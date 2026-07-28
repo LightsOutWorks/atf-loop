@@ -1,4 +1,4 @@
-# factory.yml — 無人作品ファクトリー(workflow_dispatch 専用)
+# factory.yml — 無人作品ファクトリー(トリガー: workflow_dispatch + 毎週土曜 10:00 JST の schedule)
 #
 # フロー(1ジョブ・直列):
 #   checkout
@@ -22,6 +22,10 @@ name: factory
 
 on:
   workflow_dispatch:
+  schedule:
+    # 毎週土曜 10:00 JST。GitHub Actions の cron は UTC 基準のため 9 時間戻して土曜 01:00 UTC
+    # (同日内の換算なので曜日ずれなし。POSIX cron の曜日 6 = 土曜)
+    - cron: '0 1 * * 6'
 
 permissions:
   contents: write
