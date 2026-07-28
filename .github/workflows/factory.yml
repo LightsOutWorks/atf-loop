@@ -1,0 +1,395 @@
+# factory.yml — 無人作品ファクトリー(workflow_dispatch 専用)
+#
+# フロー(1ジョブ・直列):
+#   checkout
+#   → 準備(main 実行確認・Secrets 確認・連番決定)
+#   → 生成(Claude Code が CONSTRAINTS.md を最優先ルールとして works/seed-<連番>/ に新作を生成)
+#   → スモーク検証(node smoke.mjs <対象ディレクトリ>。不合格は最大 3 回まで生成側に修正させる)
+#   → 公開内容ゲート(Codex CLI。scripts/gate-prompt.txt の固定プロンプトで codex exec を 1 回だけ実行)
+#   → 公開(判定 1 行目が PUBLISH の場合のみ main へ commit & push。GitHub Pages が自動再デプロイ)
+#
+# fail-closed 原則(成功偽装の禁止):
+#   - どの段階でも失敗・判定不能なら公開せず停止し、理由を job summary と artifact に記録する
+#   - スモーク・ゲートの無効化/削除/期待値改変で見かけ上通すことは禁止。実行中に追跡ファイル
+#     (smoke.mjs / CONSTRAINTS.md / ルート index.html / scripts/ / .github/ など)が改変された場合、
+#     または対象作品ディレクトリ外に書き込みがあった場合は integrity_check が検出して停止する
+#
+# 必要な Secrets:
+#   - CLAUDE_CODE_OAUTH_TOKEN … 生成担当(Claude Code)の認証。`claude setup-token` で発行した値
+#   - CODEX_AUTH_JSON         … ゲート担当(Codex CLI)の認証。ログイン済み端末の ~/.codex/auth.json の中身
+
+name: factory
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: factory
+  cancel-in-progress: false
+
+jobs:
+  factory:
+    name: 生成 → スモーク → ゲート → 公開
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    env:
+      LOG_DIR: ${{ runner.temp }}/factory-log
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 準備(main 実行確認・Secrets 確認・連番決定)
+        env:
+          HAS_CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+          HAS_CODEX_AUTH: ${{ secrets.CODEX_AUTH_JSON != '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$LOG_DIR"
+
+          # 各ステップから source する共通関数(fail-closed 停止と整合性チェック)
+          cat > "$LOG_DIR/lib.sh" <<'LIB'
+          # fail <理由> [併記するログファイル] — 理由を job summary と artifact 用ログに記録して停止する
+          fail() {
+            echo "::error::${STEP_LABEL:-factory}: $1"
+            {
+              echo "## ❌ 停止(fail-closed): ${STEP_LABEL:-factory}"
+              echo ""
+              echo "$1"
+              if [ -n "${2:-}" ] && [ -f "${2:-}" ]; then
+                echo ""
+                echo "<details><summary>関連ログ</summary>"
+                echo ""
+                echo '```text'
+                tail -c 60000 "$2"
+                echo '```'
+                echo "</details>"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+            {
+              echo "step: ${STEP_LABEL:-factory}"
+              echo "reason: $1"
+              if [ -n "${2:-}" ] && [ -f "${2:-}" ]; then
+                echo "--- 関連ログ: $2 ---"
+                cat "$2"
+              fi
+            } >> "$LOG_DIR/stop-reason.txt"
+            exit 1
+          }
+
+          # 追跡ファイルの改変・削除、および対象作品ディレクトリ外への新規ファイルを検出したら停止(成功偽装の防止)
+          integrity_check() {
+            local bad
+            bad=$(git status --porcelain=v1 -uall | grep -Ev "^\?\? ${WORK_DIR}/" || true)
+            if [ -n "$bad" ]; then
+              printf '%s\n' "$bad" > "$LOG_DIR/integrity-violation.txt"
+              fail "保護ファイルの改変または対象作品ディレクトリ外への書き込みを検出しました(成功偽装防止のため停止)。" "$LOG_DIR/integrity-violation.txt"
+            fi
+          }
+          LIB
+
+          STEP_LABEL="準備"
+          source "$LOG_DIR/lib.sh"
+
+          [ "$GITHUB_REF_NAME" = "main" ] || fail "公開先が main のため、このワークフローは main ブランチ上で実行してください(現在: $GITHUB_REF_NAME)。"
+          [ "$HAS_CLAUDE_TOKEN" = "true" ] || fail "Secret CLAUDE_CODE_OAUTH_TOKEN が未設定です。"
+          [ "$HAS_CODEX_AUTH" = "true" ] || fail "Secret CODEX_AUTH_JSON が未設定です。"
+
+          # 連番: ルート作品 (NEON RANGE) を SEED 001 と数え、works/seed-* の最大番号 +1 を割り当てる
+          max=1
+          for d in works/seed-*/; do
+            if [ -d "$d" ]; then
+              n=${d#works/seed-}
+              n=${n%/}
+              case "$n" in
+                *[!0-9]*) continue ;;
+              esac
+              n=$((10#$n))
+              if [ "$n" -gt "$max" ]; then max=$n; fi
+            fi
+          done
+          WORK_NAME=$(printf 'seed-%03d' $((max + 1)))
+          WORK_DIR="works/$WORK_NAME"
+          if [ -e "$WORK_DIR" ]; then fail "$WORK_DIR は既に存在します(連番の割り当てに失敗)。"; fi
+
+          {
+            echo "WORK_NAME=$WORK_NAME"
+            echo "WORK_DIR=$WORK_DIR"
+          } >> "$GITHUB_ENV"
+          {
+            echo "# 🏭 factory"
+            echo ""
+            echo "- 対象作品ディレクトリ: \`$WORK_DIR\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "対象作品ディレクトリ: $WORK_DIR"
+
+      - name: CLI インストール(Claude Code / Codex)
+        run: |
+          set -euo pipefail
+          npm install -g @anthropic-ai/claude-code @openai/codex
+          echo "claude: $(claude --version)"
+          echo "codex: $(codex --version)"
+
+      - name: 生成(Claude Code)
+        timeout-minutes: 25
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          STEP_LABEL="生成"
+          source "$LOG_DIR/lib.sh"
+
+          PROMPT=$(cat <<'EOF'
+          あなたは無人パイプライン(GitHub Actions)の生成担当です。人間は介在しないため、質問せずタスクを完遂してから終了してください。
+
+          【最優先ルール】
+          リポジトリ直下の CONSTRAINTS.md を最初に読み、そこに書かれた制約を他のどの指示よりも優先して満たすこと。
+
+          【タスク】
+          1. CONSTRAINTS.md と smoke.mjs(機械検証の実装)を読む。
+          2. ルートの index.html(既存作品 NEON RANGE)と、works/ 配下の既存作品(存在する場合は各ディレクトリの index.html と devlog.md)を確認する。
+          3. 既存のどの作品ともテーマ・題材・見た目・遊び方が重複しない、新しいブラウザ FPS 風トイのテーマを自分で決める。
+          4. __WORK_DIR__/index.html を新規作成する。HTML/CSS/JS を 1 ファイルに内包した単一ファイルで、外部依存ゼロ(外部通信・CDN・外部画像・外部フォント・外部音源はすべて禁止。詳細は CONSTRAINTS.md)。
+          5. __WORK_DIR__/devlog.md を新規作成し、作品名 / テーマ選定理由(既存作品との差別化)/ 主な設計判断 / 未解決事項 を記録する。
+          6. `node smoke.mjs __WORK_DIR__` を実行し、6 項目すべて PASS(6/6)になることを確認してから終了する。
+
+          【検証契約(smoke.mjs が期待するインターフェース。smoke.mjs 側の改変は禁止)】
+          - <title> タグに作品名を入れる
+          - 状態遷移: 初期状態 state='title' → 開始操作で 'play'(残り時間ちょうど 60)→ 60 秒経過で 'over' → 再プレイで 'play'(スコア 0・残り時間 60 に初期化)
+          - id="startBtn" の開始ボタンと id="replayBtn" の再プレイボタンを持ち、click リスナーで動作する(リザルト画面に再入力ガードを入れる場合は 1 秒以下にする)
+          - window.__GAME__ に検証用フック { start(関数), state(文字列), timeLeft(数値), score(数値) } を公開し、常に実際のゲーム状態と一致させる
+          - 時間管理は performance.now() と requestAnimationFrame のタイムスタンプで行う(Date.now() や setInterval / setTimeout に依存しない。smoke.mjs は仮想時計で 60 秒経過を再現する)
+          - スクリプトは読み込みと同時に同期的に初期化する(DOMContentLoaded / load イベント待ちにしない。検証環境ではこれらは発火しない)
+          - 要素取得は document.getElementById のみ使う(querySelector / querySelectorAll は検証環境で使えない)
+          - AudioContext / localStorage / matchMedia などは検証環境に存在しない前提で、使う場合は存在チェックと try/catch で包み、無くても例外なく動くようにする
+
+          【禁止事項(成功偽装の防止。違反するとパイプラインが fail-closed で停止する)】
+          - __WORK_DIR__/ 配下の新規ファイル(index.html と devlog.md)以外を作成・変更・削除しないこと
+          - 特に smoke.mjs / CONSTRAINTS.md / ルート index.html / scripts/ / .github/ には一切手を触れないこと
+          - 検証フックに実態と異なる値を返させるなど、見かけだけの合格を作らないこと
+          EOF
+          )
+          PROMPT=${PROMPT//__WORK_DIR__/$WORK_DIR}
+
+          set +e
+          claude -p "$PROMPT" \
+            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite,Bash(node:*)" \
+            --max-turns 120 \
+            2>&1 | tee "$LOG_DIR/claude-generate.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$rc" -ne 0 ]; then
+            fail "生成(Claude Code)が異常終了しました (exit=$rc)。" "$LOG_DIR/claude-generate.log"
+          fi
+          if [ ! -f "$WORK_DIR/index.html" ]; then
+            fail "生成完了後も $WORK_DIR/index.html が存在しません。" "$LOG_DIR/claude-generate.log"
+          fi
+          if [ ! -f "$WORK_DIR/devlog.md" ]; then
+            fail "生成完了後も $WORK_DIR/devlog.md が存在しません。" "$LOG_DIR/claude-generate.log"
+          fi
+          integrity_check
+          echo "- 生成: \`$WORK_DIR/index.html\` と \`$WORK_DIR/devlog.md\` を作成 ✅" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: スモーク検証(不合格は最大 3 回まで生成側に修正させる)
+        timeout-minutes: 35
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          STEP_LABEL="スモーク検証"
+          source "$LOG_DIR/lib.sh"
+
+          FIX_TMPL=$(cat <<'EOF'
+          無人パイプラインのスモーク検証で __WORK_DIR__ の作品が不合格でした。これは修正 __FIX_NO__ 回目(最大 3 回)です。末尾の失敗出力を読んで原因を特定し、修正してください。人間は介在しないため、質問せず完遂して終了すること。
+
+          【最優先ルール】リポジトリ直下の CONSTRAINTS.md の制約を他のどの指示よりも優先して満たすこと。
+
+          【タスク】
+          1. 末尾に貼られた smoke.mjs の失敗出力を読み、原因を特定する。
+          2. __WORK_DIR__/index.html を修正する(smoke.mjs が期待するインターフェースは smoke.mjs 本体を読んで確認する)。
+          3. 失敗の原因と修正内容を __WORK_DIR__/devlog.md に追記する。
+          4. `node smoke.mjs __WORK_DIR__` で 6 項目すべて PASS(6/6)になることを確認してから終了する。
+
+          【禁止事項(成功偽装の防止。違反するとパイプラインが fail-closed で停止する)】
+          - __WORK_DIR__/ 配下(index.html / devlog.md)以外のファイルを作成・変更・削除しないこと(特に smoke.mjs / CONSTRAINTS.md / ルート index.html / scripts/ / .github/)
+          - 検証の無効化・期待値の改変・実態と異なる値を返す検証フックなど、見かけだけの合格を作らないこと
+
+          === smoke.mjs 失敗出力 ===
+          EOF
+          )
+
+          MAX_FIX=3
+          fixes=0
+          while :; do
+            integrity_check
+            attempt=$((fixes + 1))
+            SMOKE_LOG="$LOG_DIR/smoke-attempt-${attempt}.log"
+            set +e
+            node smoke.mjs "$WORK_DIR" 2>&1 | tee "$SMOKE_LOG"
+            rc=${PIPESTATUS[0]}
+            set -e
+            if [ "$rc" -eq 0 ]; then
+              echo "- スモーク検証: 試行 ${attempt} 回目で PASS (6/6) ✅(修正 ${fixes} 回)" >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+            if [ "$fixes" -ge "$MAX_FIX" ]; then
+              fail "スモーク検証が上限の修正 ${MAX_FIX} 回を使い切っても不合格のため停止します。最終試行の結果は下記のとおり。" "$SMOKE_LOG"
+            fi
+            fixes=$((fixes + 1))
+            echo "スモーク不合格(試行 ${attempt} 回目)。生成側に修正させます(${fixes}/${MAX_FIX})。"
+            FIX_PROMPT=${FIX_TMPL//__WORK_DIR__/$WORK_DIR}
+            FIX_PROMPT=${FIX_PROMPT//__FIX_NO__/$fixes}
+            FIX_PROMPT="${FIX_PROMPT}"$'\n'"$(cat "$SMOKE_LOG")"
+            set +e
+            claude -p "$FIX_PROMPT" \
+              --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite,Bash(node:*)" \
+              --max-turns 60 \
+              2>&1 | tee "$LOG_DIR/claude-fix-${fixes}.log"
+            crc=${PIPESTATUS[0]}
+            set -e
+            if [ "$crc" -ne 0 ]; then
+              fail "修正(Claude Code、${fixes} 回目)が異常終了しました (exit=$crc)。" "$LOG_DIR/claude-fix-${fixes}.log"
+            fi
+          done
+          integrity_check
+
+      - name: 公開内容ゲート(Codex CLI・codex exec を 1 回だけ実行)
+        timeout-minutes: 10
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+          LANG: C.UTF-8
+          LC_ALL: C.UTF-8
+        run: |
+          set -euo pipefail
+          STEP_LABEL="公開内容ゲート"
+          source "$LOG_DIR/lib.sh"
+
+          # ゲート担当 (Codex CLI) の認証を復元
+          mkdir -p "$HOME/.codex"
+          printf '%s' "$CODEX_AUTH_JSON" > "$HOME/.codex/auth.json"
+          chmod 600 "$HOME/.codex/auth.json"
+          set +e
+          codex login status > "$LOG_DIR/codex-login-status.log" 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            fail "CODEX_AUTH_JSON による Codex CLI の認証が無効です。判定不能は NO_PUBLISH 扱いで停止します。" "$LOG_DIR/codex-login-status.log"
+          fi
+
+          # ゲート専用の一時ディレクトリへ、対象 index.html だけを UTF-8 明示でコピー(不正な UTF-8 はここで停止)
+          GATE_DIR=$(mktemp -d "$RUNNER_TEMP/gate.XXXXXX")
+          iconv -f UTF-8 -t UTF-8 "$WORK_DIR/index.html" > "$GATE_DIR/index.html" \
+            || fail "$WORK_DIR/index.html が正しい UTF-8 ではありません(iconv 検証に失敗)。判定不能は NO_PUBLISH 扱いで停止します。"
+
+          GATE_PROMPT=$(cat scripts/gate-prompt.txt)
+          if [ -z "$GATE_PROMPT" ]; then fail "scripts/gate-prompt.txt が空、または読み込めません。"; fi
+
+          LAST_MSG="$LOG_DIR/gate-last-message.txt"
+          set +e
+          codex exec \
+            --cd "$GATE_DIR" \
+            --sandbox read-only \
+            --skip-git-repo-check \
+            --output-last-message "$LAST_MSG" \
+            "$GATE_PROMPT" > "$LOG_DIR/gate-output.log" 2>&1
+          rc=$?
+          set -e
+
+          if [ "$rc" -ne 0 ]; then
+            fail "codex exec が異常終了しました (exit=$rc)。判定不能は NO_PUBLISH 扱いで停止します。" "$LOG_DIR/gate-output.log"
+          fi
+          if [ ! -s "$LAST_MSG" ]; then
+            fail "ゲートの判定出力が空です。判定不能は NO_PUBLISH 扱いで停止します。" "$LOG_DIR/gate-output.log"
+          fi
+
+          FIRST_LINE=$(head -n 1 "$LAST_MSG" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          if [ "$FIRST_LINE" = "PUBLISH" ]; then
+            echo "GATE_VERDICT=PUBLISH" >> "$GITHUB_ENV"
+            {
+              echo "- 公開内容ゲート: **PUBLISH** ✅"
+              echo ""
+              echo "<details><summary>判定出力の全文</summary>"
+              echo ""
+              echo '```text'
+              cat "$LAST_MSG"
+              echo '```'
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            fail "ゲート判定の 1 行目が PUBLISH ではないため、NO_PUBLISH 扱いで停止します。1 行目: ${FIRST_LINE}" "$LAST_MSG"
+          fi
+
+      - name: 公開(main へ commit & push)
+        run: |
+          set -euo pipefail
+          STEP_LABEL="公開"
+          source "$LOG_DIR/lib.sh"
+
+          if [ "${GATE_VERDICT:-}" != "PUBLISH" ]; then
+            fail "ゲート判定が PUBLISH ではないため公開しません。"
+          fi
+          integrity_check
+
+          TITLE=$(grep -oiP '(?<=<title>)[^<]*' "$WORK_DIR/index.html" | head -n 1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || true)
+          if [ -z "$TITLE" ]; then TITLE="$WORK_NAME"; fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$WORK_DIR"
+          git commit -m "works: ${WORK_NAME}「${TITLE}」を公開 (gate: ${GATE_VERDICT})"
+
+          pushed=false
+          for i in 1 2 3 4; do
+            if git push origin HEAD:main; then
+              pushed=true
+              break
+            fi
+            echo "push に失敗 (${i} 回目)。$((2 ** i)) 秒待って main を取り込み、再試行します。"
+            sleep $((2 ** i))
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              fail "main への rebase で競合が発生しました(手動対応が必要)。"
+            fi
+          done
+          if [ "$pushed" != "true" ]; then
+            fail "main への push が 4 回失敗しました。"
+          fi
+
+          sha=$(git rev-parse HEAD)
+          {
+            echo "## ✅ 公開完了"
+            echo ""
+            echo "- 作品: ${WORK_NAME}「${TITLE}」"
+            echo "- ゲート判定: ${GATE_VERDICT}"
+            echo "- commit: [\`${sha}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${sha})"
+            echo "- GitHub Pages の再デプロイ完了後、\`${WORK_DIR}/\` として公開されます。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 後片付け(認証情報の削除・作品スナップショット保存)
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.codex"
+          if [ -n "${WORK_DIR:-}" ] && [ -d "${WORK_DIR:-}" ] && [ -d "$LOG_DIR" ]; then
+            mkdir -p "$LOG_DIR/work-snapshot"
+            cp -a "$WORK_DIR/." "$LOG_DIR/work-snapshot/"
+          fi
+
+      - name: 実行ログを artifact として保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: factory-run-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/factory-log
+          if-no-files-found: warn
