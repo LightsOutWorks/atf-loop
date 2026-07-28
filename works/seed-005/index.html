@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>EMBER CANOPY</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#050403; color:#ffe9cf;
+    font-family:sans-serif;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:none;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(6,4,3,.78);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 6px; font-size:clamp(30px,7vw,54px); letter-spacing:.12em;
+    color:#ff9a52; text-shadow:0 0 18px rgba(255,122,51,.7), 0 0 44px rgba(255,60,20,.3);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(24px,6vw,40px); letter-spacing:.18em;
+    color:#ffd79a; text-shadow:0 0 16px rgba(255,215,154,.6);
+  }
+  .sub{ margin:0 0 18px; opacity:.92; font-size:clamp(13px,3.4vw,16px); }
+  .help{
+    margin:0 0 22px; line-height:1.9; font-size:clamp(12px,3.2vw,14px);
+    color:#ffd9b8; opacity:.85;
+  }
+  .btn{
+    font-family:sans-serif; font-weight:700; font-size:clamp(16px,4.2vw,20px);
+    letter-spacing:.08em; color:#2a1305; cursor:pointer;
+    background:linear-gradient(180deg,#ffb774,#ff7a33);
+    border:0; border-radius:999px; padding:14px 40px;
+    box-shadow:0 0 22px rgba(255,130,50,.5), inset 0 -3px 0 rgba(70,25,0,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-family:monospace; font-size:clamp(44px,11vw,84px); font-weight:700; line-height:1.1;
+    color:#ff9a52; text-shadow:0 0 24px rgba(255,122,51,.8);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 24px; color:#ffd9b8; opacity:.9; font-size:clamp(13px,3.4vw,16px); }
+  #bestLine{ margin:14px 0 0; font-size:13px; color:#ffbf8a; opacity:.8; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(14px,3.6vw,18px);
+    text-shadow:0 0 10px rgba(255,140,60,.55);
+  }
+  #hud .label{ font-size:.72em; opacity:.7; letter-spacing:.12em; margin-right:.4em; }
+  #timeEl{
+    font-family:monospace; font-size:clamp(20px,5vw,28px); color:#ffcf9e;
+  }
+  #timeEl.warn{ color:#ff6a5a; text-shadow:0 0 12px rgba(255,106,90,.8); }
+  #scoreEl, #streakEl{ font-family:monospace; }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,178,120,.4);
+    background:rgba(20,12,6,.6); color:#ffb774; font-family:sans-serif; font-size:18px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:11px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">STREAK</span><span id="streakEl">x1</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>EMBER CANOPY</h1>
+  <p class="sub">A 60-second net-swinging toy under a dark forest canopy</p>
+  <p class="help">
+    Mouse: move to aim the net, click to swing<br>
+    Touch: drag to aim the net, tap to swing<br>
+    Keyboard: Arrow keys / WASD to aim, Space or Enter to swing<br>
+    Swing when an ember glows brightest for a PEAK bonus. The net needs a moment to recharge after each swing.
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">Best score: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>TIME UP</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="toggle sound">&#9834;</button>
+<div class="tag">EMBER CANOPY — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var streakEl = document.getElementById('streakEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- screen size ----------
+  var W = 960, H = 600, DPR = 1;
+  function resize(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(W * DPR));
+    canvas.height = Math.max(1, Math.round(H * DPR));
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- constants ----------
+  var GAME_TIME = 60;
+  var REPLAY_GUARD = 0.6;
+  var SWING_WINDOW = 0.14;
+  var SWING_COOLDOWN = 0.42;
+  var HIT_RADIUS = 40;
+  var EMBER_LIFE = 5.4;
+  var SPAWN_MIN = 0.55, SPAWN_MAX = 0.95;
+  var MAX_EMBERS = 5;
+  var PEAK_THRESHOLD = 0.82;
+  var PULSE_PERIOD = 1.4;
+  var BOB_AMP = 16, BOB_PERIOD = 2.6;
+  var DRIFT_SPEED = 10;
+  var COMBO_STEP = 5, COMBO_MAX = 4;
+  var NET_ACCEL = 1400, NET_FRICTION = 6.5, NET_MAX_SPEED = 640;
+
+  // ---------- state ----------
+  var state = 'title';           // 'title' | 'play' | 'over'
+  var score = 0, best = 0;
+  var timeLeft = GAME_TIME;
+  var streak = 0, multiplier = 1;
+  var peakCount = 0, okCount = 0, missCount = 0, leakCount = 0;
+  var tNow = 0, lastT = null, overAt = -9;
+
+  var embers = [];
+  var spawnTimer = 0;
+
+  var netX = 0, netY = 0, netVx = 0, netVy = 0;
+  var swingActiveUntil = -9, swingCooldownUntil = -9, swingFlashUntil = -9;
+  var swingHitColor = null;
+
+  var margin = 60;
+
+  // ---------- sound (code-generated only) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  function blip(type, f0, f1, dur, vol, delay){
+    var t0 = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function sfx(kind){
+    if (muted || !audioCtx) return;
+    try{
+      if (kind === 'swing'){ blip('square', 260, 140, 0.09, 0.09, 0); }
+      else if (kind === 'catch'){ blip('triangle', 560, 880, 0.10, 0.15, 0); }
+      else if (kind === 'peak'){ blip('triangle', 760, 1500, 0.12, 0.16, 0); blip('triangle', 1100, 2100, 0.12, 0.10, 0.06); }
+      else if (kind === 'miss'){ blip('sawtooth', 220, 90, 0.14, 0.08, 0); }
+      else if (kind === 'start'){ blip('sine', 420, 840, 0.18, 0.14, 0); }
+      else if (kind === 'end'){ blip('sine', 640, 320, 0.35, 0.14, 0); blip('sine', 420, 210, 0.4, 0.10, 0.12); }
+    }catch(e){}
+  }
+  function toggleMute(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+    if (!muted) initAudio();
+  }
+  muteBtn.addEventListener('click', function(ev){ if (ev && ev.stopPropagation) ev.stopPropagation(); toggleMute(); });
+
+  // ---------- embers ----------
+  function spawnEmber(){
+    embers.push({
+      x: margin + Math.random() * (W - margin * 2),
+      baseY: H * 0.28 + Math.random() * (H * 0.48),
+      bobPhase: Math.random() * 6.2832,
+      pulsePhase: Math.random() * 6.2832,
+      driftDir: Math.random() < 0.5 ? -1 : 1,
+      bornAt: tNow,
+      caught: false
+    });
+  }
+  function emberPos(e){
+    var y = e.baseY + Math.sin(tNow * (6.2832 / BOB_PERIOD) + e.bobPhase) * BOB_AMP;
+    return { x: e.x, y: y };
+  }
+  function emberBrightness(e){
+    return 0.5 + 0.5 * Math.sin(tNow * (6.2832 / PULSE_PERIOD) + e.pulsePhase);
+  }
+  function updateEmbers(dt){
+    spawnTimer -= dt;
+    if (spawnTimer <= 0 && embers.length < MAX_EMBERS){
+      spawnEmber();
+      spawnTimer = SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+    }
+    for (var i = embers.length - 1; i >= 0; i--){
+      var e = embers[i];
+      e.x += e.driftDir * DRIFT_SPEED * dt;
+      if (e.x < margin){ e.x = margin; e.driftDir = 1; }
+      if (e.x > W - margin){ e.x = W - margin; e.driftDir = -1; }
+      if (tNow - e.bornAt > EMBER_LIFE){
+        embers.splice(i, 1);
+        leakCount++;
+        streak = 0; multiplier = 1;
+      }
+    }
+  }
+
+  // ---------- combo / scoring ----------
+  function registerCatch(peak){
+    if (peak){ score += 3 * multiplier; peakCount++; sfx('peak'); }
+    else { score += 1 * multiplier; okCount++; sfx('catch'); }
+    streak++;
+    if (streak % COMBO_STEP === 0 && multiplier < COMBO_MAX) multiplier++;
+  }
+  function registerMiss(){
+    missCount++;
+    streak = 0; multiplier = 1;
+    sfx('miss');
+  }
+
+  // ---------- swing ----------
+  function trySwing(px, py){
+    if (state !== 'play') return;
+    if (tNow < swingCooldownUntil) return;
+    netX = px; netY = py;
+    swingActiveUntil = tNow + SWING_WINDOW;
+    swingCooldownUntil = tNow + SWING_COOLDOWN;
+    sfx('swing');
+    var caughtOne = null, bestD = HIT_RADIUS;
+    for (var i = 0; i < embers.length; i++){
+      var e = embers[i];
+      var p = emberPos(e);
+      var d = Math.hypot(p.x - px, p.y - py);
+      if (d <= bestD){ bestD = d; caughtOne = e; }
+    }
+    if (caughtOne){
+      var peak = emberBrightness(caughtOne) >= PEAK_THRESHOLD;
+      registerCatch(peak);
+      swingFlashUntil = tNow + 0.18;
+      swingHitColor = peak ? '#fff6d8' : '#ff9a52';
+      var idx = embers.indexOf(caughtOne);
+      if (idx >= 0) embers.splice(idx, 1);
+    } else {
+      registerMiss();
+      swingFlashUntil = tNow + 0.12;
+      swingHitColor = '#7a6a58';
+    }
+    updateHud();
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    streakEl.textContent = 'x' + multiplier;
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- state transitions ----------
+  function start(){
+    score = 0; streak = 0; multiplier = 1;
+    peakCount = 0; okCount = 0; missCount = 0; leakCount = 0;
+    timeLeft = GAME_TIME;
+    embers = [];
+    spawnTimer = 0.3;
+    netX = W / 2; netY = H / 2; netVx = 0; netVy = 0;
+    swingActiveUntil = -9; swingCooldownUntil = -9; swingFlashUntil = -9;
+    state = 'play';
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    resultDetail.textContent = 'PEAK ' + peakCount + ' / OK ' + okCount + ' / MISS ' + missCount + ' / LEAK ' + leakCount + ' — best ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function startFromUi(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > REPLAY_GUARD){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+
+  // ---------- pointer input ----------
+  var downX = 0, downY = 0, downT = 0, dragging = false;
+  function relPos(e){
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || W, h = rect.height || H;
+    var x = (e.clientX - rect.left) / w * W;
+    var y = (e.clientY - rect.top) / h * H;
+    if (x < 0) x = 0; if (x > W) x = W;
+    if (y < 0) y = 0; if (y > H) y = H;
+    return { x: x, y: y };
+  }
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    var p = relPos(e);
+    downX = e.clientX; downY = e.clientY; downT = tNow; dragging = true;
+    netX = p.x; netY = p.y;
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function(e){
+    var p = relPos(e);
+    netX = p.x; netY = p.y;
+  }, { passive: true });
+  canvas.addEventListener('pointerup', function(e){
+    if (!dragging) return;
+    dragging = false;
+    var dx = e.clientX - downX, dy = e.clientY - downY;
+    var dist = Math.hypot(dx, dy);
+    var dur = tNow - downT;
+    if (dist < 16 && dur < 0.32){
+      var p = relPos(e);
+      trySwing(p.x, p.y);
+    }
+  });
+  canvas.addEventListener('pointercancel', function(){ dragging = false; });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- keyboard input ----------
+  var keys = { l: false, r: false, u: false, d: false };
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') trySwing(netX, netY); else startFromUi();
+    } else if (k === 'm' || k === 'M'){
+      toggleMute();
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ keys.l = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D'){ keys.r = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W'){ keys.u = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S'){ keys.d = true; if (e.preventDefault) e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function(e){
+    var k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = false;
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = false;
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W') keys.u = false;
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') keys.d = false;
+  });
+
+  // ---------- update ----------
+  function update(dt){
+    if (state === 'play'){
+      var ax = 0, ay = 0;
+      if (keys.l) ax -= NET_ACCEL;
+      if (keys.r) ax += NET_ACCEL;
+      if (keys.u) ay -= NET_ACCEL;
+      if (keys.d) ay += NET_ACCEL;
+      netVx += ax * dt; netVy += ay * dt;
+      netVx *= Math.max(0, 1 - NET_FRICTION * dt);
+      netVy *= Math.max(0, 1 - NET_FRICTION * dt);
+      var sp = Math.hypot(netVx, netVy);
+      if (sp > NET_MAX_SPEED){ netVx = netVx / sp * NET_MAX_SPEED; netVy = netVy / sp * NET_MAX_SPEED; }
+      netX += netVx * dt; netY += netVy * dt;
+      if (netX < margin){ netX = margin; netVx = 0; }
+      if (netX > W - margin){ netX = W - margin; netVx = 0; }
+      if (netY < margin){ netY = margin; netVy = 0; }
+      if (netY > H - margin){ netY = H - margin; netVy = 0; }
+
+      updateEmbers(dt);
+
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- render ----------
+  function render(){
+    ctx.clearRect(0, 0, W, H);
+
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#080604');
+    sky.addColorStop(0.55, '#0d0a07');
+    sky.addColorStop(1, '#050403');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // silhouette branches (decorative)
+    ctx.fillStyle = '#171009';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(W * 0.32, 0); ctx.lineTo(W * 0.1, H * 0.22); ctx.lineTo(0, H * 0.16); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(W, 0); ctx.lineTo(W * 0.62, 0); ctx.lineTo(W * 0.86, H * 0.28); ctx.lineTo(W, H * 0.12); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, H); ctx.lineTo(W * 0.4, H); ctx.lineTo(W * 0.14, H * 0.78); ctx.lineTo(0, H * 0.86); ctx.closePath(); ctx.fill();
+
+    // drifting dust motes (decorative)
+    ctx.fillStyle = 'rgba(255,200,150,0.10)';
+    for (var i = 0; i < 26; i++){
+      var a = i * 2.4;
+      var dx = (Math.sin(tNow * 0.15 + a) * 0.5 + 0.5) * W;
+      var dy = ((tNow * 6 + a * 60) % (H + 40)) - 20;
+      ctx.beginPath(); ctx.arc(dx, dy, 1.4, 0, 6.2832); ctx.fill();
+    }
+
+    // embers
+    for (var j = 0; j < embers.length; j++){
+      var e = embers[j];
+      var p = emberPos(e);
+      var b = emberBrightness(e);
+      var peak = b >= PEAK_THRESHOLD;
+      var r = 10 + b * 6;
+      var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * (peak ? 3.2 : 2.4));
+      if (peak){
+        glow.addColorStop(0, 'rgba(255,246,216,0.95)');
+        glow.addColorStop(0.4, 'rgba(255,154,82,0.55)');
+        glow.addColorStop(1, 'rgba(255,90,30,0)');
+      } else {
+        glow.addColorStop(0, 'rgba(255,180,110,' + (0.5 + b * 0.4) + ')');
+        glow.addColorStop(1, 'rgba(255,90,30,0)');
+      }
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * (peak ? 3.2 : 2.4), 0, 6.2832); ctx.fill();
+      ctx.fillStyle = peak ? '#fff6d8' : '#ffcf9e';
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.4, 0, 6.2832); ctx.fill();
+    }
+
+    // net cursor
+    if (state === 'play'){
+      var cool = Math.max(0, (swingCooldownUntil - tNow) / SWING_COOLDOWN);
+      ctx.strokeStyle = 'rgba(255,220,180,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(netX, netY, HIT_RADIUS * 0.55, 0, 6.2832); ctx.stroke();
+      if (cool > 0){
+        ctx.strokeStyle = 'rgba(255,120,60,0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(netX, netY, HIT_RADIUS * 0.75, -Math.PI / 2, -Math.PI / 2 + 6.2832 * (1 - cool));
+        ctx.stroke();
+      }
+      if (tNow < swingFlashUntil){
+        ctx.strokeStyle = swingHitColor || '#ffffff';
+        ctx.lineWidth = 3;
+        var f = 1 - Math.max(0, (swingFlashUntil - tNow) / 0.18);
+        ctx.globalAlpha = 1 - f;
+        ctx.beginPath(); ctx.arc(netX, netY, HIT_RADIUS * (0.6 + f * 0.9), 0, 6.2832); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = '#fff3df';
+      ctx.beginPath(); ctx.arc(netX, netY, 2.4, 0, 6.2832); ctx.fill();
+    }
+
+    // vignette
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------- main loop ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.1, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- verification hook (exposes the same state the UI uses) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start
+  };
+
+})();
+</script>
+</body>
+</html>
