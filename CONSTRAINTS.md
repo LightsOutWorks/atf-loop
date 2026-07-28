@@ -25,6 +25,12 @@
 - 状態遷移を持つこと: 開始(タイトル)→ プレイ → 終了/ゲームオーバー → 再プレイ
 - 再プレイ時にスコア・残り時間が初期化されること
 
+## UI 言語(プレイヤー向けテキスト)
+
+- All player-facing text in each toy must be written in English only. Do not add language toggles or multilingual UI.
+- 適用範囲(player-facing text): タイトル・操作説明・ボタン(START/REPLAY 等)・スコア/残り時間・ゲームオーバー表示・プレイヤー向けエラー文
+- 対象外: コードコメント・内部ログ・生成記録(devlog.md 等)
+
 ## 機械検証(smoke.mjs)
 
 検証項目は次の 6 つに固定する:
