@@ -31,6 +31,11 @@
 - 適用範囲(player-facing text): タイトル・操作説明・ボタン(START/REPLAY 等)・スコア/残り時間・ゲームオーバー表示・プレイヤー向けエラー文
 - 対象外: コードコメント・内部ログ・生成記録(devlog.md 等)
 
+## フォント
+
+- Use only CSS generic font families. Do not reference named fonts, font brands, font files, or external font services.
+- 注記: 初回運用では、font-family に使用してよい値を sans-serif / serif / monospace の 3 つに限定する(system-ui も当面使用しない)
+
 ## 機械検証(smoke.mjs)
 
 検証項目は次の 6 つに固定する:
