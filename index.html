@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>NEON RANGE — 60秒射的トイ</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#05060f; color:#e8f6ff;
+    font-family:system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:crosshair;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(4,6,18,.74);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 6px; font-size:clamp(30px,7vw,54px); letter-spacing:.14em;
+    color:#7df9ff; text-shadow:0 0 18px rgba(60,220,255,.75), 0 0 46px rgba(255,80,220,.35);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(24px,6vw,40px); letter-spacing:.2em;
+    color:#ffd24a; text-shadow:0 0 16px rgba(255,210,74,.6);
+  }
+  .sub{ margin:0 0 18px; opacity:.9; font-size:clamp(13px,3.4vw,16px); }
+  .help{
+    margin:0 0 22px; line-height:1.9; font-size:clamp(12px,3.2vw,14px);
+    color:#bfe9ff; opacity:.85;
+  }
+  .btn{
+    font:inherit; font-weight:700; font-size:clamp(16px,4.2vw,20px);
+    letter-spacing:.08em; color:#03121a; cursor:pointer;
+    background:linear-gradient(180deg,#8ef6ff,#2ec9ff);
+    border:0; border-radius:999px; padding:14px 40px;
+    box-shadow:0 0 22px rgba(70,220,255,.55), inset 0 -3px 0 rgba(0,60,90,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-size:clamp(44px,11vw,84px); font-weight:800; line-height:1.1;
+    color:#7df9ff; text-shadow:0 0 24px rgba(60,220,255,.8);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 24px; color:#bfe9ff; opacity:.9; font-size:clamp(13px,3.4vw,16px); }
+  #bestLine{ margin:14px 0 0; font-size:13px; color:#9fd8ff; opacity:.8; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(14px,3.6vw,18px);
+    text-shadow:0 0 10px rgba(60,220,255,.6);
+  }
+  #hud .label{ font-size:.72em; opacity:.7; letter-spacing:.12em; margin-right:.4em; }
+  #timeEl{
+    font-size:clamp(20px,5vw,28px); color:#8ef6ff; font-variant-numeric:tabular-nums;
+  }
+  #timeEl.warn{ color:#ff5d7a; text-shadow:0 0 12px rgba(255,93,122,.8); }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:44px; height:44px; border-radius:50%; border:1px solid rgba(140,230,255,.45);
+    background:rgba(8,16,34,.6); color:#8ef6ff; font-size:18px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:11px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">HIT</span><span id="accEl">0/0</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>NEON RANGE</h1>
+  <p class="sub">60秒間、宙に浮かぶ光のオーブを撃ち抜く射的トイ</p>
+  <p class="help">
+    PC:マウスで視点移動 / クリック・Space で発射(矢印・WASDでも視点操作)<br>
+    スマホ:ドラッグで視点移動 / 短くタップで発射<br>
+    通常オーブ +1点 / 金色コア +3点(すぐ逃げる)
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">ベストスコア: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>TIME UP</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="サウンド切替">♪</button>
+<div class="tag">NEON RANGE — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var accEl = document.getElementById('accEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- 画面サイズ ----------
+  var W = 960, H = 600, DPR = 1;
+  function resize(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(W * DPR));
+    canvas.height = Math.max(1, Math.round(H * DPR));
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- 定数・状態 ----------
+  var GAME_TIME = 60;
+  var EY = 1.7;                 // 目の高さ
+  var FOV = 1.08;               // 垂直視野(rad)
+  var YAW_MAX = 1.25, PITCH_MAX = 0.6;
+  var NEAR = 0.2;
+
+  var state = 'title';          // 'title' | 'play' | 'over'
+  var score = 0, best = 0, shots = 0, hits = 0;
+  var timeLeft = GAME_TIME;
+  var yaw = 0, pitch = 0, yawT = 0, pitchT = 0;
+  var tNow = 0, lastT = null;
+  var lastShot = -9, shakeT = -9, overAt = -9;
+  var focalLen = 300;
+
+  // ---------- 効果音(コード生成のみ) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  function blip(type, f0, f1, dur, vol, delay){
+    var t0 = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function sfx(kind){
+    if (muted || !audioCtx) return;
+    try{
+      if (kind === 'shoot'){ blip('square', 320, 80, 0.12, 0.10, 0); }
+      else if (kind === 'hit'){ blip('triangle', 620, 960, 0.10, 0.15, 0); }
+      else if (kind === 'bonus'){ blip('triangle', 700, 1400, 0.12, 0.15, 0); blip('triangle', 1050, 2100, 0.12, 0.10, 0.06); }
+      else if (kind === 'start'){ blip('sine', 440, 880, 0.18, 0.14, 0); }
+      else if (kind === 'end'){ blip('sine', 660, 330, 0.35, 0.14, 0); blip('sine', 440, 220, 0.4, 0.10, 0.12); }
+    }catch(e){}
+  }
+  function toggleMute(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+    if (!muted) initAudio();
+  }
+  muteBtn.addEventListener('click', function(ev){ if (ev && ev.stopPropagation) ev.stopPropagation(); toggleMute(); });
+
+  // ---------- 疑似3D投影 ----------
+  // カメラ空間へ変換(yaw→pitch の順に回転)
+  function toCam(x, y, z){
+    var dx = x, dy = y - EY, dz = z;
+    var cy = Math.cos(yaw), sy = Math.sin(yaw);
+    var x1 = dx * cy - dz * sy;
+    var z1 = dx * sy + dz * cy;
+    var cp = Math.cos(pitch), sp = Math.sin(pitch);
+    var y2 = dy * cp - z1 * sp;
+    var z2 = dy * sp + z1 * cp;
+    return { x: x1, y: y2, z: z2 };
+  }
+  function project(x, y, z){
+    var c = toCam(x, y, z);
+    if (c.z < NEAR) return null;
+    return { x: W / 2 + focalLen * c.x / c.z, y: H / 2 - focalLen * c.y / c.z, z: c.z };
+  }
+  // カメラ空間で NEAR クリップして線を描く
+  function line3d(x1, y1, z1, x2, y2, z2){
+    var a = toCam(x1, y1, z1), b = toCam(x2, y2, z2);
+    if (a.z < NEAR && b.z < NEAR) return;
+    if (a.z < NEAR || b.z < NEAR){
+      var t = (NEAR - a.z) / (b.z - a.z);
+      var ix = a.x + (b.x - a.x) * t;
+      var iy = a.y + (b.y - a.y) * t;
+      if (a.z < NEAR){ a = { x: ix, y: iy, z: NEAR }; }
+      else { b = { x: ix, y: iy, z: NEAR }; }
+    }
+    ctx.moveTo(W / 2 + focalLen * a.x / a.z, H / 2 - focalLen * a.y / a.z);
+    ctx.lineTo(W / 2 + focalLen * b.x / b.z, H / 2 - focalLen * b.y / b.z);
+  }
+
+  // ---------- 星空(方向ベクトルの点) ----------
+  var stars = [];
+  (function(){
+    for (var i = 0; i < 90; i++){
+      var a = (Math.random() * 2 - 1) * (YAW_MAX + 0.9);
+      var b = 0.05 + Math.random() * 1.0;
+      stars.push({ a: a, b: b, tw: Math.random() * 6.28, s: 0.7 + Math.random() * 1.6 });
+    }
+  })();
+
+  // ---------- ターゲット ----------
+  var COLORS = ['#29e6ff', '#ff4fd8', '#9dff57', '#ffa54f'];
+  var targets = [];
+  function relocate(t){
+    t.a = (Math.random() * 2 - 1) * YAW_MAX * 0.82;
+    t.b = -0.05 + Math.random() * (PITCH_MAX * 0.7 + 0.05);
+    t.d = 9 + Math.random() * 17;
+    t.r = (t.bonus ? 0.4 : 0.6) + Math.random() * 0.28 + t.d * 0.015;
+    t.va = (Math.random() < 0.5 ? -1 : 1) * ((t.bonus ? 0.22 : 0.05) + Math.random() * (t.bonus ? 0.28 : 0.09));
+    t.phase = Math.random() * 6.28;
+    t.bob = 0.02 + Math.random() * 0.05;
+    t.color = t.bonus ? '#ffd24a' : COLORS[(Math.random() * COLORS.length) | 0];
+    t.alive = true;
+    t.respawnAt = 0;
+    t.bornAt = tNow;
+    t.life = t.bonus ? (5.5 + Math.random() * 3) : Infinity;
+  }
+  function makeTarget(bonus){
+    var t = { bonus: !!bonus };
+    relocate(t);
+    return t;
+  }
+  function initTargets(){
+    targets = [];
+    for (var i = 0; i < 7; i++) targets.push(makeTarget(false));
+    targets.push(makeTarget(true));
+  }
+  initTargets();
+  function targetPos(t){
+    var b = t.b + Math.sin(tNow * 1.3 + t.phase) * t.bob;
+    var y = EY + Math.sin(b) * t.d;
+    if (y < 0.55) y = 0.55;
+    return { x: Math.sin(t.a) * Math.cos(b) * t.d, y: y, z: Math.cos(t.a) * Math.cos(b) * t.d };
+  }
+  function updateTargets(dt){
+    for (var i = 0; i < targets.length; i++){
+      var t = targets[i];
+      if (!t.alive){
+        if (tNow >= t.respawnAt) relocate(t);
+        continue;
+      }
+      t.a += t.va * dt;
+      if (t.a > YAW_MAX * 0.85){ t.a = YAW_MAX * 0.85; t.va = -Math.abs(t.va); }
+      if (t.a < -YAW_MAX * 0.85){ t.a = -YAW_MAX * 0.85; t.va = Math.abs(t.va); }
+      if (tNow - t.bornAt > t.life) relocate(t);
+    }
+  }
+
+  // ---------- ヒットエフェクト ----------
+  var fxList = [];
+  function addFx(type, x, y, val, color){
+    fxList.push({ type: type, x: x, y: y, val: val, color: color, t0: tNow });
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    accEl.textContent = hits + '/' + shots;
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- 状態遷移 ----------
+  function start(){
+    score = 0; shots = 0; hits = 0;
+    timeLeft = GAME_TIME;
+    state = 'play';
+    lastShot = -9;
+    initTargets();
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    var acc = shots > 0 ? Math.round(hits / shots * 100) : 0;
+    resultDetail.textContent = '命中 ' + hits + ' / ' + shots + '発(' + acc + '%)・ベスト ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function toTitle(){
+    state = 'title';
+    hide(hud); hide(overScreen); show(titleScreen);
+    if (best > 0){ bestTitle.textContent = String(best); show(bestLine); }
+  }
+  // 開始/再開の共通入口(TIME UP 直後の誤タップを 0.6 秒だけ無視)
+  function startFromUi(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > 0.6){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  titleScreen.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  overScreen.addEventListener('click', function(){ initAudio(); startFromUi(); });
+
+  // ---------- 射撃 ----------
+  function shoot(){
+    if (state !== 'play') return;
+    if (tNow - lastShot < 0.18) return;
+    lastShot = tNow;
+    shakeT = tNow;
+    shots++;
+    sfx('shoot');
+    var bestHit = null, bestZ = 1e9, bestPr = null, bestSr = 0;
+    for (var i = 0; i < targets.length; i++){
+      var t = targets[i];
+      if (!t.alive) continue;
+      var p = targetPos(t);
+      var pr = project(p.x, p.y, p.z);
+      if (!pr) continue;
+      var sr = focalLen * t.r / pr.z;
+      var dx = pr.x - W / 2, dy = pr.y - H / 2;
+      if (Math.sqrt(dx * dx + dy * dy) <= sr + 6 && pr.z < bestZ){
+        bestZ = pr.z; bestHit = t; bestPr = pr; bestSr = sr;
+      }
+    }
+    if (bestHit){
+      hits++;
+      var pts = bestHit.bonus ? 3 : 1;
+      score += pts;
+      addFx('ring', bestPr.x, bestPr.y, bestSr, bestHit.color);
+      addFx('text', bestPr.x, bestPr.y - bestSr * 0.6, '+' + pts, bestHit.color);
+      bestHit.alive = false;
+      bestHit.respawnAt = tNow + 0.4 + Math.random() * 0.8;
+      sfx(bestHit.bonus ? 'bonus' : 'hit');
+    }
+    updateHud();
+  }
+
+  // ---------- 入力: ポインタ ----------
+  function clampAim(){
+    if (yawT > YAW_MAX) yawT = YAW_MAX;
+    if (yawT < -YAW_MAX) yawT = -YAW_MAX;
+    if (pitchT > PITCH_MAX) pitchT = PITCH_MAX;
+    if (pitchT < -PITCH_MAX) pitchT = -PITCH_MAX;
+  }
+  var touchId = null, touchLX = 0, touchLY = 0, touchMoved = 0, touchT0 = 0;
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    if (e.pointerType === 'touch'){
+      if (touchId !== null) return;
+      touchId = e.pointerId;
+      touchLX = e.clientX; touchLY = e.clientY;
+      touchMoved = 0; touchT0 = tNow;
+    } else {
+      shoot();
+    }
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function(e){
+    if (e.pointerType === 'touch'){
+      if (e.pointerId !== touchId) return;
+      var dx = e.clientX - touchLX, dy = e.clientY - touchLY;
+      touchLX = e.clientX; touchLY = e.clientY;
+      touchMoved += Math.abs(dx) + Math.abs(dy);
+      yawT += dx * 0.0042;
+      pitchT -= dy * 0.0042;
+      clampAim();
+    } else {
+      var rect = canvas.getBoundingClientRect();
+      var w = rect.width || W, h = rect.height || H;
+      var nx = (e.clientX - rect.left) / w - 0.5;
+      var ny = (e.clientY - rect.top) / h - 0.5;
+      yawT = nx * 2 * YAW_MAX;
+      pitchT = -ny * 2 * PITCH_MAX;
+      clampAim();
+    }
+  }, { passive: true });
+  function endTouch(e, canShoot){
+    if (e.pointerId !== touchId) return;
+    touchId = null;
+    if (canShoot && touchMoved < 14 && tNow - touchT0 < 0.35) shoot();
+  }
+  canvas.addEventListener('pointerup', function(e){
+    if (e.pointerType === 'touch') endTouch(e, true);
+  });
+  canvas.addEventListener('pointercancel', function(e){
+    if (e.pointerType === 'touch') endTouch(e, false);
+  });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- 入力: キーボード ----------
+  var keys = { l: false, r: false, u: false, d: false };
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') shoot(); else startFromUi();
+    } else if (k === 'Enter'){
+      if (state === 'play') shoot(); else startFromUi();
+    } else if (k === 'm' || k === 'M'){
+      toggleMute();
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ keys.l = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D'){ keys.r = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W'){ keys.u = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S'){ keys.d = true; if (e.preventDefault) e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function(e){
+    var k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = false;
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = false;
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W') keys.u = false;
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') keys.d = false;
+  });
+
+  // ---------- 更新 ----------
+  function update(dt){
+    var ks = 1.7;
+    if (keys.l) yawT -= ks * dt;
+    if (keys.r) yawT += ks * dt;
+    if (keys.u) pitchT += ks * 0.7 * dt;
+    if (keys.d) pitchT -= ks * 0.7 * dt;
+    clampAim();
+    if (state !== 'play'){
+      // タイトル/リザルトの背景はゆっくり自動パン
+      yawT = Math.sin(tNow * 0.12) * 0.55;
+      pitchT = Math.sin(tNow * 0.07) * 0.08 + 0.05;
+    }
+    var f = Math.min(1, dt * 10);
+    yaw += (yawT - yaw) * f;
+    pitch += (pitchT - pitch) * f;
+
+    updateTargets(dt);
+
+    if (state === 'play'){
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- 描画 ----------
+  function render(){
+    focalLen = (H / 2) / Math.tan(FOV / 2);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    // 画面シェイク
+    var shake = Math.max(0, 1 - (tNow - shakeT) / 0.15);
+    if (shake > 0){
+      ctx.translate((Math.random() - 0.5) * 6 * shake, (Math.random() - 0.5) * 6 * shake);
+    }
+
+    // 地平線
+    var horizonY = H / 2 + focalLen * Math.tan(pitch);
+
+    // 空
+    var skyTop = Math.min(horizonY, H);
+    if (skyTop > 0){
+      var sky = ctx.createLinearGradient(0, 0, 0, Math.max(1, skyTop));
+      sky.addColorStop(0, '#04050e');
+      sky.addColorStop(0.72, '#0b1233');
+      sky.addColorStop(1, '#193a6e');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, Math.max(1, skyTop));
+    }
+    // 地面
+    if (horizonY < H){
+      var gnd = ctx.createLinearGradient(0, Math.max(0, horizonY), 0, H);
+      gnd.addColorStop(0, '#0c2038');
+      gnd.addColorStop(0.25, '#050a14');
+      gnd.addColorStop(1, '#03060a');
+      ctx.fillStyle = gnd;
+      ctx.fillRect(0, Math.max(0, horizonY), W, H - Math.max(0, horizonY));
+    }
+
+    // 星
+    ctx.fillStyle = '#cfeaff';
+    for (var i = 0; i < stars.length; i++){
+      var st = stars[i];
+      var R = 180;
+      var sx = Math.sin(st.a) * Math.cos(st.b) * R;
+      var sz = Math.cos(st.a) * Math.cos(st.b) * R;
+      var syw = EY + Math.sin(st.b) * R;
+      var pr = project(sx, syw, sz);
+      if (!pr) continue;
+      var tw = 0.35 + 0.65 * Math.abs(Math.sin(tNow * 0.8 + st.tw));
+      ctx.globalAlpha = 0.55 * tw;
+      ctx.fillRect(pr.x, pr.y, st.s, st.s);
+    }
+    ctx.globalAlpha = 1;
+
+    // 地面グリッド
+    ctx.strokeStyle = 'rgba(46,230,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (var k = -40; k <= 40; k += 4){
+      line3d(k, 0, -40, k, 0, 40);
+      line3d(-40, 0, k, 40, 0, k);
+    }
+    ctx.stroke();
+    // 地平線の光
+    if (horizonY > -20 && horizonY < H + 20){
+      ctx.strokeStyle = 'rgba(120,240,255,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, horizonY);
+      ctx.lineTo(W, horizonY);
+      ctx.stroke();
+    }
+
+    // ターゲット(遠い順に描画)
+    var drawList = [];
+    for (var j = 0; j < targets.length; j++){
+      var t = targets[j];
+      if (!t.alive) continue;
+      var p = targetPos(t);
+      var q = project(p.x, p.y, p.z);
+      if (!q) continue;
+      var sr = focalLen * t.r / q.z;
+      if (q.x < -sr * 2 || q.x > W + sr * 2 || q.y < -sr * 2 || q.y > H + sr * 2) continue;
+      drawList.push({ t: t, q: q, sr: sr });
+    }
+    drawList.sort(function(a, b){ return b.q.z - a.q.z; });
+    for (var m = 0; m < drawList.length; m++){
+      var it = drawList[m];
+      var tt = it.t, qq = it.q, sr2 = it.sr;
+      var alpha = 1;
+      if (tt.bonus){
+        var rem = tt.life - (tNow - tt.bornAt);
+        if (rem < 1.5) alpha = 0.35 + 0.65 * Math.abs(Math.sin(tNow * 10));
+      }
+      ctx.globalAlpha = alpha;
+      // 外側グロー
+      var glow = ctx.createRadialGradient(qq.x, qq.y, sr2 * 0.2, qq.x, qq.y, sr2 * 1.9);
+      glow.addColorStop(0, tt.color);
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = alpha * 0.28;
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(qq.x, qq.y, sr2 * 1.9, 0, 6.2832);
+      ctx.fill();
+      // 本体
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = tt.color;
+      ctx.beginPath();
+      ctx.arc(qq.x, qq.y, sr2, 0, 6.2832);
+      ctx.fill();
+      // 同心リング
+      ctx.strokeStyle = 'rgba(8,12,26,0.85)';
+      ctx.lineWidth = Math.max(1, sr2 * 0.16);
+      ctx.beginPath();
+      ctx.arc(qq.x, qq.y, sr2 * 0.62, 0, 6.2832);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(qq.x, qq.y, Math.max(1.2, sr2 * 0.2), 0, 6.2832);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // ヒットエフェクト
+    for (var n = fxList.length - 1; n >= 0; n--){
+      var fx = fxList[n];
+      var age = tNow - fx.t0;
+      if (fx.type === 'ring'){
+        var kk = age / 0.35;
+        if (kk >= 1){ fxList.splice(n, 1); continue; }
+        ctx.globalAlpha = 1 - kk;
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 3 * (1 - kk) + 1;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.val * (0.5 + 1.9 * kk), 0, 6.2832);
+        ctx.stroke();
+      } else {
+        var kk2 = age / 0.7;
+        if (kk2 >= 1){ fxList.splice(n, 1); continue; }
+        ctx.globalAlpha = 1 - kk2;
+        ctx.fillStyle = fx.color;
+        ctx.font = '700 ' + Math.round(16 + 10 * (1 - kk2)) + 'px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(fx.val), fx.x, fx.y - 42 * kk2);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ランチャー(抽象図形の発射台)と発射フラッシュ
+    var recoil = Math.max(0, 1 - (tNow - lastShot) / 0.15);
+    if (state === 'play'){
+      var tipX = W * 0.565, tipY = H * 0.74 + recoil * 16;
+      var gunGrad = ctx.createLinearGradient(0, tipY, 0, H);
+      gunGrad.addColorStop(0, '#1b2b4d');
+      gunGrad.addColorStop(1, '#080d1c');
+      ctx.fillStyle = gunGrad;
+      ctx.beginPath();
+      ctx.moveTo(W * 0.50, H + 6);
+      ctx.lineTo(tipX - 13, tipY);
+      ctx.lineTo(tipX + 13, tipY);
+      ctx.lineTo(W * 0.74, H + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(120,240,255,0.55)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#8ef6ff';
+      ctx.fillRect(tipX - 6, tipY - 4, 12, 4);
+      if (recoil > 0.45){
+        ctx.globalAlpha = (recoil - 0.45) * 1.4;
+        ctx.fillStyle = '#dffcff';
+        ctx.beginPath();
+        ctx.arc(tipX, tipY - 10, (recoil - 0.45) * 46, 0, 6.2832);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // クロスヘア
+    if (state === 'play'){
+      var cr = 12 + recoil * 8;
+      ctx.strokeStyle = 'rgba(220,255,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, cr, 0, 6.2832);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(W / 2 - cr - 7, H / 2); ctx.lineTo(W / 2 - cr + 1, H / 2);
+      ctx.moveTo(W / 2 + cr - 1, H / 2); ctx.lineTo(W / 2 + cr + 7, H / 2);
+      ctx.moveTo(W / 2, H / 2 - cr - 7); ctx.lineTo(W / 2, H / 2 - cr + 1);
+      ctx.moveTo(W / 2, H / 2 + cr - 1); ctx.lineTo(W / 2, H / 2 + cr + 7);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(W / 2 - 1, H / 2 - 1, 2, 2);
+    }
+
+    // ビネット
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.42)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------- メインループ ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.05, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- 検証用フック(UIと同じ関数を公開しているだけ) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start,
+    finish: finish,
+    shoot: shoot,
+    reset: toTitle,
+    version: 1
+  };
+
+  toTitle();
+})();
+</script>
+</body>
+</html>
