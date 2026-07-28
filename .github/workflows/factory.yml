@@ -295,16 +295,24 @@ jobs:
 
           GATE_PROMPT=$(cat scripts/gate-prompt.txt)
           if [ -z "$GATE_PROMPT" ]; then fail "scripts/gate-prompt.txt が空、または読み込めません。"; fi
+          if [ ! -s "$GATE_DIR/index.html" ]; then fail "ゲート用コピー $GATE_DIR/index.html が空です。判定不能は NO_PUBLISH 扱いで停止します。"; fi
+
+          # run #2 でゲート担当がサンドボックス内から index.html を読めず「判定不能 → NO_PUBLISH」になった。
+          # 対策として、判定対象の全文(上で UTF-8 検証したコピーと同一内容)を固定プロンプトの直後に添付し、
+          # ファイル読み取りツールの成否に依存せず判定できるようにする。判定基準の文面
+          # (scripts/gate-prompt.txt)と「1 行目 PUBLISH 完全一致のみ通過」の判定方法は一切変更しない。
+          GATE_INPUT="${GATE_PROMPT}"$'\n\n'"=== 判定対象 index.html(このディレクトリの index.html と同一内容・UTF-8 全文)ここから ==="$'\n'"$(cat "$GATE_DIR/index.html")"$'\n'"=== 判定対象 index.html ここまで ==="
 
           LAST_MSG="$LOG_DIR/gate-last-message.txt"
+          # codex の実行過程は tee でジョブログにも流す(判定の検分を artifact だけに依存させない)
           set +e
           codex exec \
             --cd "$GATE_DIR" \
             --sandbox read-only \
             --skip-git-repo-check \
             --output-last-message "$LAST_MSG" \
-            "$GATE_PROMPT" > "$LOG_DIR/gate-output.log" 2>&1
-          rc=$?
+            "$GATE_INPUT" 2>&1 | tee "$LOG_DIR/gate-output.log"
+          rc=${PIPESTATUS[0]}
           set -e
 
           if [ "$rc" -ne 0 ]; then
