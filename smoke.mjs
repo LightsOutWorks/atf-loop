@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 // smoke.mjs — index.html の機械検証(検証項目は CONSTRAINTS.md で 6 つに固定)
+// 使い方: node smoke.mjs [対象ディレクトリ]
+//   第1引数に作品ディレクトリ(例: works/seed-002)を指定すると、その中の index.html を検証する。
+//   省略時は従来どおり、このスクリプトと同じ階層(ルート作品)の index.html を検証する。
 //   ① index.html が存在する
 //   ② 外部通信・外部URL参照がない
 //   ③ script が構文エラーを起こさない
@@ -16,7 +19,8 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.join(root, 'index.html');
+const targetDir = process.argv[2] ? path.resolve(process.argv[2]) : root;
+const htmlPath = path.join(targetDir, 'index.html');
 
 const results = [];
 function record(no, name, ok, detail){
@@ -28,7 +32,7 @@ let html = null;
 {
   const ok = fs.existsSync(htmlPath);
   if (ok) html = fs.readFileSync(htmlPath, 'utf8');
-  record(1, 'index.htmlが存在する', ok, ok ? '' : 'index.html が見つからない');
+  record(1, 'index.htmlが存在する', ok, ok ? '' : 'index.html が見つからない: ' + htmlPath);
 }
 
 // ---------- ② 外部参照チェック ----------
@@ -275,7 +279,7 @@ let game = null, pump = null, el = null;
 
 // ---------- 結果出力 ----------
 const marks = ['①', '②', '③', '④', '⑤', '⑥'];
-console.log('=== smoke.mjs — index.html 機械検証 ===');
+console.log('=== smoke.mjs — ' + htmlPath + ' の機械検証 ===');
 let pass = 0;
 for (const r of results){
   const head = r.ok ? 'OK ' : 'NG ';
