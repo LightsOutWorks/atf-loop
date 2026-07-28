@@ -35,8 +35,6 @@ jobs:
     name: 生成 → スモーク → ゲート → 公開
     runs-on: ubuntu-latest
     timeout-minutes: 80
-    env:
-      LOG_DIR: ${{ runner.temp }}/factory-log
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,6 +52,10 @@ jobs:
           HAS_CODEX_AUTH: ${{ secrets.CODEX_AUTH_JSON != '' }}
         run: |
           set -euo pipefail
+          # runner コンテキストはジョブレベル env では使えないため、ログ置き場はここで確定し
+          # GITHUB_ENV 経由で後続の全ステップへ引き継ぐ(ワークスペース外 = integrity_check の対象外)
+          LOG_DIR="$RUNNER_TEMP/factory-log"
+          echo "LOG_DIR=$LOG_DIR" >> "$GITHUB_ENV"
           mkdir -p "$LOG_DIR"
 
           # 各ステップから source する共通関数(fail-closed 停止と整合性チェック)
@@ -381,7 +383,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf "$HOME/.codex"
-          if [ -n "${WORK_DIR:-}" ] && [ -d "${WORK_DIR:-}" ] && [ -d "$LOG_DIR" ]; then
+          if [ -n "${LOG_DIR:-}" ] && [ -d "${LOG_DIR:-}" ] && [ -n "${WORK_DIR:-}" ] && [ -d "${WORK_DIR:-}" ]; then
             mkdir -p "$LOG_DIR/work-snapshot"
             cp -a "$WORK_DIR/." "$LOG_DIR/work-snapshot/"
           fi
