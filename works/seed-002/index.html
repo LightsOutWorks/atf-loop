@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SIGNAL PURGE — 60秒ノイズ駆除トイ</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#030805; color:#cdffe0;
+    font-family:ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:none;
+  }
+  #scan{
+    position:fixed; inset:0; z-index:3; pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,20,10,.16) 3px
+    );
+    mix-blend-mode:multiply;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(2,8,5,.82);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 8px; font-size:clamp(26px,6.6vw,48px); letter-spacing:.12em;
+    color:#8dffb0; text-shadow:2px 0 0 rgba(255,88,96,.55), -2px 0 0 rgba(100,210,255,.5), 0 0 26px rgba(120,255,170,.35);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(22px,5.6vw,36px); letter-spacing:.18em;
+    color:#ffb14a; text-shadow:0 0 16px rgba(255,177,74,.6);
+  }
+  .sub{ margin:0 0 16px; opacity:.9; font-size:clamp(12px,3.2vw,15px); color:#a9ffc8; }
+  .help{
+    margin:0 0 20px; line-height:1.85; font-size:clamp(11px,3vw,13px);
+    color:#9fe8c0; opacity:.88;
+  }
+  .help b{ color:#ff8b93; }
+  .help i{ color:#7fd0ff; font-style:normal; }
+  .btn{
+    font:inherit; font-weight:700; font-size:clamp(15px,4vw,19px);
+    letter-spacing:.1em; color:#02160c; cursor:pointer;
+    background:linear-gradient(180deg,#a4ffc4,#3fd88a);
+    border:0; border-radius:6px; padding:13px 38px;
+    box-shadow:0 0 18px rgba(90,255,160,.5), inset 0 -3px 0 rgba(0,50,25,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-size:clamp(40px,10vw,74px); font-weight:800; line-height:1.1;
+    color:#8dffb0; text-shadow:0 0 22px rgba(120,255,170,.75);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 4px; color:#a9ffc8; opacity:.92; font-size:clamp(12px,3.2vw,15px); }
+  #bestLine{ margin:14px 0 0; font-size:12px; color:#7fd0ff; opacity:.85; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(13px,3.4vw,17px);
+    text-shadow:0 0 8px rgba(120,255,170,.5);
+  }
+  #hud .label{ font-size:.68em; opacity:.7; letter-spacing:.1em; margin-right:.4em; }
+  #timeEl{
+    font-size:clamp(18px,4.6vw,26px); color:#a4ffc4; font-variant-numeric:tabular-nums;
+  }
+  #timeEl.warn{ color:#ff6b74; text-shadow:0 0 12px rgba(255,107,116,.8); }
+  #comboEl{ color:#ffd27a; }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:42px; height:42px; border-radius:6px; border:1px solid rgba(140,255,190,.4);
+    background:rgba(6,20,12,.6); color:#8dffb0; font-size:16px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:10px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="scan"></div>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">COMBO</span><span id="comboEl">x1</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>SIGNAL PURGE</h1>
+  <p class="sub">60秒間、データトンネルに流れてくるノイズを駆除するトイ</p>
+  <p class="help">
+    PC:マウス移動で照準 / クリック・Space・Enter で駆除(矢印・WASDでも照準移動)<br>
+    スマホ:ドラッグで照準 / 短くタップで駆除<br>
+    <b>赤い棘ブロック=バグ</b>を駆除で加点・コンボ上昇 / <i>青い丸ブロック=正常パケット</i>は撃つと減点
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">ベストスコア: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>PURGE COMPLETE</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="サウンド切替">♪</button>
+<div class="tag">SIGNAL PURGE — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var comboEl = document.getElementById('comboEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- 画面サイズ ----------
+  var W = 960, H = 600, DPR = 1;
+  function resize(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(W * DPR));
+    canvas.height = Math.max(1, Math.round(H * DPR));
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- 定数・状態 ----------
+  var GAME_TIME = 60;
+  var FOV = 1.15;
+  var Z_FAR = 15, Z_NEAR = 0.85;
+  var MAX_COMBO_TIER = 5;
+  var TARGET_COUNT = 6;
+
+  var state = 'title';          // 'title' | 'play' | 'over'
+  var score = 0, best = 0, combo = 0, mult = 1;
+  var purged = 0, leaked = 0, mistakes = 0, misses = 0;
+  var timeLeft = GAME_TIME;
+  var tNow = 0, lastT = null;
+  var lastShot = -9, shakeT = -9, overAt = -9;
+  var focal = 420;
+
+  // ---------- 効果音(コード生成のみ) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  function blip(type, f0, f1, dur, vol, delay){
+    var t0 = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function sfx(kind){
+    if (muted || !audioCtx) return;
+    try{
+      if (kind === 'purge'){ blip('triangle', 720, 1200, 0.09, 0.13, 0); }
+      else if (kind === 'mistake'){ blip('sawtooth', 220, 90, 0.22, 0.13, 0); }
+      else if (kind === 'miss'){ blip('square', 180, 140, 0.06, 0.06, 0); }
+      else if (kind === 'start'){ blip('sine', 420, 840, 0.16, 0.13, 0); }
+      else if (kind === 'end'){ blip('sine', 600, 300, 0.32, 0.13, 0); blip('sine', 400, 200, 0.36, 0.09, 0.1); }
+    }catch(e){}
+  }
+  function toggleMute(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+    if (!muted) initAudio();
+  }
+  muteBtn.addEventListener('click', function(ev){ if (ev && ev.stopPropagation) ev.stopPropagation(); toggleMute(); });
+
+  // ---------- 投影(固定カメラ、対象がZ軸方向に接近) ----------
+  function project(x, y, z){
+    var s = focal / z;
+    return { x: W / 2 + x * s, y: H / 2 + y * s, s: s };
+  }
+
+  // ---------- ターゲット(バグ / 正常パケット) ----------
+  var targets = [];
+  function spawn(t){
+    t.type = Math.random() < 0.62 ? 'bug' : 'packet';
+    t.x = (Math.random() * 2 - 1) * 5.2;
+    t.y = (Math.random() * 2 - 1) * 2.7;
+    t.z = Z_FAR - Math.random() * 4;
+    t.r = t.type === 'bug' ? (0.55 + Math.random() * 0.3) : (0.45 + Math.random() * 0.25);
+    var dur = 3.2 + Math.random() * 2.4;
+    t.spd = (Z_FAR - Z_NEAR) / dur;
+    t.spin = (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 1.2);
+    t.ang = Math.random() * 6.28;
+    t.alive = true;
+  }
+  function makeTargets(){
+    targets = [];
+    for (var i = 0; i < TARGET_COUNT; i++){
+      var t = {};
+      spawn(t);
+      t.z = Z_FAR - Math.random() * (Z_FAR - Z_NEAR); // 初期配置は奥行きを分散
+      targets.push(t);
+    }
+  }
+  makeTargets();
+
+  function updateTargets(dt){
+    for (var i = 0; i < targets.length; i++){
+      var t = targets[i];
+      t.ang += t.spin * dt;
+      t.z -= t.spd * dt;
+      if (t.z <= Z_NEAR){
+        if (t.type === 'bug'){ leaked++; combo = 0; mult = 1; }
+        spawn(t);
+      }
+    }
+  }
+
+  // ---------- 照準(reticle) ----------
+  var rx = 480, ry = 300;
+  function clampReticle(){
+    if (rx < 0) rx = 0; if (rx > W) rx = W;
+    if (ry < 0) ry = 0; if (ry > H) ry = H;
+  }
+
+  // ---------- ヒットエフェクト ----------
+  var fxList = [];
+  function addFx(type, x, y, val, color){
+    fxList.push({ type: type, x: x, y: y, val: val, color: color, t0: tNow });
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    comboEl.textContent = 'x' + mult;
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- 状態遷移 ----------
+  function start(){
+    score = 0; combo = 0; mult = 1;
+    purged = 0; leaked = 0; mistakes = 0; misses = 0;
+    timeLeft = GAME_TIME;
+    state = 'play';
+    lastShot = -9;
+    rx = W / 2; ry = H / 2;
+    makeTargets();
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    resultDetail.textContent = '駆除 ' + purged + ' / 誤射 ' + mistakes + ' / 見逃し ' + leaked + '・ベスト ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function toTitle(){
+    state = 'title';
+    hide(hud); hide(overScreen); show(titleScreen);
+    if (best > 0){ bestTitle.textContent = String(best); show(bestLine); }
+  }
+  // 開始/再開の共通入口(PURGE COMPLETE 直後の誤タップを 0.6 秒だけ無視)
+  function startFromUi(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > 0.6){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+
+  // ---------- 駆除(shoot) ----------
+  function purgeAt(px, py){
+    if (state !== 'play') return;
+    if (tNow - lastShot < 0.08) return;
+    lastShot = tNow;
+    shakeT = tNow;
+    var bestHit = null, bestZ = 1e9, bestQ = null, bestSr = 0;
+    for (var i = 0; i < targets.length; i++){
+      var t = targets[i];
+      var q = project(t.x, t.y, t.z);
+      var sr = t.r * q.s;
+      var dx = q.x - px, dy = q.y - py;
+      if (Math.sqrt(dx * dx + dy * dy) <= sr + 10 && t.z < bestZ){
+        bestZ = t.z; bestHit = t; bestQ = q; bestSr = sr;
+      }
+    }
+    if (bestHit){
+      if (bestHit.type === 'bug'){
+        purged++;
+        combo++;
+        mult = Math.min(MAX_COMBO_TIER, 1 + Math.floor(combo / 5));
+        score += 2 * mult;
+        addFx('ring', bestQ.x, bestQ.y, bestSr, '#8dffb0');
+        addFx('text', bestQ.x, bestQ.y - bestSr * 0.7, '+' + (2 * mult), '#8dffb0');
+        sfx('purge');
+      } else {
+        mistakes++;
+        combo = 0; mult = 1;
+        score = Math.max(0, score - 3);
+        addFx('ring', bestQ.x, bestQ.y, bestSr, '#ff6b74');
+        addFx('text', bestQ.x, bestQ.y - bestSr * 0.7, '-3', '#ff6b74');
+        sfx('mistake');
+      }
+      spawn(bestHit);
+    } else {
+      misses++;
+      combo = 0; mult = 1;
+      addFx('text', px, py, 'MISS', '#7fd0ff');
+      sfx('miss');
+    }
+    updateHud();
+  }
+
+  // ---------- 入力: ポインタ ----------
+  var touchId = null, touchLX = 0, touchLY = 0, touchMoved = 0, touchT0 = 0;
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    if (e.pointerType === 'touch'){
+      if (touchId !== null) return;
+      touchId = e.pointerId;
+      touchLX = e.clientX; touchLY = e.clientY;
+      touchMoved = 0; touchT0 = tNow;
+      var rect0 = canvas.getBoundingClientRect();
+      rx = e.clientX - rect0.left; ry = e.clientY - rect0.top;
+      clampReticle();
+    } else {
+      var rect1 = canvas.getBoundingClientRect();
+      rx = e.clientX - rect1.left; ry = e.clientY - rect1.top;
+      clampReticle();
+      purgeAt(rx, ry);
+    }
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function(e){
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || W, h = rect.height || H;
+    if (e.pointerType === 'touch'){
+      if (e.pointerId !== touchId) return;
+      var dx = e.clientX - touchLX, dy = e.clientY - touchLY;
+      touchLX = e.clientX; touchLY = e.clientY;
+      touchMoved += Math.abs(dx) + Math.abs(dy);
+      rx += dx * (W / w); ry += dy * (H / h);
+      clampReticle();
+    } else {
+      rx = (e.clientX - rect.left) * (W / w);
+      ry = (e.clientY - rect.top) * (H / h);
+      clampReticle();
+    }
+  }, { passive: true });
+  function endTouch(e, canShoot){
+    if (e.pointerId !== touchId) return;
+    touchId = null;
+    if (canShoot && touchMoved < 14 && tNow - touchT0 < 0.35) purgeAt(rx, ry);
+  }
+  canvas.addEventListener('pointerup', function(e){
+    if (e.pointerType === 'touch') endTouch(e, true);
+  });
+  canvas.addEventListener('pointercancel', function(e){
+    if (e.pointerType === 'touch') endTouch(e, false);
+  });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- 入力: キーボード ----------
+  var keys = { l: false, r: false, u: false, d: false };
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') purgeAt(rx, ry); else startFromUi();
+    } else if (k === 'm' || k === 'M'){
+      toggleMute();
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ keys.l = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D'){ keys.r = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W'){ keys.u = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S'){ keys.d = true; if (e.preventDefault) e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function(e){
+    var k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = false;
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = false;
+    else if (k === 'ArrowUp' || k === 'w' || k === 'W') keys.u = false;
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') keys.d = false;
+  });
+
+  // ---------- 更新 ----------
+  function update(dt){
+    var ks = 620;
+    if (keys.l) rx -= ks * dt;
+    if (keys.r) rx += ks * dt;
+    if (keys.u) ry -= ks * dt;
+    if (keys.d) ry += ks * dt;
+    clampReticle();
+
+    updateTargets(dt);
+
+    if (state === 'play'){
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- 描画 ----------
+  function drawTunnel(){
+    var pulse = (tNow * 0.55) % 1;
+    for (var k = 0; k < 7; k++){
+      var d = (pulse + k / 7) % 1;
+      var sz = 30 + d * Math.max(W, H) * 0.9;
+      var alpha = (1 - d) * 0.35;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#5dffa0';
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(W / 2 - sz, H / 2 - sz * (H / W), sz * 2, sz * 2 * (H / W));
+    }
+    ctx.globalAlpha = 0.16;
+    ctx.strokeStyle = '#5dffa0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, H / 2); ctx.lineTo(0, 0);
+    ctx.moveTo(W / 2, H / 2); ctx.lineTo(W, 0);
+    ctx.moveTo(W / 2, H / 2); ctx.lineTo(0, H);
+    ctx.moveTo(W / 2, H / 2); ctx.lineTo(W, H);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTarget(t){
+    var q = project(t.x, t.y, t.z);
+    var sr = t.r * q.s;
+    if (sr < 0.5 || sr > Math.max(W, H) * 1.3) return;
+    if (q.x < -sr * 2 || q.x > W + sr * 2 || q.y < -sr * 2 || q.y > H + sr * 2) return;
+    ctx.save();
+    ctx.translate(q.x, q.y);
+    ctx.rotate(t.ang);
+    if (t.type === 'bug'){
+      ctx.fillStyle = '#ff5860';
+      ctx.beginPath();
+      var spikes = 6;
+      for (var i = 0; i < spikes; i++){
+        var a0 = (i / spikes) * 6.2832;
+        var a1 = ((i + 0.5) / spikes) * 6.2832;
+        var ox = Math.cos(a0) * sr, oy = Math.sin(a0) * sr;
+        var ix = Math.cos(a1) * sr * 0.45, iy = Math.sin(a1) * sr * 0.45;
+        if (i === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
+        ctx.lineTo(ix, iy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.5)';
+      ctx.lineWidth = Math.max(1, sr * 0.08);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#64c8ff';
+      ctx.beginPath();
+      ctx.arc(0, 0, sr, 0, 6.2832);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)';
+      ctx.lineWidth = Math.max(1, sr * 0.1);
+      ctx.beginPath();
+      ctx.arc(0, 0, sr * 0.55, 0, 6.2832);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function render(){
+    focal = (H / 2) / Math.tan(FOV / 2);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = '#030805';
+    ctx.fillRect(0, 0, W, H);
+
+    var shake = Math.max(0, 1 - (tNow - shakeT) / 0.12);
+    if (shake > 0){
+      ctx.translate((Math.random() - 0.5) * 5 * shake, (Math.random() - 0.5) * 5 * shake);
+    }
+
+    drawTunnel();
+
+    var drawList = targets.slice().sort(function(a, b){ return b.z - a.z; });
+    for (var i = 0; i < drawList.length; i++) drawTarget(drawList[i]);
+
+    for (var n = fxList.length - 1; n >= 0; n--){
+      var fx = fxList[n];
+      var age = tNow - fx.t0;
+      if (fx.type === 'ring'){
+        var kk = age / 0.3;
+        if (kk >= 1){ fxList.splice(n, 1); continue; }
+        ctx.globalAlpha = 1 - kk;
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 3 * (1 - kk) + 1;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.val * (0.5 + 1.6 * kk), 0, 6.2832);
+        ctx.stroke();
+      } else {
+        var kk2 = age / 0.6;
+        if (kk2 >= 1){ fxList.splice(n, 1); continue; }
+        ctx.globalAlpha = 1 - kk2;
+        ctx.fillStyle = fx.color;
+        ctx.font = '700 ' + Math.round(15 + 9 * (1 - kk2)) + 'px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(fx.val), fx.x, fx.y - 38 * kk2);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    if (state === 'play'){
+      var hoverType = null;
+      for (var j = 0; j < targets.length; j++){
+        var t = targets[j];
+        var q = project(t.x, t.y, t.z);
+        var sr = t.r * q.s;
+        var dx = q.x - rx, dy = q.y - ry;
+        if (Math.sqrt(dx * dx + dy * dy) <= sr + 10){ hoverType = t.type; break; }
+      }
+      var col = hoverType === 'bug' ? '#ff5860' : (hoverType === 'packet' ? '#64c8ff' : '#dffff0');
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2;
+      var cr = 11;
+      ctx.beginPath();
+      ctx.arc(rx, ry, cr, 0, 6.2832);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rx - cr - 6, ry); ctx.lineTo(rx - cr + 2, ry);
+      ctx.moveTo(rx + cr - 2, ry); ctx.lineTo(rx + cr + 6, ry);
+      ctx.moveTo(rx, ry - cr - 6); ctx.lineTo(rx, ry - cr + 2);
+      ctx.moveTo(rx, ry + cr - 2); ctx.lineTo(rx, ry + cr + 6);
+      ctx.stroke();
+    }
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.46)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------- メインループ ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.05, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- 検証用フック(UIと同じ関数を公開しているだけ) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start,
+    finish: finish,
+    purge: purgeAt,
+    reset: toTitle,
+    version: 1
+  };
+
+  toTitle();
+})();
+</script>
+</body>
+</html>
