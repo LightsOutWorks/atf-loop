@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>STRATA WARDEN — 60秒鉱脈鎮圧トイ</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#0a0613; color:#e8d9ff;
+    font-family:ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:crosshair;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(9,5,17,.86);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 10px; font-size:clamp(24px,6.2vw,42px); letter-spacing:.12em;
+    color:#d68cff; text-shadow:0 0 8px rgba(214,140,255,.65), 0 0 28px rgba(180,90,255,.35);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(20px,5.2vw,32px); letter-spacing:.15em;
+    color:#ffb454; text-shadow:0 0 16px rgba(255,180,84,.6);
+  }
+  .sub{ margin:0 0 14px; opacity:.92; font-size:clamp(12px,3.2vw,15px); color:#e0c8ff; }
+  .help{
+    margin:0 0 20px; line-height:1.85; font-size:clamp(11px,3vw,13px);
+    color:#dccdfb; opacity:.9; max-width:54ch;
+  }
+  .help b{ color:#ffb454; }
+  .help i{ color:#ff8fb0; font-style:normal; }
+  .btn{
+    font:inherit; font-weight:700; font-size:clamp(15px,4vw,19px);
+    letter-spacing:.1em; color:#1c0a2b; cursor:pointer;
+    background:linear-gradient(180deg,#e6b6ff,#b463ff);
+    border:0; border-radius:6px; padding:13px 38px;
+    box-shadow:0 0 18px rgba(180,90,255,.5), inset 0 -3px 0 rgba(50,10,80,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-size:clamp(38px,10vw,68px); font-weight:800; line-height:1.1;
+    color:#ffb454; text-shadow:0 0 22px rgba(255,180,84,.75);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 4px; color:#dccdfb; opacity:.92; font-size:clamp(12px,3.2vw,15px); }
+  #bestLine{ margin:14px 0 0; font-size:12px; color:#c9a8ff; opacity:.85; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(13px,3.4vw,17px);
+    text-shadow:0 0 8px rgba(180,90,255,.5);
+  }
+  #hud .label{ font-size:.68em; opacity:.7; letter-spacing:.1em; margin-right:.4em; }
+  #timeEl{
+    font-size:clamp(18px,4.6vw,26px); color:#f2e6ff; font-variant-numeric:tabular-nums;
+  }
+  #timeEl.warn{ color:#ff5470; text-shadow:0 0 12px rgba(255,84,112,.8); }
+  #streakEl{ color:#ffb454; }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:42px; height:42px; border-radius:6px; border:1px solid rgba(214,140,255,.4);
+    background:rgba(20,8,30,.6); color:#d68cff; font-size:16px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:10px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">STREAK</span><span id="streakEl">0</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>STRATA WARDEN</h1>
+  <p class="sub">60秒間、坑道の結晶脈が暴走(RUPTURE)する前に鎮めるトイ</p>
+  <p class="help">
+    PC:マウスで暴走中の結晶脈をクリックして鎮める<br>
+    スマホ:結晶脈を直接タップして鎮める<br>
+    キーボード:矢印・WASD でカーソルを移動、Space・Enter で鎮める<br>
+    輪が広がり<b>安定帯(点線の輪の間)</b>に入った瞬間に鎮めると STABLE。早すぎる干渉は空振り、安定帯を過ぎても輪が満ちる前なら STRAINED で弱く鎮まる。<i>満ちるまで放置</i>すると RUPTURE してストリークが途切れる
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">ベスト記録: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>CONTAINMENT COMPLETE</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="サウンド切替">♪</button>
+<div class="tag">STRATA WARDEN — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var streakEl = document.getElementById('streakEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- 画面サイズ ----------
+  var W = 960, H = 600, DPR = 1;
+  function fit(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  // ---------- 定数 ----------
+  var GAME_TIME = 60;
+  var COLS = 3, ROWS = 2;
+  var SLOT_COUNT = COLS * ROWS;
+  var VEIN_LIFE = 3.0;
+  var BAND_START = 0.55;
+  var BAND_END = 0.82;
+  var REPLAY_GUARD = 0.6;
+  var HIT_PAD = 14;
+
+  function rand(a, b){ return a + Math.random() * (b - a); }
+  function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+
+  // ---------- 岩肌(初期化時に一度だけ生成) ----------
+  var cracks = [];
+  (function initCracks(){
+    for (var i = 0; i < 26; i++){
+      cracks.push({
+        x: Math.random(), y: Math.random(),
+        len: rand(0.03, 0.1), ang: rand(0, 6.2832), seed: Math.random() * 6.28
+      });
+    }
+  })();
+  var dust = [];
+  (function initDust(){
+    for (var i = 0; i < 40; i++){
+      dust.push({ x: Math.random(), y: Math.random(), r: rand(0.6, 1.6), sp: rand(0.006, 0.02), seed: Math.random() * 6.28 });
+    }
+  })();
+
+  // ---------- スロット(結晶脈の固定位置) ----------
+  var slotShapes = [];
+  (function initSlotShapes(){
+    for (var i = 0; i < SLOT_COUNT; i++){
+      var pts = [];
+      var spikes = 7;
+      for (var k = 0; k < spikes; k++){
+        pts.push({ a: (k / spikes) * 6.2832 + rand(-0.2, 0.2), f: rand(0.72, 1.05) });
+      }
+      slotShapes.push(pts);
+    }
+  })();
+  function slotPos(i){
+    var col = i % COLS, row = Math.floor(i / COLS);
+    var left = W * 0.12, right = W * 0.88;
+    var top = H * 0.3, bottom = H * 0.88;
+    var cw = (right - left) / COLS, ch = (bottom - top) / ROWS;
+    var r = Math.min(cw, ch) * 0.34;
+    return { x: left + cw * (col + 0.5), y: top + ch * (row + 0.5), r: r };
+  }
+
+  // ---------- 状態 ----------
+  var state = 'title';
+  var score = 0, combo = 0, maxCombo = 0, best = 0;
+  var stableCount = 0, strainedCount = 0, ruptureCount = 0, missCount = 0;
+  var timeLeft = GAME_TIME;
+  var overAt = -10;
+  var tNow = 0, lastT = null;
+
+  var slots = new Array(SLOT_COUNT).fill(null);
+  var nextSpawnAt = 0;
+  var cursorIndex = 0;
+  var fxList = [];
+  var shakeUntil = -10;
+
+  // ---------- 音(生成音のみ・存在チェック+try/catch) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e){ audioCtx = null; }
+  }
+  function playTone(freq, dur, type, gain){
+    if (!audioCtx || muted) return;
+    try {
+      var t0 = audioCtx.currentTime;
+      var osc = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain || 0.18, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.02);
+    } catch (e){ /* 無音環境では何もしない */ }
+  }
+  function sfx(name){
+    if (name === 'stable') playTone(760, 0.15, 'triangle', 0.2);
+    else if (name === 'strained') playTone(420, 0.14, 'sine', 0.15);
+    else if (name === 'early') playTone(300, 0.09, 'square', 0.08);
+    else if (name === 'miss') playTone(200, 0.09, 'square', 0.07);
+    else if (name === 'rupture') playTone(120, 0.26, 'sawtooth', 0.14);
+    else if (name === 'start') playTone(660, 0.14, 'sine', 0.18);
+    else if (name === 'end') playTone(340, 0.3, 'triangle', 0.18);
+  }
+  muteBtn.addEventListener('click', function(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+  });
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    streakEl.textContent = String(combo);
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- 結晶脈(vein) ----------
+  function energyOf(v){ return (tNow - v.bornT) / VEIN_LIFE; }
+
+  function updateVeins(){
+    if (state !== 'play') return;
+    var elapsed = GAME_TIME - timeLeft;
+    var active = 0;
+    for (var i = 0; i < SLOT_COUNT; i++) if (slots[i]) active++;
+    var maxActive = elapsed < 15 ? 1 : (elapsed < 35 ? 2 : 3);
+
+    if (tNow >= nextSpawnAt && active < maxActive){
+      var free = [];
+      for (var j = 0; j < SLOT_COUNT; j++) if (!slots[j]) free.push(j);
+      if (free.length){
+        var pick = free[Math.floor(Math.random() * free.length)];
+        slots[pick] = { bornT: tNow };
+      }
+      var k = clamp(elapsed / GAME_TIME, 0, 1);
+      var spMin = 1.15 - 0.6 * k;
+      var spMax = 1.85 - 0.75 * k;
+      nextSpawnAt = tNow + rand(spMin, spMax);
+    }
+
+    for (var s = 0; s < SLOT_COUNT; s++){
+      var v = slots[s];
+      if (v && energyOf(v) >= 1){
+        slots[s] = null;
+        ruptureCount++;
+        combo = 0;
+        shakeUntil = tNow + 0.22;
+        var p = slotPos(s);
+        addFx(p.x, p.y, 'RUPTURE', '#ff5470');
+        sfx('rupture');
+        updateHud();
+      }
+    }
+  }
+
+  function addFx(x, y, text, color){
+    fxList.push({ x: x, y: y, text: text, color: color, t0: tNow });
+  }
+
+  function tryStabilize(index){
+    if (state !== 'play') return;
+    if (index < 0 || index >= SLOT_COUNT) return;
+    var v = slots[index];
+    var p = slotPos(index);
+    if (!v){
+      missCount++;
+      combo = 0;
+      addFx(p.x, p.y, 'MISS', '#8ea0c9');
+      sfx('miss');
+      updateHud();
+      return;
+    }
+    var e = energyOf(v);
+    slots[index] = null;
+    if (e < BAND_START){
+      missCount++;
+      combo = 0;
+      addFx(p.x, p.y, 'TOO EARLY', '#8ea0c9');
+      sfx('early');
+    } else if (e <= BAND_END){
+      combo++;
+      if (combo > maxCombo) maxCombo = combo;
+      var pts = 10 + Math.min(6, combo - 1);
+      stableCount++;
+      score += pts;
+      addFx(p.x, p.y, 'STABLE +' + pts, '#ffd27a');
+      sfx('stable');
+    } else {
+      strainedCount++;
+      combo = 0;
+      score += 4;
+      addFx(p.x, p.y, 'STRAINED +4', '#ff8fb0');
+      sfx('strained');
+    }
+    updateHud();
+  }
+
+  function moveCursor(dCol, dRow){
+    var col = cursorIndex % COLS, row = Math.floor(cursorIndex / COLS);
+    col = ((col + dCol) % COLS + COLS) % COLS;
+    row = ((row + dRow) % ROWS + ROWS) % ROWS;
+    cursorIndex = row * COLS + col;
+  }
+
+  // ---------- 状態遷移 ----------
+  function start(){
+    score = 0; combo = 0; maxCombo = 0; timeLeft = GAME_TIME;
+    stableCount = 0; strainedCount = 0; ruptureCount = 0; missCount = 0;
+    slots = new Array(SLOT_COUNT).fill(null);
+    nextSpawnAt = tNow + 0.3;
+    cursorIndex = 0;
+    fxList = [];
+    shakeUntil = -10;
+    state = 'play';
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    initAudio();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    resultDetail.textContent = 'STABLE ' + stableCount + ' / STRAINED ' + strainedCount +
+      ' / 空振り ' + missCount + ' / RUPTURE ' + ruptureCount + '・最大ストリーク ' + maxCombo + '・ベスト ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function toTitle(){
+    state = 'title';
+    hide(hud); hide(overScreen); show(titleScreen);
+    if (best > 0){ bestTitle.textContent = String(best); show(bestLine); }
+  }
+  function attemptStart(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > REPLAY_GUARD){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); attemptStart(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); attemptStart(); });
+
+  // ---------- 入力: ポインタ(グリッド上の結晶脈を直接クリック/タップ) ----------
+  function eventToCanvasXY(e){
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || W, h = rect.height || H;
+    return {
+      x: (e.clientX - rect.left) * (W / w),
+      y: (e.clientY - rect.top) * (H / h)
+    };
+  }
+  function slotAt(px, py){
+    var bestI = -1, bestD = 1e9;
+    for (var i = 0; i < SLOT_COUNT; i++){
+      var p = slotPos(i);
+      var dx = p.x - px, dy = p.y - py;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= p.r + HIT_PAD && d < bestD){ bestD = d; bestI = i; }
+    }
+    return bestI;
+  }
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    if (state !== 'play') return;
+    var p = eventToCanvasXY(e);
+    var idx = slotAt(p.x, p.y);
+    if (idx >= 0){
+      cursorIndex = idx;
+      tryStabilize(idx);
+    }
+  }, { passive: false });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- 入力: キーボード(カーソル移動→確定) ----------
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'd' || k === 'D'){
+      if (e.preventDefault) e.preventDefault();
+      moveCursor(1, 0);
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){
+      if (e.preventDefault) e.preventDefault();
+      moveCursor(-1, 0);
+    } else if (k === 'ArrowUp' || k === 'w' || k === 'W'){
+      if (e.preventDefault) e.preventDefault();
+      moveCursor(0, -1);
+    } else if (k === 'ArrowDown' || k === 's' || k === 'S'){
+      if (e.preventDefault) e.preventDefault();
+      moveCursor(0, 1);
+    } else if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') tryStabilize(cursorIndex);
+      else attemptStart();
+    }
+  });
+
+  // ---------- 更新 ----------
+  function update(dt){
+    updateVeins();
+    if (state === 'play'){
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- 描画 ----------
+  function drawBackground(){
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#120a1e');
+    g.addColorStop(0.55, '#0a0613');
+    g.addColorStop(1, '#05030a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(150,110,200,.12)';
+    ctx.lineWidth = 1.2;
+    for (var i = 0; i < cracks.length; i++){
+      var c = cracks[i];
+      var cx = c.x * W, cy = c.y * H;
+      var l = c.len * Math.max(W, H);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(c.ang) * l, cy + Math.sin(c.ang) * l);
+      ctx.stroke();
+    }
+
+    for (var d = 0; d < dust.length; d++){
+      var p = dust[d];
+      var yy = (p.y - (tNow * p.sp) % 1 + 1) % 1;
+      var tw = 0.4 + 0.4 * Math.sin(tNow * 1.4 + p.seed);
+      ctx.globalAlpha = 0.15 + 0.3 * tw;
+      ctx.fillStyle = '#c9a8ff';
+      ctx.beginPath();
+      ctx.arc(p.x * W, yy * H, p.r, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCrystalOutline(x, y, r, pts){
+    ctx.beginPath();
+    for (var k = 0; k < pts.length; k++){
+      var pt = pts[k];
+      var rr = r * pt.f;
+      var px = x + Math.cos(pt.a) * rr, py = y + Math.sin(pt.a) * rr;
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  function drawSlot(i){
+    var p = slotPos(i);
+    var v = slots[i];
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.strokeStyle = 'rgba(180,140,230,.35)';
+    ctx.lineWidth = 1.4;
+    drawCrystalOutline(0, 0, p.r, slotShapes[i]);
+    ctx.stroke();
+
+    ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = 'rgba(255,180,84,.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(0, 0, p.r * BAND_START, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, p.r * BAND_END, 0, 6.2832); ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (v){
+      var e = clamp(energyOf(v), 0, 1.15);
+      var inBand = e >= BAND_START && e <= BAND_END;
+      var over = e > BAND_END;
+      var col = inBand ? '#ffd27a' : (over ? '#ff5470' : '#b98cff');
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(0, 0, 3 + p.r * Math.min(1, e), 0, 6.2832);
+      ctx.globalAlpha = 0.14;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = inBand ? 3 : 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(2, p.r * Math.min(1, e)), 0, 6.2832);
+      ctx.stroke();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, 6.2832);
+      ctx.fill();
+    }
+
+    if (state === 'play' && i === cursorIndex){
+      ctx.strokeStyle = '#8ecbff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r + 12, 0, 6.2832);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
+  function render(){
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var shakeT = shakeUntil - tNow;
+    var sx = 0, sy = 0;
+    if (shakeT > 0){
+      sx = (Math.random() - 0.5) * 6 * (shakeT / 0.22);
+      sy = (Math.random() - 0.5) * 6 * (shakeT / 0.22);
+    }
+    ctx.save();
+    ctx.translate(sx, sy);
+    drawBackground();
+
+    for (var i = 0; i < SLOT_COUNT; i++) drawSlot(i);
+
+    for (var n = fxList.length - 1; n >= 0; n--){
+      var fx = fxList[n];
+      var age = tNow - fx.t0;
+      var dur = 0.6;
+      if (age >= dur){ fxList.splice(n, 1); continue; }
+      ctx.globalAlpha = 1 - age / dur;
+      ctx.fillStyle = fx.color;
+      ctx.font = '700 14px ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(fx.text, fx.x, fx.y - 28 * (age / dur));
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.46)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------- メインループ ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.05, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- 検証用フック(UIと同じ関数を公開しているだけ) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start,
+    finish: finish,
+    stabilize: tryStabilize,
+    reset: toTitle,
+    version: 1
+  };
+
+  toTitle();
+})();
+</script>
+</body>
+</html>
