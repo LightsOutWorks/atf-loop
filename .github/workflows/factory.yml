@@ -8,6 +8,10 @@
 #   → 公開内容ゲート(Codex CLI。scripts/gate-prompt.txt の固定プロンプトで codex exec を 1 回だけ実行)
 #   → 公開(判定 1 行目が PUBLISH の場合のみ main へ commit & push。GitHub Pages が自動再デプロイ)
 #
+# カナリア実行: workflow_dispatch の入力 dry_run=true で起動すると、生成→スモーク→整合性→ゲート→
+#   ローカル commit までを本番と同一経路で実施し、main への push(公開)だけをスキップする。
+#   生成物とゲート判定は job summary と artifact(work-snapshot/)で確認できる。schedule 起動は常に通常実行。
+#
 # fail-closed 原則(成功偽装の禁止):
 #   - どの段階でも失敗・判定不能なら公開せず停止し、理由を job summary と artifact に記録する
 #   - スモーク・ゲートの無効化/削除/期待値改変で見かけ上通すことは禁止。実行中に追跡ファイル
@@ -19,9 +23,15 @@
 #   - CODEX_AUTH_JSON         … ゲート担当(Codex CLI)の認証。ログイン済み端末の ~/.codex/auth.json の中身
 
 name: factory
+run-name: ${{ inputs.dry_run && 'factory(カナリア・公開なし)' || 'factory' }}
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'カナリア実行(生成→スモーク→整合性→ゲートまで実施し、main への公開だけを行わない)'
+        type: boolean
+        default: false
   schedule:
     # 毎週土曜 10:00 JST。GitHub Actions の cron は UTC 基準のため 9 時間戻して土曜 01:00 UTC
     # (同日内の換算なので曜日ずれなし。POSIX cron の曜日 6 = 土曜)
@@ -54,6 +64,7 @@ jobs:
         env:
           HAS_CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
           HAS_CODEX_AUTH: ${{ secrets.CODEX_AUTH_JSON != '' }}
+          DRY_RUN: ${{ inputs.dry_run == true }}
         run: |
           set -euo pipefail
           # runner コンテキストはジョブレベル env では使えないため、ログ置き場はここで確定し
@@ -135,13 +146,20 @@ jobs:
             echo "# 🏭 factory"
             echo ""
             echo "- 対象作品ディレクトリ: \`$WORK_DIR\`"
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "- 実行モード: 🐤 カナリア(main への公開なし)"
+            else
+              echo "- 実行モード: 通常(PUBLISH 時に main へ公開)"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
           echo "対象作品ディレクトリ: $WORK_DIR"
 
       - name: CLI インストール(Claude Code / Codex)
         run: |
           set -euo pipefail
-          npm install -g @anthropic-ai/claude-code @openai/codex
+          # CLI は「最後に成功した run #9」(2026-07-29, seed-006 公開)で実績のある版に完全固定する。
+          # 目的は npm 最新版の自動流入を止めること。版数の変更は PR を通して行うこと。
+          npm install -g @anthropic-ai/claude-code@2.1.220 @openai/codex@0.146.0
           echo "claude: $(claude --version)"
           echo "codex: $(codex --version)"
 
@@ -343,7 +361,9 @@ jobs:
             fail "ゲート判定の 1 行目が PUBLISH ではないため、NO_PUBLISH 扱いで停止します。1 行目: ${FIRST_LINE}" "$LAST_MSG"
           fi
 
-      - name: 公開(main へ commit & push)
+      - name: 公開(main へ commit & push。カナリア時は push なし)
+        env:
+          DRY_RUN: ${{ inputs.dry_run == true }}
         run: |
           set -euo pipefail
           STEP_LABEL="公開"
@@ -361,6 +381,21 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$WORK_DIR"
           git commit -m "works: ${WORK_NAME}「${TITLE}」を公開 (gate: ${GATE_VERDICT})"
+
+          # カナリア実行: ローカル commit までは本番と同一経路。main への push だけをスキップする
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            sha=$(git rev-parse HEAD)
+            {
+              echo "## 🐤 カナリア完走(公開はスキップ)"
+              echo ""
+              echo "- 作品: ${WORK_NAME}「${TITLE}」"
+              echo "- ゲート判定: ${GATE_VERDICT}"
+              echo "- ローカル commit: \`${sha}\`(push していないため main・GitHub Pages には反映されない)"
+              echo "- 生成物は artifact の \`work-snapshot/\` で確認できます。"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "カナリア実行のため main への push をスキップしました(ローカル commit: $sha)。"
+            exit 0
+          fi
 
           pushed=false
           for i in 1 2 3 4; do
