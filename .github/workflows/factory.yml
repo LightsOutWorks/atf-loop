@@ -382,8 +382,10 @@ jobs:
           git add -- "$WORK_DIR"
           git commit -m "works: ${WORK_NAME}「${TITLE}」を公開 (gate: ${GATE_VERDICT})"
 
-          # カナリア実行: ローカル commit までは本番と同一経路。main への push だけをスキップする
-          if [ "${DRY_RUN:-false}" = "true" ]; then
+          # カナリア実行: ローカル commit までは本番と同一経路。main への push だけをスキップする。
+          # DRY_RUN が未設定なら公開可否を判定できないため停止する(公開側へ倒さない = fail-closed)
+          : "${DRY_RUN:?DRY_RUN が未設定です(fail-closed: 公開可否を判定できないため停止)}"
+          if [ "$DRY_RUN" = "true" ]; then
             sha=$(git rev-parse HEAD)
             {
               echo "## 🐤 カナリア完走(公開はスキップ)"
