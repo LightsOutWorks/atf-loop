@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>FROST HARPOON</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#030b12; color:#eafeff;
+    font-family:sans-serif;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:crosshair;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(2,8,13,.80);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 6px; font-size:clamp(28px,6.6vw,50px); letter-spacing:.1em;
+    color:#8fe9ff; text-shadow:0 0 18px rgba(143,233,255,.7), 0 0 44px rgba(60,180,220,.35);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(24px,6vw,40px); letter-spacing:.16em;
+    color:#eafeff; text-shadow:0 0 16px rgba(143,233,255,.6);
+  }
+  .sub{ margin:0 0 18px; opacity:.92; font-size:clamp(13px,3.4vw,16px); }
+  .help{
+    margin:0 0 22px; line-height:1.9; font-size:clamp(12px,3.2vw,14px);
+    color:#cdf3ff; opacity:.85;
+  }
+  .btn{
+    font-family:sans-serif; font-weight:700; font-size:clamp(16px,4.2vw,20px);
+    letter-spacing:.08em; color:#04262b; cursor:pointer;
+    background:linear-gradient(180deg,#c9f6ff,#4fd0e0);
+    border:0; border-radius:999px; padding:14px 40px;
+    box-shadow:0 0 22px rgba(90,210,230,.5), inset 0 -3px 0 rgba(0,40,45,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-family:monospace; font-size:clamp(44px,11vw,84px); font-weight:700; line-height:1.1;
+    color:#8fe9ff; text-shadow:0 0 24px rgba(143,233,255,.8);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 24px; color:#cdf3ff; opacity:.9; font-size:clamp(13px,3.4vw,16px); }
+  #bestLine{ margin:14px 0 0; font-size:13px; color:#a9e6f2; opacity:.8; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(14px,3.6vw,18px);
+    text-shadow:0 0 10px rgba(120,210,235,.55);
+  }
+  #hud .label{ font-size:.72em; opacity:.7; letter-spacing:.12em; margin-right:.4em; }
+  #timeEl{
+    font-family:monospace; font-size:clamp(20px,5vw,28px); color:#cdf3ff;
+  }
+  #timeEl.warn{ color:#ff6a5a; text-shadow:0 0 12px rgba(255,106,90,.8); }
+  #scoreEl, #comboEl{ font-family:monospace; }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:44px; height:44px; border-radius:50%; border:1px solid rgba(140,220,240,.4);
+    background:rgba(6,16,22,.6); color:#8fe9ff; font-family:sans-serif; font-size:18px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:11px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">COMBO</span><span id="comboEl">x1</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>FROST HARPOON</h1>
+  <p class="sub">A 60-second harpoon-turret toy inside a frozen cavern</p>
+  <p class="help">
+    Mouse: move to aim, click to fire<br>
+    Touch: tap where you want to fire<br>
+    Keyboard: Left/Right or A/D to rotate the turret, Space or Enter to fire<br>
+    The harpoon flies in a straight line and can pierce through more than one vapor wisp — lead your shot to chain hits for bonus points.
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">Best score: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>CAVE SECURED</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="toggle sound">&#9834;</button>
+<div class="tag">FROST HARPOON — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var comboEl = document.getElementById('comboEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- screen size ----------
+  var W = 960, H = 600, DPR = 1;
+  function resize(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(W * DPR));
+    canvas.height = Math.max(1, Math.round(H * DPR));
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- constants ----------
+  var GAME_TIME = 60;
+  var REPLAY_GUARD = 0.6;
+  var HARPOON_SPEED = 980;
+  var HARPOON_MAX_LIFE = 1.3;
+  var HIT_RADIUS = 24;
+  var RELOAD_TIME = 0.22;
+  var AIM_LIMIT = 1.35;
+  var AIM_ROT_SPEED = 2.6;
+  var WISP_MIN_SPEED = 55, WISP_MAX_SPEED = 130;
+  var MAX_WISPS = 7;
+  var SPAWN_MIN = 0.35, SPAWN_MAX = 0.75;
+  var BASE_POINTS = 10, CHAIN_BONUS = 6;
+  var COMBO_STEP = 4, COMBO_MAX = 5;
+  var LAUNCH_OFFSET_Y = 56;
+
+  // ---------- state ----------
+  var state = 'title';           // 'title' | 'play' | 'over'
+  var score = 0, best = 0;
+  var timeLeft = GAME_TIME;
+  var streak = 0, multiplier = 1;
+  var hitShots = 0, chainShots = 0, missShots = 0, leakCount = 0;
+  var tNow = 0, lastT = null, overAt = -9;
+
+  var wisps = [];
+  var spawnTimer = 0;
+
+  var harpoons = [];
+  var aimAngle = 0;
+  var reloadUntil = -9;
+  var muzzleFlashUntil = -9;
+
+  // ---------- sound (code-generated only) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  function blip(type, f0, f1, dur, vol, delay){
+    var t0 = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function sfx(kind){
+    if (muted || !audioCtx) return;
+    try{
+      if (kind === 'fire'){ blip('square', 520, 780, 0.06, 0.08, 0); }
+      else if (kind === 'hit'){ blip('triangle', 640, 1000, 0.09, 0.14, 0); }
+      else if (kind === 'chain'){ blip('triangle', 900, 1500, 0.10, 0.15, 0); blip('triangle', 1200, 1900, 0.10, 0.10, 0.05); }
+      else if (kind === 'miss'){ blip('sawtooth', 200, 90, 0.13, 0.07, 0); }
+      else if (kind === 'start'){ blip('sine', 440, 860, 0.18, 0.14, 0); }
+      else if (kind === 'end'){ blip('sine', 620, 320, 0.35, 0.14, 0); blip('sine', 400, 200, 0.4, 0.10, 0.12); }
+    }catch(e){}
+  }
+  function toggleMute(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+    if (!muted) initAudio();
+  }
+  muteBtn.addEventListener('click', function(ev){ if (ev && ev.stopPropagation) ev.stopPropagation(); toggleMute(); });
+
+  // ---------- geometry ----------
+  function launchX(){ return W / 2; }
+  function launchY(){ return H - LAUNCH_OFFSET_Y; }
+  function aimDir(){ return { x: Math.sin(aimAngle), y: -Math.cos(aimAngle) }; }
+  function clampAim(a){
+    if (a < -AIM_LIMIT) return -AIM_LIMIT;
+    if (a > AIM_LIMIT) return AIM_LIMIT;
+    return a;
+  }
+
+  // ---------- wisps ----------
+  function spawnWisp(){
+    var fromLeft = Math.random() < 0.5;
+    var y = H * 0.10 + Math.random() * (H * 0.60);
+    var speed = WISP_MIN_SPEED + Math.random() * (WISP_MAX_SPEED - WISP_MIN_SPEED);
+    var vy = (Math.random() - 0.5) * 30;
+    wisps.push({
+      x: fromLeft ? -24 : W + 24,
+      y: y,
+      vx: fromLeft ? speed : -speed,
+      vy: vy,
+      r: 11 + Math.random() * 5,
+      phase: Math.random() * 6.2832
+    });
+  }
+  function updateWisps(dt){
+    spawnTimer -= dt;
+    if (spawnTimer <= 0 && wisps.length < MAX_WISPS){
+      spawnWisp();
+      spawnTimer = SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+    }
+    for (var i = wisps.length - 1; i >= 0; i--){
+      var wsp = wisps[i];
+      wsp.x += wsp.vx * dt;
+      wsp.y += wsp.vy * dt;
+      if (wsp.y < H * 0.06 || wsp.y > H * 0.82){ wsp.vy *= -1; }
+      if (wsp.x < -40 || wsp.x > W + 40){
+        wisps.splice(i, 1);
+        leakCount++;
+      }
+    }
+  }
+
+  // ---------- combo / scoring ----------
+  function registerShotResult(chainCount){
+    if (chainCount <= 0){
+      missShots++;
+      streak = 0; multiplier = 1;
+      sfx('miss');
+      return;
+    }
+    hitShots++;
+    if (chainCount >= 2){ chainShots++; sfx('chain'); } else { sfx('hit'); }
+    var gained = (BASE_POINTS + (chainCount - 1) * CHAIN_BONUS) * multiplier;
+    score += gained;
+    streak++;
+    if (streak % COMBO_STEP === 0 && multiplier < COMBO_MAX) multiplier++;
+    updateHud();
+  }
+
+  // ---------- firing ----------
+  function fire(){
+    if (state !== 'play') return;
+    if (tNow < reloadUntil) return;
+    var dir = aimDir();
+    harpoons.push({
+      x: launchX(), y: launchY(),
+      dx: dir.x * HARPOON_SPEED, dy: dir.y * HARPOON_SPEED,
+      bornAt: tNow, chainCount: 0, hitSet: []
+    });
+    reloadUntil = tNow + RELOAD_TIME;
+    muzzleFlashUntil = tNow + 0.08;
+    sfx('fire');
+  }
+  function aimAt(px, py){
+    var a = Math.atan2(px - launchX(), -(py - launchY()));
+    aimAngle = clampAim(a);
+  }
+
+  function updateHarpoons(dt){
+    for (var i = harpoons.length - 1; i >= 0; i--){
+      var h = harpoons[i];
+      h.x += h.dx * dt;
+      h.y += h.dy * dt;
+      for (var j = wisps.length - 1; j >= 0; j--){
+        var wsp = wisps[j];
+        if (h.hitSet.indexOf(wsp) !== -1) continue;
+        var d = Math.hypot(wsp.x - h.x, wsp.y - h.y);
+        if (d <= HIT_RADIUS + wsp.r){
+          h.hitSet.push(wsp);
+          h.chainCount++;
+          wisps.splice(j, 1);
+        }
+      }
+      var expired = (tNow - h.bornAt) > HARPOON_MAX_LIFE;
+      var outOfBounds = h.x < -30 || h.x > W + 30 || h.y < -30 || h.y > H + 30;
+      if (expired || outOfBounds){
+        registerShotResult(h.chainCount);
+        harpoons.splice(i, 1);
+      }
+    }
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    comboEl.textContent = 'x' + multiplier;
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- state transitions ----------
+  function start(){
+    score = 0; streak = 0; multiplier = 1;
+    hitShots = 0; chainShots = 0; missShots = 0; leakCount = 0;
+    timeLeft = GAME_TIME;
+    wisps = [];
+    spawnTimer = 0.25;
+    harpoons = [];
+    aimAngle = 0;
+    reloadUntil = -9; muzzleFlashUntil = -9;
+    state = 'play';
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    resultDetail.textContent = 'HIT ' + hitShots + ' / CHAIN ' + chainShots + ' / MISS ' + missShots + ' / LEAK ' + leakCount + ' — best ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function startFromUi(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > REPLAY_GUARD){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+
+  // ---------- pointer input ----------
+  function relPos(e){
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || W, h = rect.height || H;
+    var x = (e.clientX - rect.left) / w * W;
+    var y = (e.clientY - rect.top) / h * H;
+    if (x < 0) x = 0; if (x > W) x = W;
+    if (y < 0) y = 0; if (y > H) y = H;
+    return { x: x, y: y };
+  }
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    var p = relPos(e);
+    aimAt(p.x, p.y);
+    fire();
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function(e){
+    if (state !== 'play') return;
+    var p = relPos(e);
+    aimAt(p.x, p.y);
+  }, { passive: true });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- keyboard input ----------
+  var keys = { l: false, r: false };
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') fire(); else startFromUi();
+    } else if (k === 'm' || k === 'M'){
+      toggleMute();
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ keys.l = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D'){ keys.r = true; if (e.preventDefault) e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function(e){
+    var k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = false;
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = false;
+  });
+
+  // ---------- update ----------
+  function update(dt){
+    if (state === 'play'){
+      if (keys.l) aimAngle = clampAim(aimAngle - AIM_ROT_SPEED * dt);
+      if (keys.r) aimAngle = clampAim(aimAngle + AIM_ROT_SPEED * dt);
+
+      updateWisps(dt);
+      updateHarpoons(dt);
+
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- render ----------
+  function render(){
+    ctx.clearRect(0, 0, W, H);
+
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#01060a');
+    sky.addColorStop(0.55, '#041521');
+    sky.addColorStop(1, '#030b12');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // icicles (decorative)
+    ctx.fillStyle = 'rgba(150,220,240,0.14)';
+    for (var i = 0; i < 9; i++){
+      var ix = (i + 0.5) * (W / 9);
+      var ih = 30 + ((i * 37) % 60);
+      ctx.beginPath();
+      ctx.moveTo(ix - 16, 0);
+      ctx.lineTo(ix + 16, 0);
+      ctx.lineTo(ix, ih);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // drifting frost particles (decorative)
+    ctx.fillStyle = 'rgba(200,240,255,0.12)';
+    for (var p = 0; p < 24; p++){
+      var a = p * 2.1;
+      var dx = (Math.sin(tNow * 0.12 + a) * 0.5 + 0.5) * W;
+      var dy = ((tNow * 8 + a * 50) % (H + 40)) - 20;
+      ctx.beginPath(); ctx.arc(dx, dy, 1.3, 0, 6.2832); ctx.fill();
+    }
+
+    // wisps
+    for (var wI = 0; wI < wisps.length; wI++){
+      var wsp = wisps[wI];
+      var pulse = 0.55 + 0.25 * Math.sin(tNow * 2.2 + wsp.phase);
+      var glow = ctx.createRadialGradient(wsp.x, wsp.y, 0, wsp.x, wsp.y, wsp.r * 3);
+      glow.addColorStop(0, 'rgba(180,240,255,' + (0.55 * pulse + 0.2) + ')');
+      glow.addColorStop(1, 'rgba(80,190,220,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(wsp.x, wsp.y, wsp.r * 3, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#eafeff';
+      ctx.beginPath(); ctx.arc(wsp.x, wsp.y, wsp.r * 0.45, 0, 6.2832); ctx.fill();
+    }
+
+    // harpoons
+    for (var hI = 0; hI < harpoons.length; hI++){
+      var h = harpoons[hI];
+      var tailX = h.x - h.dx * 0.03, tailY = h.y - h.dy * 0.03;
+      ctx.strokeStyle = 'rgba(200,245,255,0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(tailX, tailY); ctx.lineTo(h.x, h.y); ctx.stroke();
+      ctx.fillStyle = '#eafeff';
+      ctx.beginPath(); ctx.arc(h.x, h.y, 3, 0, 6.2832); ctx.fill();
+    }
+
+    if (state === 'play'){
+      var lx = launchX(), ly = launchY();
+      var dir = aimDir();
+      var aimLen = 130;
+
+      // aim line
+      ctx.strokeStyle = 'rgba(143,233,255,0.35)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 8]);
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + dir.x * aimLen, ly + dir.y * aimLen); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // reload arc
+      var cool = Math.max(0, (reloadUntil - tNow) / RELOAD_TIME);
+      if (cool > 0){
+        ctx.strokeStyle = 'rgba(255,150,90,0.85)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(lx, ly, 22, -Math.PI / 2, -Math.PI / 2 + 6.2832 * (1 - cool));
+        ctx.stroke();
+      }
+
+      // muzzle flash
+      if (tNow < muzzleFlashUntil){
+        ctx.fillStyle = 'rgba(230,250,255,0.8)';
+        ctx.beginPath(); ctx.arc(lx, ly, 14, 0, 6.2832); ctx.fill();
+      }
+
+      // launcher turret
+      ctx.fillStyle = '#0d2530';
+      ctx.strokeStyle = '#8fe9ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(lx, ly, 18, 0, 6.2832); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#cdf3ff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + dir.x * 26, ly + dir.y * 26);
+      ctx.stroke();
+    }
+
+    // vignette
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------- main loop ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.1, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- verification hook (exposes the same state the UI uses) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start
+  };
+
+})();
+</script>
+</body>
+</html>
