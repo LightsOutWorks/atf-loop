@@ -1,0 +1,24 @@
+{
+  "seed": "seed-009",
+  "candidates": [
+    "TETHER LOCK: Hold your aim on a drifting target to fill a lock ring; swinging onto a different target mid-hold cancels the ring and forces you to restart, so you must commit to one target at a time.",
+    "CROSSWIRE CONVERGE: Two independently controlled crosshairs must overlap on the same target at once to fire; the player decides how to time and route each axis into alignment before the target moves away.",
+    "RICOCHET LINE: Drag back and release to launch a bouncing shot whose angle and power you set; the player decides the bounce path needed to chain through multiple targets off the arena walls.",
+    "GRID RESERVE: Breaking small nodes banks charge that is spent unlocking rarer high-value nodes; the player decides when to bank versus when to spend accumulated charge.",
+    "FREQ SWITCH: Targets arrive tagged with one of three signal frequencies and the player must select the matching weapon mode before firing, or the shot is wasted and the combo resets.",
+    "SPLIT SWARM: Shooting a target splits it into two smaller, faster targets worth less each; the player decides whether to keep splitting for volume or leave clusters alone to avoid getting overwhelmed.",
+    "GRAVITY SNARE: Clicking places a pulsing attractor field that pulls nearby drifting targets toward a collection point; the player decides where and when to place the limited-duration field rather than clicking targets directly.",
+    "ECHO SEQUENCE: A short flash sequence of positions lights up and the player must click them back in the same order before it fades, with sequences growing longer over time.",
+    "TRIP LINE: Dragging draws a limited-length wire across the arena that destroys anything crossing it while active; the player decides where to place each use of a shared, regenerating length budget.",
+    "SURGE WAIT: Targets grow in value the longer they are left unshot but can overload and vanish if left too long; the player decides how long to let each one ride before cashing it in.",
+    "DUAL WATCH: Two separate lanes each need defending but only one turret can be active at a time; the player decides when to swap control between lanes, leaving the other briefly undefended.",
+    "PING REVEAL: Clicking sends a pulse that briefly reveals nearby hidden targets in a radius; the player decides where to ping and which revealed targets to hit before they fade back to invisible."
+  ],
+  "finalists": [
+    {"title": "TETHER LOCK", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "GRAVITY SNARE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4}},
+    {"title": "TRIP LINE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":3}}
+  ],
+  "selected": "TETHER LOCK",
+  "reason": "TETHER LOCK scored highest overall on stability and immediate feedback (a visibly filling lock ring each frame you hold) while introducing a decision axis no existing work uses — sustained commitment with a real switching cost — and it maps cleanly onto mouse-hold, touch-hold, and keyboard-hold controls without extra complexity."
+}

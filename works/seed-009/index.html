@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>TETHER LOCK</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#04070b; color:#bfe9ff;
+    font-family:sans-serif;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:crosshair;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(4,7,11,.86);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 6px; font-size:clamp(26px,6.4vw,48px); letter-spacing:.1em;
+    color:#8ff3da; text-shadow:0 0 18px rgba(120,240,210,.6), 0 0 44px rgba(180,140,255,.28);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(24px,6vw,40px); letter-spacing:.16em;
+    color:#d9b8ff; text-shadow:0 0 16px rgba(200,160,255,.55);
+  }
+  .sub{ margin:0 0 18px; opacity:.92; font-size:clamp(13px,3.4vw,16px); }
+  .help{
+    margin:0 0 22px; line-height:1.9; font-size:clamp(12px,3.2vw,14px);
+    color:#d8ecff; opacity:.85;
+  }
+  .btn{
+    font-family:sans-serif; font-weight:700; font-size:clamp(16px,4.2vw,20px);
+    letter-spacing:.08em; color:#03181a; cursor:pointer;
+    background:linear-gradient(180deg,#9ff3da,#3cc2a6);
+    border:0; border-radius:999px; padding:14px 40px;
+    box-shadow:0 0 22px rgba(90,220,190,.5), inset 0 -3px 0 rgba(0,30,25,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-family:monospace; font-size:clamp(44px,11vw,84px); font-weight:700; line-height:1.1;
+    color:#a7f3e0; text-shadow:0 0 24px rgba(140,240,210,.8);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 24px; color:#d8ecff; opacity:.9; font-size:clamp(13px,3.4vw,16px); }
+  #bestLine{ margin:14px 0 0; font-size:13px; color:#9cc9dd; opacity:.8; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(13px,3.4vw,17px);
+    text-shadow:0 0 10px rgba(140,240,210,.5);
+  }
+  #hud .label{ font-size:.7em; opacity:.7; letter-spacing:.1em; margin-right:.4em; }
+  #timeEl{
+    font-family:monospace; font-size:clamp(20px,5vw,28px); color:#d8ecff;
+  }
+  #timeEl.warn{ color:#ff6b8a; text-shadow:0 0 12px rgba(255,107,138,.8); }
+  #scoreEl, #comboEl{ font-family:monospace; }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:44px; height:44px; border-radius:50%; border:1px solid rgba(160,240,220,.4);
+    background:rgba(8,16,22,.6); color:#a7f3e0; font-family:sans-serif; font-size:18px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:11px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">COMBO</span><span id="comboEl">x1</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>TETHER LOCK</h1>
+  <p class="sub">A drifting-signal tether toy: hold your aim on a drifter to lock it, but swinging onto another drifter cancels your progress — commit before it slips away.</p>
+  <p class="help">
+    Mouse: press and hold on a drifter to tether it; release early cancels the lock.<br>
+    Touch: press and hold a drifter with your finger; lift to cancel.<br>
+    Keyboard: Left/Right to aim at a drifter, hold Enter/Space to tether it.<br>
+    Gold pulsars are worth more but take longer to lock, and they drift away if you dawdle.
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">Best score: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>SIGNAL LOST</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="toggle sound">&#9834;</button>
+<div class="tag">TETHER LOCK — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var comboEl = document.getElementById('comboEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- screen size ----------
+  var W = 960, H = 600, DPR = 1;
+  function resize(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(W * DPR));
+    canvas.height = Math.max(1, Math.round(H * DPR));
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- constants ----------
+  var GAME_TIME = 60;
+  var REPLAY_GUARD = 0.6;
+  var ARENA_PAD = 44;
+  var GLIMMER_R = 15, PULSAR_R = 26;
+  var GLIMMER_NEED = 0.55, PULSAR_NEED = 1.3;
+  var GLIMMER_VALUE = 8, PULSAR_VALUE = 30;
+  var GLIMMER_LIFE_MIN = 3.0, GLIMMER_LIFE_MAX = 4.2;
+  var PULSAR_LIFE_MIN = 6.4, PULSAR_LIFE_MAX = 8.2;
+  var MAX_TARGETS = 6;
+  var SPAWN_MIN = 0.5, SPAWN_MAX = 1.0;
+  var STREAK_STEP = 4, MULT_MAX = 4;
+  var SNAP_RADIUS = 34;
+  var SHAKE_TIME = 0.18;
+  var nextId = 1;
+
+  // ---------- state ----------
+  var state = 'title';           // 'title' | 'play' | 'over'
+  var score = 0, best = 0;
+  var timeLeft = GAME_TIME;
+  var elapsed = 0;
+  var streak = 0, multiplier = 1;
+  var lockedCount = 0, missedCount = 0, abandonedCount = 0;
+  var tNow = 0, lastT = null, overAt = -9;
+
+  var targets = [];
+  var aimX = W / 2, aimY = H / 2;
+  var engagedId = -1;
+  var holding = false, holdTargetId = -1, holdProgress = 0;
+  var pointerActive = false;
+  var spaceDown = false;
+  var spawnTimer = 0;
+  var shakeUntil = -9;
+  var fx = [];   // floating text / burst effects
+
+  // ---------- sound (code-generated only) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  function blip(type, f0, f1, dur, vol, delay){
+    var t0 = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function sfx(kind){
+    if (muted || !audioCtx) return;
+    try{
+      if (kind === 'lock'){ blip('sine', 420, 880, 0.14, 0.13, 0); }
+      else if (kind === 'pulsar'){ blip('sine', 300, 720, 0.18, 0.14, 0); blip('square', 520, 940, 0.12, 0.08, 0.06); }
+      else if (kind === 'lost'){ blip('sine', 220, 90, 0.22, 0.09, 0); }
+      else if (kind === 'cancel'){ blip('sawtooth', 240, 140, 0.1, 0.07, 0); }
+      else if (kind === 'start'){ blip('sine', 440, 860, 0.18, 0.14, 0); }
+      else if (kind === 'end'){ blip('sine', 620, 320, 0.35, 0.14, 0); blip('sine', 400, 200, 0.4, 0.10, 0.12); }
+    }catch(e){}
+  }
+  function toggleMute(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+    if (!muted) initAudio();
+  }
+  muteBtn.addEventListener('click', function(ev){ if (ev && ev.stopPropagation) ev.stopPropagation(); toggleMute(); });
+
+  // ---------- targets ----------
+  function arenaTop(){ return 92; }
+  function arenaBottom(){ return H - 56; }
+  function spawnTarget(){
+    var frac = Math.max(0, Math.min(1, elapsed / GAME_TIME));
+    var pPulsar = 0.18 + frac * 0.22;
+    var kind = Math.random() < pPulsar ? 'pulsar' : 'glimmer';
+    var r = kind === 'pulsar' ? PULSAR_R : GLIMMER_R;
+    var top = arenaTop(), bot = arenaBottom();
+    var x = ARENA_PAD + r + Math.random() * Math.max(1, (W - 2 * (ARENA_PAD + r)));
+    var y = top + r + Math.random() * Math.max(1, (bot - top - 2 * r));
+    var speed = kind === 'pulsar' ? 10 + Math.random() * 12 : 18 + Math.random() * 28;
+    var ang = Math.random() * Math.PI * 2;
+    var life = kind === 'pulsar'
+      ? (PULSAR_LIFE_MIN + Math.random() * (PULSAR_LIFE_MAX - PULSAR_LIFE_MIN))
+      : (GLIMMER_LIFE_MIN + Math.random() * (GLIMMER_LIFE_MAX - GLIMMER_LIFE_MIN));
+    targets.push({
+      id: nextId++,
+      kind: kind,
+      x: x, y: y,
+      vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+      r: r,
+      age: 0,
+      life: life,
+      need: kind === 'pulsar' ? PULSAR_NEED : GLIMMER_NEED,
+      value: kind === 'pulsar' ? PULSAR_VALUE : GLIMMER_VALUE
+    });
+  }
+  function findTargetById(id){
+    for (var i = 0; i < targets.length; i++){ if (targets[i].id === id) return targets[i]; }
+    return null;
+  }
+  function removeTargetById(id){
+    for (var i = 0; i < targets.length; i++){
+      if (targets[i].id === id){ var t = targets[i]; targets.splice(i, 1); return t; }
+    }
+    return null;
+  }
+  function nearestTargetIdx(px, py, maxD){
+    var bestI = -1, bestD = 9e9;
+    for (var i = 0; i < targets.length; i++){
+      var t = targets[i];
+      var d = Math.hypot(t.x - px, t.y - py);
+      var pad = Math.max(maxD, t.r + 16);
+      if (d <= pad && d < bestD){ bestD = d; bestI = i; }
+    }
+    return bestI;
+  }
+  function updateTargets(dt){
+    spawnTimer -= dt;
+    var frac = Math.max(0, Math.min(1, elapsed / GAME_TIME));
+    var interval = (SPAWN_MIN - frac * 0.18) + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+    if (spawnTimer <= 0 && targets.length < MAX_TARGETS){
+      spawnTarget();
+      spawnTimer = Math.max(0.28, interval);
+    }
+    var top = arenaTop(), bot = arenaBottom();
+    for (var i = targets.length - 1; i >= 0; i--){
+      var t = targets[i];
+      t.x += t.vx * dt;
+      t.y += t.vy * dt;
+      if (t.x - t.r < 0){ t.x = t.r; t.vx *= -1; }
+      if (t.x + t.r > W){ t.x = W - t.r; t.vx *= -1; }
+      if (t.y - t.r < top){ t.y = top + t.r; t.vy *= -1; }
+      if (t.y + t.r > bot){ t.y = bot - t.r; t.vy *= -1; }
+      t.age += dt;
+      if (t.age >= t.life){
+        if (holdTargetId === t.id){ holding = false; holdTargetId = -1; holdProgress = 0; }
+        if (engagedId === t.id) engagedId = -1;
+        missedCount++;
+        streak = 0; multiplier = 1;
+        shakeUntil = tNow + SHAKE_TIME;
+        sfx('lost');
+        addFx(t.x, t.y, 'LOST', '#6f95ad');
+        targets.splice(i, 1);
+        updateHud();
+      }
+    }
+  }
+
+  function addFx(x, y, label, color){
+    fx.push({ x: x, y: y, label: label, color: color, born: tNow, life: 0.7 });
+  }
+
+  function bumpStreak(){
+    streak++;
+    if (streak % STREAK_STEP === 0 && multiplier < MULT_MAX) multiplier++;
+  }
+
+  function beginHold(t){
+    holding = true;
+    holdTargetId = t.id;
+    holdProgress = 0;
+    engagedId = t.id;
+  }
+  function cancelHold(){
+    if (!holding) return;
+    abandonedCount++;
+    sfx('cancel');
+    holding = false; holdTargetId = -1; holdProgress = 0;
+  }
+  function handleAim(p){
+    aimX = p.x; aimY = p.y;
+    if (state !== 'play') return;
+    var idx = nearestTargetIdx(p.x, p.y, SNAP_RADIUS);
+    if (!holding){
+      engagedId = idx === -1 ? -1 : targets[idx].id;
+      return;
+    }
+    if (idx === -1) return;
+    var t = targets[idx];
+    if (t.id !== holdTargetId){
+      cancelHold();
+      beginHold(t);
+    }
+  }
+  function completeLock(t){
+    var pts = t.value * multiplier;
+    score += pts;
+    lockedCount++;
+    bumpStreak();
+    addFx(t.x, t.y, '+' + pts, t.kind === 'pulsar' ? '#ffd27a' : '#9be8ff');
+    sfx(t.kind === 'pulsar' ? 'pulsar' : 'lock');
+    removeTargetById(t.id);
+    holding = false; holdTargetId = -1; holdProgress = 0;
+    if (engagedId === t.id) engagedId = -1;
+    updateHud();
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    comboEl.textContent = 'x' + multiplier;
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- state transitions ----------
+  function start(){
+    score = 0; streak = 0; multiplier = 1;
+    lockedCount = 0; missedCount = 0; abandonedCount = 0;
+    timeLeft = GAME_TIME; elapsed = 0;
+    targets = []; fx = []; engagedId = -1;
+    holding = false; holdTargetId = -1; holdProgress = 0;
+    spawnTimer = 0.3;
+    shakeUntil = -9;
+    state = 'play';
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    holding = false; holdTargetId = -1; holdProgress = 0;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    resultDetail.textContent = 'LOCKED ' + lockedCount + ' / LOST ' + missedCount + ' / RELEASED ' + abandonedCount + ' — best ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function startFromUi(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > REPLAY_GUARD){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+
+  // ---------- pointer input ----------
+  function relXY(e){
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || W, h = rect.height || H;
+    var x = (e.clientX - rect.left) / w * W;
+    var y = (e.clientY - rect.top) / h * H;
+    if (x < 0) x = 0; if (x > W) x = W;
+    if (y < 0) y = 0; if (y > H) y = H;
+    return { x: x, y: y };
+  }
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    pointerActive = true;
+    if (state !== 'play') return;
+    handleAim(relXY(e));
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function(e){
+    var p = relXY(e);
+    if (!pointerActive){
+      aimX = p.x; aimY = p.y;
+      if (state === 'play' && !holding){
+        var idx = nearestTargetIdx(p.x, p.y, SNAP_RADIUS);
+        engagedId = idx === -1 ? -1 : targets[idx].id;
+      }
+      return;
+    }
+    if (e.preventDefault) e.preventDefault();
+    if (state !== 'play') return;
+    handleAim(p);
+  }, { passive: false });
+  window.addEventListener('pointerup', function(){
+    pointerActive = false;
+    if (state === 'play') cancelHold();
+  });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- keyboard input ----------
+  function orderedTargets(){
+    var arr = targets.slice();
+    arr.sort(function(a, b){ return a.x - b.x; });
+    return arr;
+  }
+  function moveSelection(dir){
+    if (holding) return;
+    var arr = orderedTargets();
+    if (arr.length === 0){ engagedId = -1; return; }
+    var idx = -1;
+    for (var i = 0; i < arr.length; i++){ if (arr[i].id === engagedId){ idx = i; break; } }
+    idx = idx === -1 ? (dir > 0 ? 0 : arr.length - 1) : (idx + dir + arr.length) % arr.length;
+    engagedId = arr[idx].id;
+  }
+  function confirmDown(){
+    if (holding) return;
+    var t = findTargetById(engagedId);
+    if (!t && targets.length) t = targets[0];
+    if (t) beginHold(t);
+  }
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play'){
+        if (!spaceDown){ spaceDown = true; confirmDown(); }
+      } else {
+        startFromUi();
+      }
+    } else if (k === 'm' || k === 'M'){
+      toggleMute();
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') moveSelection(-1);
+    } else if (k === 'ArrowRight' || k === 'd' || k === 'D'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') moveSelection(1);
+    }
+  });
+  window.addEventListener('keyup', function(e){
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      spaceDown = false;
+      if (state === 'play') cancelHold();
+    }
+  });
+
+  // ---------- update ----------
+  function update(dt){
+    if (state === 'play'){
+      updateTargets(dt);
+      for (var i = fx.length - 1; i >= 0; i--){
+        if (tNow - fx[i].born > fx[i].life) fx.splice(i, 1);
+      }
+
+      if (holding){
+        var t = findTargetById(holdTargetId);
+        if (!t){ holding = false; holdTargetId = -1; holdProgress = 0; }
+        else {
+          holdProgress += dt / t.need;
+          if (holdProgress >= 1) completeLock(t);
+        }
+      }
+
+      elapsed += dt;
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- render ----------
+  function render(){
+    var shakeX = 0, shakeY = 0;
+    if (tNow < shakeUntil){
+      var amt = (shakeUntil - tNow) / SHAKE_TIME * 5;
+      shakeX = (Math.random() - 0.5) * amt;
+      shakeY = (Math.random() - 0.5) * amt;
+    }
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+    ctx.clearRect(-20, -20, W + 40, H + 40);
+
+    var deep = ctx.createLinearGradient(0, 0, 0, H);
+    deep.addColorStop(0, '#03060a');
+    deep.addColorStop(0.6, '#071a22');
+    deep.addColorStop(1, '#0a2430');
+    ctx.fillStyle = deep;
+    ctx.fillRect(0, 0, W, H);
+
+    // drifting bioluminescent motes (decorative)
+    ctx.globalAlpha = 1;
+    for (var i = 0; i < 24; i++){
+      var bx = (i * 83.7) % W;
+      var by = (H * 0.12) + (i * 51.3) % (H * 0.72);
+      var pulse = 0.35 + 0.25 * Math.sin(tNow * 0.7 + i * 1.7);
+      ctx.globalAlpha = 0.1 + pulse * 0.18;
+      ctx.fillStyle = '#7ff7d8';
+      ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // arena boundary hint
+    ctx.strokeStyle = 'rgba(140,240,220,0.12)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ARENA_PAD * 0.4, arenaTop() - 10, W - ARENA_PAD * 0.8, arenaBottom() - arenaTop() + 20);
+
+    // tether line to held target
+    if (holding){
+      var ht = findTargetById(holdTargetId);
+      if (ht){
+        ctx.strokeStyle = 'rgba(255,242,201,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(aimX, aimY);
+        ctx.lineTo(ht.x, ht.y);
+        ctx.stroke();
+      }
+    }
+
+    // targets
+    for (var ti = 0; ti < targets.length; ti++){
+      var t = targets[ti];
+      var lifeFrac = Math.max(0, 1 - t.age / t.life);
+      var warn = lifeFrac < 0.28;
+      var isEngaged = t.id === engagedId;
+      var isHeld = t.id === holdTargetId;
+      var baseColor = t.kind === 'pulsar' ? '#d9b8ff' : '#bdf3ff';
+      var warnColor = '#ffb3c0';
+
+      var glow = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.r * 2.2);
+      glow.addColorStop(0, t.kind === 'pulsar' ? 'rgba(220,180,255,0.5)' : 'rgba(140,240,220,0.5)');
+      glow.addColorStop(1, 'rgba(140,240,220,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.r * 2.2, 0, 6.2832); ctx.fill();
+
+      ctx.fillStyle = warn ? warnColor : baseColor;
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = 'rgba(10,20,25,0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (t.kind === 'pulsar'){
+        ctx.fillStyle = '#2a1f3a';
+        ctx.font = '700 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(t.value), t.x, t.y);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
+
+      // life ring
+      ctx.strokeStyle = warn ? 'rgba(255,120,140,0.85)' : 'rgba(200,240,230,0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.r + 7, -Math.PI / 2, -Math.PI / 2 + 6.2832 * lifeFrac);
+      ctx.stroke();
+
+      // lock progress ring
+      if (isHeld){
+        ctx.strokeStyle = '#fff2c9';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.r + 13, -Math.PI / 2, -Math.PI / 2 + 6.2832 * Math.min(1, holdProgress));
+        ctx.stroke();
+      } else if (isEngaged){
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(t.x, t.y, t.r + 13, 0, 6.2832); ctx.stroke();
+      }
+    }
+
+    // reticle
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(aimX, aimY, 9, 0, 6.2832); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(aimX - 14, aimY); ctx.lineTo(aimX - 4, aimY);
+    ctx.moveTo(aimX + 4, aimY); ctx.lineTo(aimX + 14, aimY);
+    ctx.moveTo(aimX, aimY - 14); ctx.lineTo(aimX, aimY - 4);
+    ctx.moveTo(aimX, aimY + 4); ctx.lineTo(aimX, aimY + 14);
+    ctx.stroke();
+
+    // floating fx text
+    for (var fi = 0; fi < fx.length; fi++){
+      var f = fx[fi];
+      var frac = Math.max(0, Math.min(1, (tNow - f.born) / f.life));
+      ctx.globalAlpha = 1 - frac;
+      ctx.fillStyle = f.color;
+      ctx.font = '700 13px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(f.label, f.x, f.y - frac * 26);
+      ctx.textAlign = 'left';
+    }
+    ctx.globalAlpha = 1;
+
+    // vignette
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.restore();
+  }
+
+  // ---------- main loop ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.1, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- verification hook (exposes the same state the UI uses) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start
+  };
+
+})();
+</script>
+</body>
+</html>
