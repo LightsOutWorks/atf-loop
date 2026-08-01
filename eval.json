@@ -1,0 +1,63 @@
+{
+  "prompt_version": "eval-min-v1",
+  "scored_at": "2026-08-01",
+  "scorer": "claude-sonnet-5",
+  "works": [
+    {
+      "seed": "seed-001",
+      "novelty": 3,
+      "depth": 1,
+      "novelty_reason": "First work; no predecessor exists, so it is scored as a baseline reflex aim-and-fire loop (continuous camera-aim, instant hit-test on press) rather than assumed maximal.",
+      "depth_reason": "Single decision (when to fire while continuously aimed); shots/hits are tracked but only feed an end-of-round accuracy readout, never a later decision.",
+      "world": null
+    },
+    {
+      "seed": "seed-002",
+      "novelty": 2,
+      "depth": 2,
+      "novelty_reason": "Reuses seed-001's instant aim-and-fire hit-test verbatim, adding one real rule: a second target type (packet) that penalizes on hit and resets the combo, forcing target discrimination absent from seed-001.",
+      "depth_reason": "Two decisions (aim position, then fire-or-hold based on the reticle-highlighted target's type); combo/mult is a score multiplier only, not state that changes what is required next.",
+      "world": null
+    },
+    {
+      "seed": "seed-003",
+      "novelty": 4,
+      "depth": 2,
+      "novelty_reason": "No predecessor (seed-001, seed-002) judges a target's own internal timer; both resolve on-press instantly. Introduces hold-drag-then-release-timed-against-a-shrinking-ring, changing the decision from spatial aim to temporal release-timing.",
+      "depth_reason": "Two interacting decisions (where to hold + when to release, judged against CORE_START/CORE_END of the flare's shrink); up to 2 concurrent flares force prioritization, but no state persists beyond score/streak.",
+      "world": null
+    },
+    {
+      "seed": "seed-004",
+      "novelty": 2,
+      "depth": 2,
+      "novelty_reason": "Reuses seed-003's judge-target's-own-timer principle (BAND_START/BAND_END mirrors seed-003's CORE_START/CORE_END) but reverts to an instant tap and adds a third graded outcome (TOO EARLY vs STRAINED) on a fixed multi-slot grid — one real modification, not a new judging principle.",
+      "depth_reason": "Two decisions (which slot + timing against its energy band); up to 3 concurrent veins force prioritization, matching seed-003's structure with no additional non-score state.",
+      "world": null
+    },
+    {
+      "seed": "seed-005",
+      "novelty": 2,
+      "depth": 2,
+      "novelty_reason": "Reuses the judge-target's-own-timer principle from seed-003/seed-004 (PEAK_THRESHOLD on emberBrightness) but changes it from a one-shot life-arc to a repeating sine pulse the player can wait through, plus a player-side swing cooldown — one real modification, not a new principle.",
+      "depth_reason": "Two decisions (net position via physics-based movement + when to spend the cooldown-gated swing) across up to 5 embers; streak/multiplier is a score multiplier only, as in seed-002/seed-003/seed-004.",
+      "world": null
+    },
+    {
+      "seed": "seed-006",
+      "novelty": 4,
+      "depth": 4,
+      "novelty_reason": "No predecessor (seed-001..seed-005) fires a traveling projectile; all resolve on-press instantly against whatever is at the aim point now. Introduces angle-based aiming with real flight time and multi-target pierce, changing the decision from 'is a target here now' to 'what line will intersect several moving targets' future paths'.",
+      "depth_reason": "Aim-angle and fire-timing interact with wisps' independent velocities (lead-prediction) and with each other via hitSet/splice: a wisp claimed mid-flight by one harpoon is removed from the pool for any other simultaneously-flying harpoon, an emergent interaction the on-screen text never states.",
+      "world": null
+    },
+    {
+      "seed": "seed-007",
+      "novelty": 4,
+      "depth": 3,
+      "novelty_reason": "No predecessor lets the player invest a chosen hold-duration for more power; seed-001..seed-006 all use fixed-duration cooldowns after acting, never a charge-before-acting resource. Changes the decision from targeting/timing precision to a time-investment trade-off against multiple falling threats.",
+      "depth_reason": "Position and charge-duration decisions interact with meteors' own mutable state: an under-powered hit permanently downgrades m.type (L to M to S), a real non-score state change that alters what a later shot on that same meteor requires.",
+      "world": null
+    }
+  ]
+}
