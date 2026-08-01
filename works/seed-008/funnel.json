@@ -1,0 +1,24 @@
+{
+  "seed": "seed-008",
+  "candidates": [
+    "RICOCHET SHOT: Player aims bank-shot projectiles that bounce off angled surfaces to reach targets hidden behind obstacles; the decision is choosing bounce angle/trajectory rather than a direct line of sight.",
+    "HEAT CHANNEL: Player holds a continuous beam on a moving target to build damage over dwell time while a heat gauge climbs toward overheat lockout; the decision is how long to sustain the beam before releasing to cool down.",
+    "MAG RELOAD: Player fires from a small magazine and must manually trigger a reload that briefly disables firing; the decision is when to reload given the incoming rate of targets.",
+    "TYPE SWITCH: Targets appear in one of several colors and the player must cycle their weapon's active color before firing, since a mismatched shot has no effect; the decision is pre-emptively switching type based on the next expected target.",
+    "MARK & DETONATE: Player taps to mark multiple targets without destroying them, then triggers a separate detonation that destroys every currently marked target at once for a stacking bonus; the decision is how many targets to risk marking before the marks expire versus detonating early and safe.",
+    "SHIELD PARRY: Some incoming objects must be shot while others must be blocked with a timed shield raise that deflects them into a score zone; the decision is choosing the correct response (shoot or block) for each object as it approaches.",
+    "GRAVITY WELL: Player plants a short-lived attractor that pulls nearby drifting targets into a cluster, then detonates the cluster for area score scaling with cluster size; the decision is where and when to place the well versus picking off single targets directly.",
+    "CHAIN LOCK: Player sweeps the reticle across several targets within a short window to lock them in sequence, then releases to fire the whole locked chain at once; the decision is how long to keep chaining versus releasing before a locked target escapes.",
+    "ECHO PING: Most targets are camouflaged and invisible; a limited-use ping briefly reveals every hidden target nearby before they re-cloak; the decision is when to spend a ping and which revealed target to prioritize before the reveal window closes.",
+    "OVERCHARGE FAN: Charging the trigger before release controls the spread of a shot, from a narrow powerful bolt to a wide weak fan; the decision is picking spread width to match a single tough target versus a loose cluster.",
+    "BATTERY CONVERT: Weak targets drop charge currency on destruction, and heavily shielded targets can only be cracked once enough currency has been banked; the decision is farming weak targets for currency versus attempting the shielded target early with insufficient charge.",
+    "DUAL DEFENSE: The player must simultaneously keep a shield covering a lower lane while aiming and firing at targets in an upper lane; the decision is how to split limited attention/input between defending and attacking each moment."
+  ],
+  "finalists": [
+    {"title": "MARK & DETONATE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "ECHO PING", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":3,"C6":4,"C7":4}},
+    {"title": "BATTERY CONVERT", "scores": {"C1":4,"C2":4,"C3":4,"C4":4,"C5":4,"C6":4,"C7":3}}
+  ],
+  "selected": "BATTERY CONVERT",
+  "reason": "BATTERY CONVERT keeps a single, familiar action (click/tap a target) throughout so it clears C2/C5 cleanly, while still forcing a persistent-state decision (bank charge vs. risk an early crack) that no existing work uses, giving it the strongest combined C1/C3/C4 profile of the three finalists."
+}
