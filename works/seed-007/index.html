@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>METEOR CHARGE</title>
+<style>
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:#0d0714; color:#f0c98a;
+    font-family:sans-serif;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #game{
+    position:fixed; inset:0; width:100%; height:100%;
+    display:block; touch-action:none; cursor:crosshair;
+  }
+  .screen{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px;
+    background:rgba(13,7,20,.82);
+  }
+  .hidden{ display:none !important; }
+  h1{
+    margin:0 0 6px; font-size:clamp(26px,6.4vw,48px); letter-spacing:.1em;
+    color:#ffcf8a; text-shadow:0 0 18px rgba(255,170,90,.65), 0 0 44px rgba(255,120,60,.3);
+  }
+  h2{
+    margin:0 0 10px; font-size:clamp(24px,6vw,40px); letter-spacing:.16em;
+    color:#f0c98a; text-shadow:0 0 16px rgba(255,180,110,.55);
+  }
+  .sub{ margin:0 0 18px; opacity:.92; font-size:clamp(13px,3.4vw,16px); }
+  .help{
+    margin:0 0 22px; line-height:1.9; font-size:clamp(12px,3.2vw,14px);
+    color:#f3dcb8; opacity:.85;
+  }
+  .btn{
+    font-family:sans-serif; font-weight:700; font-size:clamp(16px,4.2vw,20px);
+    letter-spacing:.08em; color:#2b1608; cursor:pointer;
+    background:linear-gradient(180deg,#ffe2ad,#e08a3f);
+    border:0; border-radius:999px; padding:14px 40px;
+    box-shadow:0 0 22px rgba(230,150,70,.5), inset 0 -3px 0 rgba(60,25,0,.35);
+  }
+  .btn:active{ transform:translateY(2px); }
+  #finalScore{
+    font-family:monospace; font-size:clamp(44px,11vw,84px); font-weight:700; line-height:1.1;
+    color:#ffcf8a; text-shadow:0 0 24px rgba(255,180,110,.8);
+    margin:4px 0 6px;
+  }
+  #resultDetail{ margin:0 0 24px; color:#f3dcb8; opacity:.9; font-size:clamp(13px,3.4vw,16px); }
+  #bestLine{ margin:14px 0 0; font-size:13px; color:#e0b788; opacity:.8; }
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 14px; pointer-events:none;
+    font-weight:700; font-size:clamp(14px,3.6vw,18px);
+    text-shadow:0 0 10px rgba(255,180,110,.5);
+  }
+  #hud .label{ font-size:.72em; opacity:.7; letter-spacing:.12em; margin-right:.4em; }
+  #timeEl{
+    font-family:monospace; font-size:clamp(20px,5vw,28px); color:#f3dcb8;
+  }
+  #timeEl.warn{ color:#ff6b4a; text-shadow:0 0 12px rgba(255,107,74,.8); }
+  #scoreEl, #comboEl{ font-family:monospace; }
+  #muteBtn{
+    position:fixed; left:10px; bottom:10px; z-index:6;
+    width:44px; height:44px; border-radius:50%; border:1px solid rgba(240,190,130,.4);
+    background:rgba(20,12,10,.6); color:#ffcf8a; font-family:sans-serif; font-size:18px; cursor:pointer;
+  }
+  .tag{ position:fixed; right:12px; bottom:10px; z-index:4; font-size:11px; opacity:.4; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div><span class="label">SCORE</span><span id="scoreEl">0</span></div>
+  <div id="timeEl">60.0</div>
+  <div><span class="label">COMBO</span><span id="comboEl">x1</span></div>
+</div>
+
+<div id="titleScreen" class="screen">
+  <h1>METEOR CHARGE</h1>
+  <p class="sub">A 60-second charge-cannon toy defending a desert observatory dome</p>
+  <p class="help">
+    Mouse: move to slide the cannon, hold to charge, release to fire<br>
+    Touch: drag to aim, hold to charge, release to fire<br>
+    Keyboard: Left/Right or A/D to slide, hold Space/Enter to charge, release to fire<br>
+    Small meteors fall to any shot. Medium and large ones need a fuller charge — an under-powered hit only cracks them smaller instead of destroying them.
+  </p>
+  <button id="startBtn" class="btn">START</button>
+  <p id="bestLine" class="hidden">Best score: <span id="bestTitle">0</span> pt</p>
+</div>
+
+<div id="overScreen" class="screen hidden">
+  <h2>SKY CLEARED</h2>
+  <div id="finalScore">0 pt</div>
+  <p id="resultDetail"></p>
+  <button id="replayBtn" class="btn">REPLAY</button>
+</div>
+
+<button id="muteBtn" title="toggle sound">&#9834;</button>
+<div class="tag">METEOR CHARGE — single-file toy</div>
+
+<script>
+"use strict";
+(function(){
+
+  // ---------- DOM ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var scoreEl = document.getElementById('scoreEl');
+  var timeEl = document.getElementById('timeEl');
+  var comboEl = document.getElementById('comboEl');
+  var hud = document.getElementById('hud');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var resultDetail = document.getElementById('resultDetail');
+  var bestLine = document.getElementById('bestLine');
+  var bestTitle = document.getElementById('bestTitle');
+  var muteBtn = document.getElementById('muteBtn');
+
+  // ---------- screen size ----------
+  var W = 960, H = 600, DPR = 1;
+  function resize(){
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(W * DPR));
+    canvas.height = Math.max(1, Math.round(H * DPR));
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- constants ----------
+  var GAME_TIME = 60;
+  var REPLAY_GUARD = 0.6;
+  var TURRET_Y_OFFSET = 54;
+  var TURRET_MARGIN = 42;
+  var TURRET_KEY_SPEED = 560;
+  var CHARGE_FULL_TIME = 0.72;
+  var TIER1_MAX = 0.34, TIER2_MAX = 0.74;
+  var FIRE_COOLDOWN = 0.15;
+  var SHOT_SPEED = 760;
+  var SHOT_RADII = [4, 6, 8];
+  var MAX_METEORS = 8;
+  var SPAWN_MIN = 0.5, SPAWN_MAX = 0.95;
+  var METEOR_TYPES = [
+    { key: 'S', r: 12, req: 1, points: 10, speed: [140, 190], down: -1 },
+    { key: 'M', r: 18, req: 2, points: 24, speed: [100, 150], down: 0 },
+    { key: 'L', r: 26, req: 3, points: 42, speed: [70, 110], down: 1 }
+  ];
+  var COMBO_STEP = 4, COMBO_MAX = 5;
+  var SHAKE_TIME = 0.25;
+
+  // ---------- state ----------
+  var state = 'title';           // 'title' | 'play' | 'over'
+  var score = 0, best = 0;
+  var timeLeft = GAME_TIME;
+  var elapsed = 0;
+  var streak = 0, multiplier = 1;
+  var destroyedCount = 0, crackedCount = 0, breachCount = 0;
+  var tNow = 0, lastT = null, overAt = -9;
+
+  var meteors = [];
+  var shots = [];
+  var spawnTimer = 0;
+
+  var turretX = 0, turretY = 0;
+  var isCharging = false, chargeStart = 0;
+  var cooldownUntil = -9;
+  var shakeUntil = -9;
+
+  // ---------- sound (code-generated only) ----------
+  var audioCtx = null, muted = false;
+  function initAudio(){
+    if (audioCtx || muted) return;
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  function blip(type, f0, f1, dur, vol, delay){
+    var t0 = audioCtx.currentTime + (delay || 0);
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function sfx(kind){
+    if (muted || !audioCtx) return;
+    try{
+      if (kind === 'fire1'){ blip('square', 420, 560, 0.05, 0.07, 0); }
+      else if (kind === 'fire2'){ blip('square', 460, 680, 0.07, 0.09, 0); }
+      else if (kind === 'fire3'){ blip('sawtooth', 520, 860, 0.09, 0.11, 0); }
+      else if (kind === 'hit'){ blip('triangle', 700, 1100, 0.09, 0.14, 0); }
+      else if (kind === 'crack'){ blip('square', 300, 220, 0.08, 0.09, 0); }
+      else if (kind === 'breach'){ blip('sawtooth', 220, 90, 0.18, 0.12, 0); }
+      else if (kind === 'start'){ blip('sine', 440, 860, 0.18, 0.14, 0); }
+      else if (kind === 'end'){ blip('sine', 620, 320, 0.35, 0.14, 0); blip('sine', 400, 200, 0.4, 0.10, 0.12); }
+    }catch(e){}
+  }
+  function toggleMute(){
+    muted = !muted;
+    muteBtn.textContent = muted ? '×' : '♪';
+    if (!muted) initAudio();
+  }
+  muteBtn.addEventListener('click', function(ev){ if (ev && ev.stopPropagation) ev.stopPropagation(); toggleMute(); });
+
+  // ---------- geometry ----------
+  function clampTurret(x){
+    if (x < TURRET_MARGIN) return TURRET_MARGIN;
+    if (x > W - TURRET_MARGIN) return W - TURRET_MARGIN;
+    return x;
+  }
+  function breachY(){ return H - TURRET_Y_OFFSET - 14; }
+
+  // ---------- meteors ----------
+  function spawnMeteor(){
+    var frac = Math.max(0, Math.min(1, elapsed / GAME_TIME));
+    var pL = 0.05 + frac * 0.35;
+    var pM = 0.25 + frac * 0.25;
+    var r = Math.random();
+    var type = (r < pL) ? METEOR_TYPES[2] : (r < pL + pM) ? METEOR_TYPES[1] : METEOR_TYPES[0];
+    var speed = type.speed[0] + Math.random() * (type.speed[1] - type.speed[0]);
+    meteors.push({
+      x: 30 + Math.random() * (W - 60),
+      y: -30,
+      vx: (Math.random() - 0.5) * 40,
+      vy: speed,
+      type: type
+    });
+  }
+  function updateMeteors(dt){
+    spawnTimer -= dt;
+    var frac = Math.max(0, Math.min(1, elapsed / GAME_TIME));
+    var interval = (SPAWN_MIN - frac * 0.22) + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+    if (spawnTimer <= 0 && meteors.length < MAX_METEORS){
+      spawnMeteor();
+      spawnTimer = Math.max(0.22, interval);
+    }
+    var by = breachY();
+    for (var i = meteors.length - 1; i >= 0; i--){
+      var m = meteors[i];
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+      if (m.x < 20 || m.x > W - 20) m.vx *= -1;
+      if (m.y + m.type.r >= by){
+        meteors.splice(i, 1);
+        breachCount++;
+        streak = 0; multiplier = 1;
+        shakeUntil = tNow + SHAKE_TIME;
+        sfx('breach');
+        updateHud();
+      }
+    }
+  }
+
+  // ---------- shots ----------
+  function startCharge(){
+    if (state !== 'play') return;
+    if (tNow < cooldownUntil) return;
+    if (isCharging) return;
+    isCharging = true;
+    chargeStart = tNow;
+  }
+  function cancelCharge(){
+    isCharging = false;
+  }
+  function releaseCharge(){
+    if (!isCharging) return;
+    isCharging = false;
+    if (state !== 'play') return;
+    var charge = Math.min(1, (tNow - chargeStart) / CHARGE_FULL_TIME);
+    var tier = charge < TIER1_MAX ? 1 : (charge < TIER2_MAX ? 2 : 3);
+    shots.push({
+      x: turretX, y: turretY - 18,
+      vy: -SHOT_SPEED, tier: tier, r: SHOT_RADII[tier - 1]
+    });
+    cooldownUntil = tNow + FIRE_COOLDOWN;
+    sfx('fire' + tier);
+  }
+  function updateShots(dt){
+    for (var i = shots.length - 1; i >= 0; i--){
+      var s = shots[i];
+      s.y += s.vy * dt;
+      if (s.y < -20){ shots.splice(i, 1); continue; }
+      var hitIndex = -1;
+      for (var j = 0; j < meteors.length; j++){
+        var m = meteors[j];
+        var d = Math.hypot(m.x - s.x, m.y - s.y);
+        if (d <= s.r + m.type.r){ hitIndex = j; break; }
+      }
+      if (hitIndex !== -1){
+        resolveHit(meteors[hitIndex], hitIndex, s.tier);
+        shots.splice(i, 1);
+      }
+    }
+  }
+  function resolveHit(m, index, tier){
+    if (tier >= m.type.req){
+      score += m.type.points * multiplier;
+      destroyedCount++;
+      streak++;
+      if (streak % COMBO_STEP === 0 && multiplier < COMBO_MAX) multiplier++;
+      meteors.splice(index, 1);
+      sfx('hit');
+    } else if (m.type.down >= 0){
+      m.type = METEOR_TYPES[m.type.down];
+      crackedCount++;
+      sfx('crack');
+    } else {
+      score += m.type.points * multiplier;
+      destroyedCount++;
+      streak++;
+      meteors.splice(index, 1);
+      sfx('hit');
+    }
+    updateHud();
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = String(score);
+    comboEl.textContent = 'x' + multiplier;
+  }
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+
+  // ---------- state transitions ----------
+  function start(){
+    score = 0; streak = 0; multiplier = 1;
+    destroyedCount = 0; crackedCount = 0; breachCount = 0;
+    timeLeft = GAME_TIME; elapsed = 0;
+    meteors = []; shots = [];
+    spawnTimer = 0.3;
+    turretX = W / 2; turretY = H - TURRET_Y_OFFSET;
+    isCharging = false; chargeStart = 0;
+    cooldownUntil = -9; shakeUntil = -9;
+    state = 'play';
+    hide(titleScreen); hide(overScreen); show(hud);
+    timeEl.classList.remove('warn');
+    updateHud();
+    sfx('start');
+  }
+  function finish(){
+    if (state !== 'play') return;
+    state = 'over';
+    overAt = tNow;
+    isCharging = false;
+    if (score > best) best = score;
+    finalScore.textContent = score + ' pt';
+    resultDetail.textContent = 'DESTROYED ' + destroyedCount + ' / CRACKED ' + crackedCount + ' / BREACH ' + breachCount + ' — best ' + best + ' pt';
+    hide(hud); show(overScreen);
+    sfx('end');
+  }
+  function startFromUi(){
+    if (state === 'title'){ start(); return; }
+    if (state === 'over' && tNow - overAt > REPLAY_GUARD){ start(); }
+  }
+  startBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+  replayBtn.addEventListener('click', function(){ initAudio(); startFromUi(); });
+
+  // ---------- pointer input ----------
+  function relX(e){
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || W;
+    var x = (e.clientX - rect.left) / w * W;
+    if (x < 0) x = 0; if (x > W) x = W;
+    return x;
+  }
+  canvas.addEventListener('pointerdown', function(e){
+    initAudio();
+    if (e.preventDefault) e.preventDefault();
+    turretX = clampTurret(relX(e));
+    startCharge();
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function(e){
+    if (state !== 'play') return;
+    turretX = clampTurret(relX(e));
+  }, { passive: true });
+  window.addEventListener('pointerup', function(){ releaseCharge(); });
+  window.addEventListener('pointercancel', function(){ cancelCharge(); });
+  canvas.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
+
+  // ---------- keyboard input ----------
+  var keys = { l: false, r: false };
+  window.addEventListener('keydown', function(e){
+    initAudio();
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') startCharge(); else startFromUi();
+    } else if (k === 'm' || k === 'M'){
+      toggleMute();
+    } else if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ keys.l = true; if (e.preventDefault) e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D'){ keys.r = true; if (e.preventDefault) e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function(e){
+    var k = e.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter'){ releaseCharge(); }
+    else if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = false;
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = false;
+  });
+
+  // ---------- update ----------
+  function update(dt){
+    if (state === 'play'){
+      if (keys.l) turretX = clampTurret(turretX - TURRET_KEY_SPEED * dt);
+      if (keys.r) turretX = clampTurret(turretX + TURRET_KEY_SPEED * dt);
+
+      updateMeteors(dt);
+      updateShots(dt);
+
+      elapsed += dt;
+      timeLeft -= dt;
+      if (timeLeft <= 10.05) timeEl.classList.add('warn');
+      if (timeLeft <= 0){
+        timeLeft = 0;
+        timeEl.textContent = '0.0';
+        finish();
+      } else {
+        timeEl.textContent = timeLeft.toFixed(1);
+      }
+    }
+  }
+
+  // ---------- render ----------
+  function render(){
+    var shakeX = 0, shakeY = 0;
+    if (tNow < shakeUntil){
+      var amt = (shakeUntil - tNow) / SHAKE_TIME * 6;
+      shakeX = (Math.random() - 0.5) * amt;
+      shakeY = (Math.random() - 0.5) * amt;
+    }
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+    ctx.clearRect(-20, -20, W + 40, H + 40);
+
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#0d0714');
+    sky.addColorStop(0.55, '#241533');
+    sky.addColorStop(1, '#3a2418');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // stars (decorative)
+    ctx.fillStyle = 'rgba(255,235,210,0.5)';
+    for (var i = 0; i < 40; i++){
+      var sx = (i * 53.7) % W;
+      var sy = (i * 91.3) % (H * 0.55);
+      var tw = 0.5 + 0.5 * Math.sin(tNow * 1.6 + i);
+      ctx.globalAlpha = 0.25 + tw * 0.4;
+      ctx.beginPath(); ctx.arc(sx, sy, 1.2, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // dune horizon (decorative)
+    var by = breachY();
+    ctx.fillStyle = '#4a2f1a';
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    ctx.lineTo(0, by + 22);
+    for (var dx = 0; dx <= W; dx += 40){
+      ctx.lineTo(dx, by + 22 + Math.sin(dx * 0.02) * 10);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(202,160,108,0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, by + 22);
+    for (var dx2 = 0; dx2 <= W; dx2 += 40){
+      ctx.lineTo(dx2, by + 22 + Math.sin(dx2 * 0.02) * 10);
+    }
+    ctx.stroke();
+
+    // meteors
+    for (var mi = 0; mi < meteors.length; mi++){
+      var m = meteors[mi];
+      var glow = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.type.r * 2.4);
+      glow.addColorStop(0, 'rgba(255,170,90,0.55)');
+      glow.addColorStop(1, 'rgba(255,120,60,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.type.r * 2.4, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,200,150,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(m.x - m.vx * 0.06, m.y - m.vy * 0.06); ctx.lineTo(m.x, m.y); ctx.stroke();
+      ctx.fillStyle = '#fff1d6';
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.type.r * 0.6, 0, 6.2832); ctx.fill();
+    }
+
+    // shots
+    for (var si = 0; si < shots.length; si++){
+      var s = shots[si];
+      ctx.fillStyle = s.tier === 3 ? '#fff6e0' : (s.tier === 2 ? '#ffcf8a' : '#ffb066');
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
+    }
+
+    if (state === 'play'){
+      var charge = isCharging ? Math.min(1, (tNow - chargeStart) / CHARGE_FULL_TIME) : 0;
+      var tierColor = charge < TIER1_MAX ? 'rgba(255,176,102,0.8)' : (charge < TIER2_MAX ? 'rgba(255,207,138,0.85)' : 'rgba(255,246,224,0.95)');
+
+      // charge meter
+      if (isCharging){
+        ctx.strokeStyle = tierColor;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(turretX, turretY - 16, 22, -Math.PI / 2, -Math.PI / 2 + 6.2832 * charge);
+        ctx.stroke();
+      }
+
+      // turret body
+      ctx.fillStyle = '#3a2410';
+      ctx.strokeStyle = '#c98a4b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(turretX - 26, turretY + 18);
+      ctx.lineTo(turretX + 26, turretY + 18);
+      ctx.lineTo(turretX + 16, turretY - 10);
+      ctx.lineTo(turretX - 16, turretY - 10);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = isCharging ? tierColor : '#c98a4b';
+      ctx.beginPath();
+      ctx.rect(turretX - 6, turretY - 30, 12, 20);
+      ctx.fill();
+
+      var coolT = Math.max(0, (cooldownUntil - tNow) / FIRE_COOLDOWN);
+      if (coolT > 0){
+        ctx.strokeStyle = 'rgba(255,107,74,0.7)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(turretX, turretY - 16, 30, -Math.PI / 2, -Math.PI / 2 + 6.2832 * (1 - coolT));
+        ctx.stroke();
+      }
+    }
+
+    // vignette
+    var vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.restore();
+  }
+
+  // ---------- main loop ----------
+  function frame(ms){
+    var t = ms / 1000;
+    if (lastT === null) lastT = t;
+    var dt = Math.min(0.1, Math.max(0, t - lastT));
+    lastT = t;
+    tNow = t;
+    update(dt);
+    render();
+    window.requestAnimationFrame(frame);
+  }
+  window.requestAnimationFrame(frame);
+
+  // ---------- verification hook (exposes the same state the UI uses) ----------
+  window.__GAME__ = {
+    get state(){ return state; },
+    get score(){ return score; },
+    get timeLeft(){ return timeLeft; },
+    get best(){ return best; },
+    start: start
+  };
+
+})();
+</script>
+</body>
+</html>
