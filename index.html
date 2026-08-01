@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Catalog — Browser FPS-style Toys</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #0a0b12; color: #e8ecf6;
+    font-family: sans-serif;
+  }
+  body {
+    min-height: 100%;
+    padding: 32px 16px 64px;
+    box-sizing: border-box;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.6rem;
+    letter-spacing: 0.04em;
+    margin: 0 0 4px;
+  }
+  .seed-num {
+    color: #7f8bc9;
+    font-weight: normal;
+  }
+  p.lede {
+    color: #a9b1c6;
+    margin: 0 0 32px;
+    line-height: 1.5;
+  }
+  ul.catalog {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  li.entry {
+    border: 1px solid #2a2e40;
+    border-radius: 10px;
+    padding: 16px 18px;
+    background: #12141f;
+  }
+  li.entry.featured {
+    border-color: #4a5fd9;
+    background: #141a2e;
+  }
+  h2 {
+    font-size: 1.15rem;
+    margin: 0 0 6px;
+  }
+  .desc {
+    margin: 0 0 10px;
+    color: #c7cce0;
+    line-height: 1.45;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    font-size: 0.85rem;
+  }
+  .date {
+    color: #8891ac;
+  }
+  a.play {
+    color: #9db2ff;
+    text-decoration: none;
+    border: 1px solid #3a4470;
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  a.play:hover, a.play:focus {
+    background: #1f2748;
+  }
+  .redirect-note {
+    margin: 0 0 28px;
+    padding: 12px 16px;
+    border: 1px solid #3a4470;
+    border-radius: 8px;
+    background: #10142a;
+    color: #c7cce0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .redirect-note a {
+    color: #9db2ff;
+  }
+  footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #2a2e40;
+    color: #7f879e;
+    font-size: 0.85rem;
+  }
+  footer a.feedback {
+    color: #8891ac;
+    text-decoration: none;
+    border-bottom: 1px dashed #4a5170;
+    cursor: default;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Browser FPS-style Toys — Catalog</h1>
+  <p class="lede">Single-file, dependency-free browser toys. Each play is about 60 seconds.</p>
+
+  <p class="redirect-note">
+    Looking for the toy that used to live at this address?
+    It is now <strong>SEED 001 — NEON RANGE</strong>, listed first below.
+    <a href="works/seed-001/index.html">Play NEON RANGE →</a>
+  </p>
+
+  <ul class="catalog">
+    <li class="entry featured">
+      <h2><span class="seed-num">SEED 001 —</span> NEON RANGE</h2>
+      <p class="desc">A first-person neon shooting range: turn the camera to aim and shoot floating light orbs before time runs out.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-07-27</span>
+        <a class="play" href="works/seed-001/index.html">Play →</a>
+      </div>
+    </li>
+    <li class="entry">
+      <h2><span class="seed-num">SEED 002 —</span> SIGNAL PURGE</h2>
+      <p class="desc">A data-tunnel shooter: move the reticle to purge red bug blocks while sparing blue packet blocks to keep your combo alive.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-07-28</span>
+        <a class="play" href="works/seed-002/index.html">Play →</a>
+      </div>
+    </li>
+    <li class="entry">
+      <h2><span class="seed-num">SEED 003 —</span> BEACON WATCH</h2>
+      <p class="desc">A lighthouse timing game: press, drag to aim, and release the instant a signal flare's ring closes for a PERFECT catch.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-07-28</span>
+        <a class="play" href="works/seed-003/index.html">Play →</a>
+      </div>
+    </li>
+    <li class="entry">
+      <h2><span class="seed-num">SEED 004 —</span> STRATA WARDEN</h2>
+      <p class="desc">A mine-wall containment game: click a crystal vein the instant its expanding energy ring reaches the stable band.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-07-28</span>
+        <a class="play" href="works/seed-004/index.html">Play →</a>
+      </div>
+    </li>
+    <li class="entry">
+      <h2><span class="seed-num">SEED 005 —</span> EMBER CANOPY</h2>
+      <p class="desc">A forest-canopy catcher: swing a cursor-following net to catch drifting embers right at their brightest pulse.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-07-28</span>
+        <a class="play" href="works/seed-005/index.html">Play →</a>
+      </div>
+    </li>
+    <li class="entry">
+      <h2><span class="seed-num">SEED 006 —</span> FROST HARPOON</h2>
+      <p class="desc">An ice-cave harpoon gun: aim and fire a piercing projectile to chain-hit multiple drifting vapor wisps in one shot.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-07-29</span>
+        <a class="play" href="works/seed-006/index.html">Play →</a>
+      </div>
+    </li>
+    <li class="entry">
+      <h2><span class="seed-num">SEED 007 —</span> METEOR CHARGE</h2>
+      <p class="desc">A desert-observatory cannon: hold to charge power, then release to shoot down falling meteors before they breach.</p>
+      <div class="meta">
+        <span class="date">Release date: 2026-08-01</span>
+        <a class="play" href="works/seed-007/index.html">Play →</a>
+      </div>
+    </li>
+  </ul>
+
+  <footer>
+    <a class="feedback" href="#feedback">Feedback (coming soon)</a>
+  </footer>
+</main>
+</body>
+</html>
