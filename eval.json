@@ -5,9 +5,9 @@
   "works": [
     {
       "seed": "seed-001",
-      "novelty": 3,
+      "novelty": null,
       "depth": 1,
-      "novelty_reason": "First work; no predecessor exists, so it is scored as a baseline reflex aim-and-fire loop (continuous camera-aim, instant hit-test on press) rather than assumed maximal.",
+      "novelty_reason": "no predecessor",
       "depth_reason": "Single decision (when to fire while continuously aimed); shots/hits are tracked but only feed an end-of-round accuracy readout, never a later decision.",
       "world": null
     },
