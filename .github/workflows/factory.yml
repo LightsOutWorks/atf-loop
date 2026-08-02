@@ -248,6 +248,7 @@ jobs:
           }
           "description" は index.html のタイトル画面に実際に表示した1行説明(例: <p class="sub"> に書いた文)と一言一句同じにすること。ここで新しい文を書き起こさないこと。
           "primary_input" と "success_condition" は Interaction Contract である。タイトル画面がプレイヤーへ提示している操作の約束から機械的に導くこと(例: 「押し続けてロック」と約束していれば hold、「タップして駆除」なら tap、「ドラッグして狙いを離す」なら drag)。UIでの約束が先であり、実装側の都合で自由に選んでよいものではない。
+          "success_condition" は primary_input の1回の実行が引き起こす最小の観測可能な状態変化を指すこと。ゲームの勝利条件や到達目標(例: 3個そろえる・3連続成功する等)を指してはならない。例: hold でドックできるなら docked_1 に相当する条件を指すのであって、docked_3 のような複数回・連続達成を指すものではない。
           6. `node smoke.mjs __WORK_DIR__` を実行し、6 項目すべて PASS(6/6)になることを確認する。続けて `node scripts/interaction-smoke.mjs __WORK_DIR__` を実行し、meta.json で宣言した primary_input を実際のポインタ操作で駆動して success_condition(window.__GAME__.checkSuccess())が真になることを確認してから終了する。
 
           【検証契約(smoke.mjs が期待するインターフェース。smoke.mjs 側の改変は禁止)】
