@@ -1,0 +1,7 @@
+{
+  "seed": "seed-010",
+  "title": "PRISM SPLIT",
+  "description": "A dusk-canyon light toy: tap a drifting prism to split it into two smaller shards, or tap a fully-split shard to pop it for points.",
+  "primary_input": "tap",
+  "success_condition": "prism_resolved_1"
+}

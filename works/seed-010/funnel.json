@@ -1,0 +1,24 @@
+{
+  "seed": "seed-010",
+  "candidates": [
+    "PRISM SPLIT: Tapping a drifting prism splits it into two smaller, faster shards worth less each until they reach a terminal size that pops for full value; the player decides whether to fully cascade-split one prism for maximum eventual payout or spread taps across many prisms for safer, incremental scoring.",
+    "ECHO GRID: A short sequence of grid cells flashes in order and the player must tap them back in the same sequence before it fades, with one new cell added to the sequence after every clean success; the player decides whether to attempt a growing sequence from memory or wait a beat longer before committing.",
+    "ARC SLING: Dragging back from a fixed anchor sets both the angle and power of a shot in one motion, and releasing launches it along a gravity arc toward targets at varying distances and heights; the player decides how far to pull back and at what angle to reach far versus near targets in a single continuous motion.",
+    "PATH WEAVER: Continuously dragging holds a short deflector segment in front of a lane of oncoming orbs, redirecting whichever orb currently touches it into one of two goal mouths on either side; the player decides which side to send each orb toward, adjusting live as it approaches.",
+    "GRAVITY SNARE: Tapping places a short-lived pulsing field that pulls nearby drifting orbs toward a fixed collection point instead of hitting them directly; the player decides where and when to place the field, since only orbs pulled all the way in are scored.",
+    "TRIP LINE: Dragging draws a short line that destroys anything crossing it while active, consuming a shared, slowly regenerating length budget; the player decides where to place each segment and whether to spend the budget on one long line or several short ones.",
+    "DUAL LANE SWAP: Two lanes each receive incoming threats but only one lane's shield can be active at a time, and tapping toggles which lane is currently shielded; the player decides when to swap the shielded lane, since the other lane takes unblocked hits while unguarded.",
+    "MIRROR PAIR: Moving the cursor drags a primary marker while a mirrored marker moves as its reflection on the opposite side of the arena, and both markers must reach their own target at the same moment to score; the player decides how to route the shared movement so both mirrored paths avoid obstacles and land in sync.",
+    "INK BLOOM: Clicking drops a blot that grows over a few seconds and pops any target its edge touches, but two overlapping blots merge into one larger, faster-growing blot that can also swallow hazard tiles for a penalty; the player decides where to place each blot and whether to let them merge for area coverage or keep them apart for safety.",
+    "FUSE RELAY: Clicking a lit node passes a charge to one connected neighbor of the player's choosing, and the charge must reach the far end of the network before a countdown expires, with new neighbors lighting up at each hop; the player decides which neighbor to route the charge through at every hop to keep the chain alive and reach higher-value end nodes.",
+    "RECOIL STEP: Tapping fires a shot but pushes the player's fixed turret one step backward along a short rail with a limited safe zone before a fall penalty, while a separate action steps the turret back forward; the player decides how many quick shots to risk before resetting position.",
+    "CHAIN VALVE: Holding down builds a shared charge meter that also raises a heat gauge, and releasing before the redline banks the current charge as points while releasing after it forces a lockout cooldown with no reward; the player decides how long to hold for a bigger bank versus cashing out early and often to stay safe."
+  ],
+  "finalists": [
+    {"title": "PRISM SPLIT", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":4,"C6":4,"C7":4}},
+    {"title": "ARC SLING", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "TRIP LINE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}}
+  ],
+  "selected": "PRISM SPLIT",
+  "reason": "PRISM SPLIT scored highest overall, especially on implementation stability and how quickly its core rule reads (C4/C5) since the first tap immediately and unmistakably shows the split-or-pop rule, while its cascade-vs-spread choice directly reshapes the entity count and layout for the rest of the round (C3/C7) more cleanly than the other finalists' single-shot mechanics."
+}
