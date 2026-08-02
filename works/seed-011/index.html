@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>MAGNET TIDE</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #05070d;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #05070d;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #cfe8ff; font-size: 18px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #7fe8ff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(4,6,13,0.78); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #eaf6ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #eaf6ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #9fb7d6; max-width: 520px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #7fe8ff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #6fe3ff; background: #0d1930;
+    color: #e9fbff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>STREAK <span id="streakVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>MAGNET TIDE</h1>
+    <p class="sub" id="subDesc">Tap anywhere to flip the field's polarity — matching orbs pull into the collector, mismatched ones get pushed away.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST STREAK 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var streakVal = document.getElementById('streakVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var state = 'title';
+  var score = 0;
+  var timeLeft = 60;
+  var streak = 0;
+  var bestStreak = 0;
+  var capturedCount = 0;
+  var fieldPolarity = 'A';
+  var flipFlashUntil = 0;
+  var lastFrameTime = null;
+  var spawnAccum = 0;
+  var orbs = [];
+  var particles = [];
+  var pops = [];
+  var resultGuardUntil = 0;
+
+  var COLLECTOR_R = 42;
+  var ORB_R = 11;
+  var CAPTURE_DIST = COLLECTOR_R + ORB_R;
+  var MAX_ORBS = 12;
+  var SPAWN_INTERVAL = 0.7;
+  var SPEED_CAP = 220;
+  var ATTRACT_ACCEL = 150;
+  var REPEL_ACCEL = 90;
+  var DRIFT_ACCEL = 10;
+  var LOSS_MARGIN = 90;
+
+  var COLOR_A = '#5fe0ff';
+  var COLOR_B = '#ff5fd0';
+
+  function fieldColor(p) { return p === 'A' ? COLOR_A : COLOR_B; }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function centerX() { return VIEW_W / 2; }
+  function centerY() { return VIEW_H / 2; }
+
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function clamp(v, min, max) { return v < min ? min : (v > max ? max : v); }
+
+  function spawnOrb() {
+    var edge = Math.floor(rand(0, 4));
+    var x, y;
+    if (edge === 0) { x = rand(0, VIEW_W); y = -30; }
+    else if (edge === 1) { x = VIEW_W + 30; y = rand(0, VIEW_H); }
+    else if (edge === 2) { x = rand(0, VIEW_W); y = VIEW_H + 30; }
+    else { x = -30; y = rand(0, VIEW_H); }
+    orbs.push({
+      x: x, y: y,
+      vx: rand(-20, 20), vy: rand(-20, 20),
+      polarity: Math.random() < 0.5 ? 'A' : 'B'
+    });
+  }
+
+  function resetGame() {
+    score = 0;
+    timeLeft = 60;
+    streak = 0;
+    bestStreak = 0;
+    capturedCount = 0;
+    fieldPolarity = 'A';
+    flipFlashUntil = 0;
+    lastFrameTime = null;
+    spawnAccum = 0;
+    orbs = [];
+    particles = [];
+    pops = [];
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + 500;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST STREAK ' + bestStreak;
+    overScreen.style.display = 'flex';
+  }
+
+  function flipField() {
+    if (state !== 'play') return;
+    fieldPolarity = fieldPolarity === 'A' ? 'B' : 'A';
+    flipFlashUntil = performance.now() + 220;
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    streakVal.textContent = String(streak);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function addParticleBurst(x, y, color) {
+    for (var i = 0; i < 10; i++) {
+      var ang = rand(0, Math.PI * 2);
+      var spd = rand(60, 180);
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        life: 0.5, maxLife: 0.5, color: color
+      });
+    }
+  }
+
+  function addScorePop(x, y, text) {
+    pops.push({ x: x, y: y, life: 0.7, maxLife: 0.7, text: text });
+  }
+
+  function updateOrbs(dt) {
+    var cx = centerX(), cy = centerY();
+    for (var i = orbs.length - 1; i >= 0; i--) {
+      var o = orbs[i];
+      var dx = cx - o.x, dy = cy - o.y;
+      var dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+      var nx = dx / dist, ny = dy / dist;
+      var matched = o.polarity === fieldPolarity;
+      var accel = matched ? ATTRACT_ACCEL : -REPEL_ACCEL;
+      o.vx += (nx * accel + nx * DRIFT_ACCEL) * dt;
+      o.vy += (ny * accel + ny * DRIFT_ACCEL) * dt;
+
+      var speed = Math.sqrt(o.vx * o.vx + o.vy * o.vy);
+      if (speed > SPEED_CAP) {
+        var s = SPEED_CAP / speed;
+        o.vx *= s; o.vy *= s;
+      }
+
+      o.x += o.vx * dt;
+      o.y += o.vy * dt;
+
+      if (matched && dist <= CAPTURE_DIST) {
+        streak++;
+        if (streak > bestStreak) bestStreak = streak;
+        var mult = 1 + Math.floor(streak / 3);
+        if (mult > 4) mult = 4;
+        var gain = 10 * mult;
+        score += gain;
+        capturedCount++;
+        addParticleBurst(o.x, o.y, fieldColor(o.polarity));
+        addScorePop(cx, cy - COLLECTOR_R - 14, '+' + gain);
+        orbs.splice(i, 1);
+        continue;
+      }
+
+      if (o.x < -LOSS_MARGIN || o.x > VIEW_W + LOSS_MARGIN || o.y < -LOSS_MARGIN || o.y > VIEW_H + LOSS_MARGIN) {
+        if (!matched) streak = 0;
+        orbs.splice(i, 1);
+      }
+    }
+  }
+
+  function updateParticles(dt) {
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (var j = pops.length - 1; j >= 0; j--) {
+      var s = pops[j];
+      s.y -= 26 * dt;
+      s.life -= dt;
+      if (s.life <= 0) pops.splice(j, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#05070d';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
+
+  function drawCollector(now) {
+    var cx = centerX(), cy = centerY();
+    var flashT = clamp((flipFlashUntil - now) / 220, 0, 1);
+    var ringColor = fieldColor(fieldPolarity);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, COLLECTOR_R + 18 + flashT * 26, 0, Math.PI * 2);
+    ctx.strokeStyle = ringColor;
+    ctx.globalAlpha = 0.25 + flashT * 0.5;
+    ctx.lineWidth = 3 + flashT * 5;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, COLLECTOR_R, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b1220';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = ringColor;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fillStyle = ringColor;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawOrbs() {
+    for (var i = 0; i < orbs.length; i++) {
+      var o = orbs[i];
+      var matched = o.polarity === fieldPolarity;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, ORB_R + (matched ? 3 : 0), 0, Math.PI * 2);
+      ctx.fillStyle = fieldColor(o.polarity);
+      ctx.globalAlpha = matched ? 1 : 0.55;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawParticles() {
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      var a = clamp(p.life / p.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      ctx.restore();
+    }
+    for (var j = 0; j < pops.length; j++) {
+      var s = pops[j];
+      var alpha = clamp(s.life / s.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#eafcff';
+      ctx.font = '20px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(s.text, s.x, s.y);
+      ctx.restore();
+    }
+  }
+
+  function render(now) {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawCollector(now);
+      drawOrbs();
+      drawParticles();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        spawnAccum = 0;
+        updateOrbs(dt);
+        updateParticles(dt);
+        updateHud();
+        render(now);
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      spawnAccum += dt;
+      while (spawnAccum >= SPAWN_INTERVAL && orbs.length < MAX_ORBS) {
+        spawnAccum -= SPAWN_INTERVAL;
+        spawnOrb();
+      }
+
+      updateOrbs(dt);
+      updateParticles(dt);
+      updateHud();
+    }
+    render(now);
+    requestAnimationFrame(tick);
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (state === 'title') { start(); return; }
+    flipField();
+  }
+  canvas.addEventListener('pointerdown', onPointerDown);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (state === 'title') { start(); return; }
+      flipField();
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return capturedCount >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

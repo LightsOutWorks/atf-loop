@@ -1,0 +1,7 @@
+{
+  "seed": "seed-011",
+  "title": "MAGNET TIDE",
+  "description": "Tap anywhere to flip the field's polarity — matching orbs pull into the collector, mismatched ones get pushed away.",
+  "primary_input": "tap",
+  "success_condition": "orb_captured_1"
+}

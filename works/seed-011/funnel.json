@@ -1,0 +1,23 @@
+{
+  "seed": "seed-011",
+  "candidates": [
+    {"title": "TRIAGE PULSE", "description": "Tap resolves whichever of several concurrently-decaying targets you choose, but ignoring one speeds up the decay of all the rest.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "RICOCHET DRAW", "description": "Drag back and release to launch a ball whose bounce path off the walls is set entirely by the pull vector, chaining bounces for a bigger payout.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "STACK BALANCE", "description": "Tap one of three columns to stack a block there, choosing which column to reinforce so no single stack outgrows its neighbors and topples.", "scores": {"C1":4,"C2":3,"C3":3,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "POLARITY FLIP", "description": "Tap toggles a global polarity that instantly reverses whether every orb on screen is pulled toward or pushed away from the collector.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "SHAPE DIAL", "description": "Drag rotates a ring of sockets so the correctly-shaped one is in place to catch each falling shape before it lands.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "CHAIN IGNITE", "description": "Tap a node to start a chain reaction that auto-spreads through a small network, scoring whichever cluster of nodes the chosen start point reaches.", "scores": {"C1":3,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "FLOW GATE", "description": "Drag positions a fork gate that routes each arriving object left or right depending on its type, revealed only just before it arrives.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "SPLIT LEDGER", "description": "Tap commits accumulated value into a Safe or Risky ledger, banking small and sure versus doubling it at the cost of a cooldown risk.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "ORBIT SNARE", "description": "Hold to grab a continuously swinging arm's tip and release to fling its payload toward a target sector chosen by the release angle.", "scores": {"C1":3,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}},
+    {"title": "PRESSURE VENT", "description": "Hold builds a shared pressure-and-heat gauge and releasing before redline banks the pressure as score, releasing after it forfeits the cycle.", "scores": {"C1":1,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "GRID CASCADE", "description": "Tap merges a lit cell into a chosen neighbor, building bigger single cells that must be banked before they grow past a cap and destabilize.", "scores": {"C1":1,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}}
+  ],
+  "finalists": [
+    {"title": "TRIAGE PULSE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "STACK BALANCE", "scores": {"C1":4,"C2":3,"C3":3,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "POLARITY FLIP", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}}
+  ],
+  "selected": "POLARITY FLIP",
+  "reason": "POLARITY FLIP ties TRIAGE PULSE for the top score but wins on implementation stability and feedback strength (C4/C6): a single global tap instantly reverses every orb's motion at once with no aiming needed, and it is the most structurally distinct from all ten existing works (C1) since none of them use a global state-toggle input in place of direct target selection."
+}
