@@ -16,7 +16,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+
+// NODE_PATH は CommonJS の require() 解決アルゴリズムだけが参照し、ESM の import 文からは
+// 一切見えない。playwright をリポジトリ外(NODE_PATH 経由)に置く運用のため、ESM の
+// 静的 import ではなく createRequire 経由の require() で解決する。
+const { chromium } = createRequire(import.meta.url)('playwright');
 
 const VALID_INPUTS = ['tap', 'hold', 'drag'];
 const TIME_BUDGET_MS = 25000;
