@@ -1,6 +1,6 @@
 {
   "prompt_version": "eval-min-v1",
-  "scored_at": "2026-08-01",
+  "scored_at": "2026-08-02",
   "scorer": "claude-sonnet-5",
   "works": [
     {
@@ -57,6 +57,22 @@
       "depth": 3,
       "novelty_reason": "No predecessor lets the player invest a chosen hold-duration for more power; seed-001..seed-006 all use fixed-duration cooldowns after acting, never a charge-before-acting resource. Changes the decision from targeting/timing precision to a time-investment trade-off against multiple falling threats.",
       "depth_reason": "Position and charge-duration decisions interact with meteors' own mutable state: an under-powered hit permanently downgrades m.type (L to M to S), a real non-score state change that alters what a later shot on that same meteor requires.",
+      "world": null
+    },
+    {
+      "seed": "seed-008",
+      "novelty": 4,
+      "depth": 3,
+      "novelty_reason": "No predecessor (seed-001..007) has a resource that persists and accumulates across multiple target hits to gate a second, higher-value target type; seed-007's charge is the closest analogue but is per-shot and resets on release, while VOLT CACHE's currency is banked from cell hits and spent (or denied) on vault hits across the whole round, changing the decision from per-target timing/aim to cross-target resource sequencing.",
+      "depth_reason": "Two interacting decisions (which target to hit, and implicit sequencing of cells before vaults) with real non-score state (currency, incremented by cell hits and consumed or denied by vault hits); the currency-gate interaction is stated directly in the title-screen text, so no emergent behavior beyond what the rules state.",
+      "world": null
+    },
+    {
+      "seed": "seed-009",
+      "novelty": 4,
+      "depth": 3,
+      "novelty_reason": "No predecessor (seed-001..008) binds a sustained hold to one specific target instance; seed-007's hold-to-charge is untargeted and never cancels on re-aim, seed-003's hold-drag-release only resolves against whichever flare is nearest at release, and seed-008 has no hold at all (both its target kinds resolve on instant click) — TETHER LOCK is the first work where holding accumulates progress against one committed target and re-aiming onto a different target discards that progress entirely, changing the decision from timing/aim precision or resource sequencing to sustained single-target commitment with a real switching cost.",
+      "depth_reason": "Two interacting decisions (which target to commit to, and whether to keep holding as its own life timer runs or abandon for a safer one) with real non-score state (holdProgress, which persists only while locked to one target id and is discarded on switch, release, or the held target's own expiry); the switch-cancels-progress rule is stated directly in the title-screen text, so no emergent behavior beyond what the rules state.",
       "world": null
     }
   ]
