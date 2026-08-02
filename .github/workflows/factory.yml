@@ -164,6 +164,28 @@ jobs:
           echo "claude: $(claude --version)"
           echo "codex: $(codex --version)"
 
+      - name: Interaction Smoke 用ブラウザ準備(Playwright Chromium。リポジトリ外にインストール)
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          STEP_LABEL="Interaction Smoke 準備"
+          source "$LOG_DIR/lib.sh"
+
+          # integrity_check は WORK_DIR 外の未追跡ファイルを違反として検出するため、
+          # Playwright 本体・ブラウザバイナリはリポジトリ外(RUNNER_TEMP 配下)へインストールする。
+          PW_DIR="$RUNNER_TEMP/interaction-smoke-deps"
+          PW_BROWSERS_DIR="$RUNNER_TEMP/interaction-smoke-browsers"
+          mkdir -p "$PW_DIR"
+          npm install --prefix "$PW_DIR" playwright
+          {
+            echo "NODE_PATH=$PW_DIR/node_modules"
+            echo "PLAYWRIGHT_BROWSERS_PATH=$PW_BROWSERS_DIR"
+          } >> "$GITHUB_ENV"
+          export NODE_PATH="$PW_DIR/node_modules"
+          export PLAYWRIGHT_BROWSERS_PATH="$PW_BROWSERS_DIR"
+          "$PW_DIR/node_modules/.bin/playwright" install --with-deps chromium
+          integrity_check
+
       - name: 生成(Claude Code)
         timeout-minutes: 25
         env:
@@ -214,20 +236,24 @@ jobs:
             "reason": "<一〜二文>"
           }
           "candidates" にはフェーズ1で生成した12個全てを入れる。"finalists" にはフェーズ3で最終候補となった3個だけを入れる。却下した候補への論評など、これ以外の情報は記録しないこと。
-          5. __WORK_DIR__/meta.json を新規作成し、次の3項目だけをそのまま記録する(他の項目は一切含めないこと):
+          5. __WORK_DIR__/meta.json を新規作成し、次の5項目だけをそのまま記録する(他の項目は一切含めないこと):
           {
             "seed": "<今回の seed id>",
             "title": "<作品名>",
-            "description": "<タイトル画面に表示した1行説明と同じ文>"
+            "description": "<タイトル画面に表示した1行説明と同じ文>",
+            "primary_input": "<tap | hold | drag のいずれか>",
+            "success_condition": "<成功状態を短く表すラベル。例: lock_completed>"
           }
           "description" は index.html のタイトル画面に実際に表示した1行説明(例: <p class="sub"> に書いた文)と一言一句同じにすること。ここで新しい文を書き起こさないこと。
-          6. `node smoke.mjs __WORK_DIR__` を実行し、6 項目すべて PASS(6/6)になることを確認してから終了する。
+          "primary_input" と "success_condition" は Interaction Contract である。タイトル画面がプレイヤーへ提示している操作の約束から機械的に導くこと(例: 「押し続けてロック」と約束していれば hold、「タップして駆除」なら tap、「ドラッグして狙いを離す」なら drag)。UIでの約束が先であり、実装側の都合で自由に選んでよいものではない。
+          6. `node smoke.mjs __WORK_DIR__` を実行し、6 項目すべて PASS(6/6)になることを確認する。続けて `node scripts/interaction-smoke.mjs __WORK_DIR__` を実行し、meta.json で宣言した primary_input を実際のポインタ操作で駆動して success_condition(window.__GAME__.checkSuccess())が真になることを確認してから終了する。
 
           【検証契約(smoke.mjs が期待するインターフェース。smoke.mjs 側の改変は禁止)】
           - <title> タグに作品名を入れる
           - 状態遷移: 初期状態 state='title' → 開始操作で 'play'(残り時間ちょうど 60)→ 60 秒経過で 'over' → 再プレイで 'play'(スコア 0・残り時間 60 に初期化)
           - id="startBtn" の開始ボタンと id="replayBtn" の再プレイボタンを持ち、click リスナーで動作する(リザルト画面に再入力ガードを入れる場合は 1 秒以下にする)
           - window.__GAME__ に検証用フック { start(関数), state(文字列), timeLeft(数値), score(数値) } を公開し、常に実際のゲーム状態と一致させる
+          - window.__GAME__ に checkSuccess()(引数なしで真偽値を返す関数)を追加する。meta.json の success_condition が指す、プレイヤーが画面で見ている状態(達成回数・スコアの変化・状態遷移など)を実際に読んで判定すること。入力ハンドラが成功時に立てるフラグを読むだけの実装(呼ばれた事実だけを見る・常に true を返す等)にしないこと
           - 時間管理は performance.now() と requestAnimationFrame のタイムスタンプで行う(Date.now() や setInterval / setTimeout に依存しない。smoke.mjs は仮想時計で 60 秒経過を再現する)
           - スクリプトは読み込みと同時に同期的に初期化する(DOMContentLoaded / load イベント待ちにしない。検証環境ではこれらは発火しない)
           - 要素取得は document.getElementById のみ使う(querySelector / querySelectorAll は検証環境で使えない)
@@ -261,7 +287,7 @@ jobs:
           integrity_check
           echo "- 生成: \`$WORK_DIR/index.html\` と \`$WORK_DIR/devlog.md\` を作成 ✅" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: スモーク検証(不合格は最大 3 回まで生成側に修正させる)
+      - name: スモーク検証 + Interaction Smoke(不合格は最大 3 回まで生成側に修正させる)
         timeout-minutes: 35
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -271,21 +297,21 @@ jobs:
           source "$LOG_DIR/lib.sh"
 
           FIX_TMPL=$(cat <<'EOF'
-          無人パイプラインのスモーク検証で __WORK_DIR__ の作品が不合格でした。これは修正 __FIX_NO__ 回目(最大 3 回)です。末尾の失敗出力を読んで原因を特定し、修正してください。人間は介在しないため、質問せず完遂して終了すること。
+          無人パイプラインの検証で __WORK_DIR__ の作品が不合格でした。これは修正 __FIX_NO__ 回目(最大 3 回)です。末尾の失敗出力を読んで原因を特定し、修正してください。人間は介在しないため、質問せず完遂して終了すること。
 
           【最優先ルール】リポジトリ直下の CONSTRAINTS.md の制約を他のどの指示よりも優先して満たすこと。
 
           【タスク】
-          1. 末尾に貼られた smoke.mjs の失敗出力を読み、原因を特定する。
-          2. __WORK_DIR__/index.html を修正する(smoke.mjs が期待するインターフェースは smoke.mjs 本体を読んで確認する)。
+          1. 末尾に貼られた失敗出力を読み、原因を特定する(smoke.mjs による6項目検証、または scripts/interaction-smoke.mjs による Interaction Contract 検証のいずれか)。
+          2. __WORK_DIR__/index.html および __WORK_DIR__/meta.json を修正する(それぞれが期待するインターフェースは smoke.mjs / scripts/interaction-smoke.mjs 本体を読んで確認する)。
           3. 失敗の原因と修正内容を __WORK_DIR__/devlog.md に追記する。
-          4. `node smoke.mjs __WORK_DIR__` で 6 項目すべて PASS(6/6)になることを確認してから終了する。
+          4. `node smoke.mjs __WORK_DIR__` で 6 項目すべて PASS(6/6)になり、続けて `node scripts/interaction-smoke.mjs __WORK_DIR__` も成功することを確認してから終了する。
 
           【禁止事項(成功偽装の防止。違反するとパイプラインが fail-closed で停止する)】
-          - __WORK_DIR__/ 配下(index.html / devlog.md)以外のファイルを作成・変更・削除しないこと(特に smoke.mjs / CONSTRAINTS.md / ルート index.html / scripts/ / .github/)
+          - __WORK_DIR__/ 配下(index.html / devlog.md / meta.json)以外のファイルを作成・変更・削除しないこと(特に smoke.mjs / CONSTRAINTS.md / ルート index.html / scripts/ / .github/)
           - 検証の無効化・期待値の改変・実態と異なる値を返す検証フックなど、見かけだけの合格を作らないこと
 
-          === smoke.mjs 失敗出力 ===
+          === 失敗出力 ===
           EOF
           )
 
@@ -295,22 +321,33 @@ jobs:
             integrity_check
             attempt=$((fixes + 1))
             SMOKE_LOG="$LOG_DIR/smoke-attempt-${attempt}.log"
+            ISMOKE_LOG="$LOG_DIR/interaction-smoke-attempt-${attempt}.log"
+
             set +e
             node smoke.mjs "$WORK_DIR" 2>&1 | tee "$SMOKE_LOG"
             rc=${PIPESTATUS[0]}
             set -e
+            FAIL_LOG="$SMOKE_LOG"
             if [ "$rc" -eq 0 ]; then
-              echo "- スモーク検証: 試行 ${attempt} 回目で PASS (6/6) ✅(修正 ${fixes} 回)" >> "$GITHUB_STEP_SUMMARY"
+              set +e
+              node scripts/interaction-smoke.mjs "$WORK_DIR" 2>&1 | tee "$ISMOKE_LOG"
+              rc=${PIPESTATUS[0]}
+              set -e
+              FAIL_LOG="$ISMOKE_LOG"
+            fi
+
+            if [ "$rc" -eq 0 ]; then
+              echo "- スモーク検証 + Interaction Smoke: 試行 ${attempt} 回目で PASS ✅(修正 ${fixes} 回)" >> "$GITHUB_STEP_SUMMARY"
               break
             fi
             if [ "$fixes" -ge "$MAX_FIX" ]; then
-              fail "スモーク検証が上限の修正 ${MAX_FIX} 回を使い切っても不合格のため停止します。最終試行の結果は下記のとおり。" "$SMOKE_LOG"
+              fail "検証(smoke.mjs / interaction-smoke.mjs)が上限の修正 ${MAX_FIX} 回を使い切っても不合格のため停止します。最終試行の結果は下記のとおり。" "$FAIL_LOG"
             fi
             fixes=$((fixes + 1))
-            echo "スモーク不合格(試行 ${attempt} 回目)。生成側に修正させます(${fixes}/${MAX_FIX})。"
+            echo "検証不合格(試行 ${attempt} 回目)。生成側に修正させます(${fixes}/${MAX_FIX})。"
             FIX_PROMPT=${FIX_TMPL//__WORK_DIR__/$WORK_DIR}
             FIX_PROMPT=${FIX_PROMPT//__FIX_NO__/$fixes}
-            FIX_PROMPT="${FIX_PROMPT}"$'\n'"$(cat "$SMOKE_LOG")"
+            FIX_PROMPT="${FIX_PROMPT}"$'\n'"$(cat "$FAIL_LOG")"
             set +e
             claude -p "$FIX_PROMPT" \
               --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite,Bash(node:*)" \
