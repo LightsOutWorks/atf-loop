@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>CORE OVERLOAD</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0a0c12;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0a0c12;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #d9e6ff; font-size: 18px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #7fd4ff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.86); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f2f6ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f2f6ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #a9b6cf; max-width: 540px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #7fd4ff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #7fd4ff; background: #071a24;
+    color: #e9f8ff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>OVERFLOW <span id="overflowVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>CORE OVERLOAD</h1>
+    <p class="sub" id="subDesc">Three reactor nodes build heat on their own. Hold a node to vent its heat into score — drain it fully for a bonus, or let it overflow and lose points.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalDrains">FULL DRAINS 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var overflowVal = document.getElementById('overflowVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalDrains = document.getElementById('finalDrains');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var NODE_COUNT = 3;
+  var BASE_RATES = [7, 9, 11];
+  var VENT_RATE = 42;
+  var SCORE_PER_HEAT = 0.75;
+  var DRAIN_BONUS = 6;
+  var OVERFLOW_PENALTY = 8;
+  var SUCCESS_VENT_THRESHOLD = 4;
+
+  var state = 'title';
+  var score = 0;
+  var timeLeft = 60;
+  var overflowCount = 0;
+  var drainCount = 0;
+  var totalVented = 0;
+  var scoreAccum = 0;
+  var sparkAccum = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var nodes = [];
+  var particles = [];
+  var pops = [];
+
+  var isPointerDown = false;
+  var pointerNodeIndex = -1;
+  var keyNodeIndex = -1;
+
+  var audioCtx = null;
+
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function clamp(v, min, max) { return v < min ? min : (v > max ? max : v); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function rateMultiplier(elapsed) {
+    if (elapsed > 45) return 1.9;
+    if (elapsed > 25) return 1.4;
+    return 1;
+  }
+
+  function makeNodes() {
+    var arr = [];
+    for (var i = 0; i < NODE_COUNT; i++) {
+      arr.push({ heat: 0, base: BASE_RATES[i % BASE_RATES.length], flashTimer: 0 });
+    }
+    return arr;
+  }
+
+  function resetGame() {
+    score = 0;
+    timeLeft = 60;
+    overflowCount = 0;
+    drainCount = 0;
+    totalVented = 0;
+    scoreAccum = 0;
+    sparkAccum = 0;
+    lastFrameTime = null;
+    nodes = makeNodes();
+    particles = [];
+    pops = [];
+    isPointerDown = false;
+    pointerNodeIndex = -1;
+    keyNodeIndex = -1;
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + 500;
+    finalScore.textContent = 'SCORE ' + score;
+    finalDrains.textContent = 'FULL DRAINS ' + drainCount;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    overflowVal.textContent = String(overflowCount);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function nodeRect(i) {
+    var w = VIEW_W / NODE_COUNT;
+    return { x: i * w, y: 0, w: w, h: VIEW_H };
+  }
+
+  function addSpark(x, y) {
+    particles.push({
+      x: x, y: y,
+      vx: rand(-20, 20), vy: rand(-90, -40),
+      life: 0.45, maxLife: 0.45
+    });
+  }
+
+  function addPop(x, y, text, color) {
+    pops.push({ x: x, y: y, life: 0.8, maxLife: 0.8, text: text, color: color });
+  }
+
+  function activeNode() {
+    if (isPointerDown && pointerNodeIndex >= 0) return pointerNodeIndex;
+    if (keyNodeIndex >= 0) return keyNodeIndex;
+    return -1;
+  }
+
+  function updateNodes(dt, elapsed) {
+    var mult = rateMultiplier(elapsed);
+    var active = activeNode();
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n.flashTimer > 0) n.flashTimer = Math.max(0, n.flashTimer - dt);
+
+      n.heat += n.base * mult * dt;
+
+      if (i === active && n.heat > 0) {
+        var vent = Math.min(n.heat, VENT_RATE * dt);
+        n.heat -= vent;
+        totalVented += vent;
+        scoreAccum += vent * SCORE_PER_HEAT;
+        while (scoreAccum >= 1) { score += 1; scoreAccum -= 1; }
+
+        var r = nodeRect(i);
+        sparkAccum += dt;
+        while (sparkAccum >= 0.05) {
+          sparkAccum -= 0.05;
+          var barTop = r.y + r.h * (1 - clamp(n.heat / 100, 0, 1));
+          addSpark(r.x + r.w * rand(0.3, 0.7), barTop);
+        }
+
+        if (n.heat <= 0.01) {
+          n.heat = 0;
+          drainCount += 1;
+          score += DRAIN_BONUS;
+          addPop(r.x + r.w / 2, r.h / 2, '+' + DRAIN_BONUS + ' DRAINED', '#8fffc0');
+          playTone(720, 0.12, 'triangle');
+        }
+      }
+
+      if (n.heat >= 100) {
+        n.heat = 0;
+        overflowCount += 1;
+        score = Math.max(0, score - OVERFLOW_PENALTY);
+        n.flashTimer = 0.35;
+        var rr = nodeRect(i);
+        addPop(rr.x + rr.w / 2, rr.h / 2 - 30, '-' + OVERFLOW_PENALTY + ' OVERFLOW', '#ff7f7f');
+        playTone(160, 0.25, 'sawtooth');
+      }
+    }
+  }
+
+  function updateEffects(dt) {
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (var j = pops.length - 1; j >= 0; j--) {
+      var s = pops[j];
+      s.y -= 22 * dt;
+      s.life -= dt;
+      if (s.life <= 0) pops.splice(j, 1);
+    }
+  }
+
+  function heatColor(frac) {
+    if (frac > 0.85) return '#ff5f5f';
+    if (frac > 0.6) return '#ffd15f';
+    return '#5fe8a8';
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0a0c12';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
+
+  function drawNodes() {
+    var active = activeNode();
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      var r = nodeRect(i);
+      var frac = clamp(n.heat / 100, 0, 1);
+
+      ctx.save();
+      ctx.fillStyle = '#0f151f';
+      ctx.fillRect(r.x + 4, r.y, r.w - 8, r.h);
+
+      var barH = r.h * frac;
+      ctx.fillStyle = heatColor(frac);
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(r.x + 4, r.y + r.h - barH, r.w - 8, barH);
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = i === active ? '#bfe9ff' : 'rgba(150,180,220,0.35)';
+      ctx.lineWidth = i === active ? 4 : 2;
+      ctx.strokeRect(r.x + 4, r.y + 2, r.w - 8, r.h - 4);
+
+      if (n.flashTimer > 0) {
+        ctx.globalAlpha = clamp(n.flashTimer / 0.35, 0, 1) * 0.6;
+        ctx.fillStyle = '#ff3f3f';
+        ctx.fillRect(r.x + 4, r.y, r.w - 8, r.h);
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.fillStyle = '#d9e6ff';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('NODE ' + (i + 1), r.x + r.w / 2, r.y + 50);
+      ctx.font = '13px monospace';
+      ctx.fillStyle = '#a9c0dd';
+      ctx.fillText(Math.round(n.heat) + '%', r.x + r.w / 2, r.y + 72);
+      ctx.restore();
+    }
+  }
+
+  function drawEffects() {
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      var a = clamp(p.life / p.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#bfe9ff';
+      ctx.fill();
+      ctx.restore();
+    }
+    for (var j = 0; j < pops.length; j++) {
+      var s = pops[j];
+      var alpha = clamp(s.life / s.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = s.color || '#eafcff';
+      ctx.font = '18px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(s.text, s.x, s.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawNodes();
+      drawEffects();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+      var elapsed = 60 - Math.max(0, timeLeft);
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        updateNodes(dt, elapsed);
+        updateEffects(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      updateNodes(dt, elapsed);
+      updateEffects(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function eventToCanvasXY(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width || VIEW_W, h = rect.height || VIEW_H;
+    return {
+      x: (e.clientX - rect.left) * (VIEW_W / w),
+      y: (e.clientY - rect.top) * (VIEW_H / h)
+    };
+  }
+
+  function nodeIndexAt(x) {
+    var w = VIEW_W / NODE_COUNT;
+    return clamp(Math.floor(x / w), 0, NODE_COUNT - 1);
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var p = eventToCanvasXY(e);
+    isPointerDown = true;
+    pointerNodeIndex = nodeIndexAt(p.x);
+  }
+
+  function onPointerMove(e) {
+    if (state !== 'play' || !isPointerDown) return;
+    var p = eventToCanvasXY(e);
+    pointerNodeIndex = nodeIndexAt(p.x);
+  }
+
+  function onPointerUp() {
+    isPointerDown = false;
+    pointerNodeIndex = -1;
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === '1') keyNodeIndex = 0;
+    else if (k === '2') keyNodeIndex = 1;
+    else if (k === '3') keyNodeIndex = 2;
+    else if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over' && performance.now() >= resultGuardUntil) { start(); return; }
+    }
+  });
+  document.addEventListener('keyup', function (e) {
+    var k = e && (e.key || e.code);
+    if ((k === '1' && keyNodeIndex === 0) ||
+        (k === '2' && keyNodeIndex === 1) ||
+        (k === '3' && keyNodeIndex === 2)) {
+      keyNodeIndex = -1;
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return totalVented >= SUCCESS_VENT_THRESHOLD; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

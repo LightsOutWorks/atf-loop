@@ -1,0 +1,21 @@
+{
+  "seed": "seed-013",
+  "candidates": [
+    {"title": "MEMORY VOLLEY", "description": "Targets flash a short order at each round's start; tap them back in that exact order for a chain bonus, but tapping out of order breaks the streak and only pops a single target.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "SLICE VECTOR", "description": "Drag a straight cut through the field to slice every target it crosses, spending a slowly-regenerating stamina meter proportional to the cut's length.", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "ARC LAUNCHER", "description": "Drag back and release to fling a projectile along a physics arc, where pull distance sets power and pull angle sets the launch trajectory toward distant targets.", "scores": {"C1":3,"C2":2,"C3":3,"C4":2,"C5":2,"C6":2,"C7":3}},
+    {"title": "CORE OVERLOAD", "description": "Three reactor nodes build heat on their own; hold on a node to vent its heat into score, chasing a full-drain bonus while racing to keep the other nodes from overflowing.", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":3,"C6":4,"C7":4}},
+    {"title": "CHAIN IGNITE", "description": "Tap a target to ignite it and pass the ignition along its faint connecting lines to linked targets after a short delay, but tapping one still on cooldown fizzles the whole chain.", "scores": {"C1":3,"C2":2,"C3":3,"C4":2,"C5":2,"C6":2,"C7":3}},
+    {"title": "MIRROR STEER", "description": "Drag continuously rotates a central mirror to deflect a steady stream of incoming projectiles into color-matched goal slots at the screen's edges.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "TRIAGE PULSE", "description": "Several targets appear at once, each with its own shrinking value ring, but only one tap is allowed per short cooldown, forcing a choice of which to take before it bottoms out.", "scores": {"C1":2,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "LOOP LASSO", "description": "Drag a closed loop around clusters of drifting orbs; only orbs fully enclosed when the loop closes are captured, and loop length draws from a slowly-regenerating stamina budget.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "SPLIT AIM DUO", "description": "Drag steers a pair of reticles that move in mirrored symmetry across the center, requiring one drag path to align both on two separate targets at once.", "scores": {"C1":4,"C2":2,"C3":3,"C4":2,"C5":2,"C6":3,"C7":3}}
+  ],
+  "finalists": [
+    {"title": "CORE OVERLOAD", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":3,"C6":4,"C7":4}},
+    {"title": "SLICE VECTOR", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "MIRROR STEER", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}}
+  ],
+  "selected": "CORE OVERLOAD",
+  "reason": "CORE OVERLOAD scored highest overall (26 vs 25 and 25), tying for the top C1/C6 marks and leading outright on C4 and C7: choosing which of three simultaneously rising nodes to vent before it overflows is a concurrent-attention decision none of the 12 existing works have, it pays off visibly on every hold, and it keeps demanding faster switching as heat rates escalate — and its large fixed hold-zone interaction is also the most stably implementable and testable of the three finalists."
+}

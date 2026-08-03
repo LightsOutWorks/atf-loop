@@ -1,0 +1,7 @@
+{
+  "seed": "seed-013",
+  "title": "CORE OVERLOAD",
+  "description": "Three reactor nodes build heat on their own. Hold a node to vent its heat into score — drain it fully for a bonus, or let it overflow and lose points.",
+  "primary_input": "hold",
+  "success_condition": "node_vented_1"
+}
