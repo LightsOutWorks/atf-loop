@@ -1,0 +1,7 @@
+{
+  "seed": "seed-014",
+  "title": "SPIRE DRIFT",
+  "description": "Tap to drop the drifting block onto the tower — clean overlaps keep it wide, sloppy ones narrow your margin and speed up the drift.",
+  "primary_input": "tap",
+  "success_condition": "block_locked_1"
+}

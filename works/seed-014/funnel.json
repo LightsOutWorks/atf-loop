@@ -1,0 +1,22 @@
+{
+  "seed": "seed-014",
+  "candidates": [
+    {"title": "SPIRE DRIFT", "description": "Tap to drop a horizontally drifting block onto the growing tower; only the overlapping slice locks in, so the tower narrows and drifts faster with every imprecise drop.", "scores": {"C1":4,"C2":4,"C3":3,"C4":3,"C5":4,"C6":4,"C7":4}},
+    {"title": "MARQUEE HAUL", "description": "Drag out a rectangular box around clustered orbs; releasing captures everything fully enclosed, but a box that also encloses a hazard orb voids the whole catch.", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "PATTERN BREAK", "description": "A short set of tiles flashes from a grid, then the full grid lights up; tap only the tiles that were NOT part of the flash before the timer runs out.", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "ROUTE SWITCH", "description": "Tap junction nodes to flip which lane an oncoming pulse is routed into; the flip applies to every pulse currently approaching that junction, not just one.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4}},
+    {"title": "WALL DRAW", "description": "Drag out a short one-time deflector wall whose position and angle come from the drag vector; drifting orbs bounce off it into a collector before it dissolves.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}},
+    {"title": "CHANNEL CATCH", "description": "Drag a paddle-channel left and right to intercept a ball that falls and bounces unpredictably off fixed pegs; catches near the channel's center score more than edge catches.", "scores": {"C1":3,"C2":3,"C3":3,"C4":2,"C5":3,"C6":3,"C7":3}},
+    {"title": "SHIELD ARC", "description": "Drag around a pivot to continuously rotate a shield arc that only deflects incoming projectiles whose approach angle it currently covers at the moment of contact.", "scores": {"C1":2,"C2":3,"C3":2,"C4":2,"C5":3,"C6":3,"C7":3}},
+    {"title": "ECHO CHAIN", "description": "Tap to launch a pulse that rebounds off the far wall and returns along a mirrored path; tap again exactly as it passes back through the origin zone to catch it for a bonus.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3}},
+    {"title": "THREAD PULL", "description": "Drag away from a fixed anchor to stretch an elastic thread, where drag distance sets launch power and drag angle sets direction; release fires the payload at a drifting target.", "scores": {"C1":2,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "PULSE SORT", "description": "Incoming pulses carry a size value; tap the matching small/medium/large slot while its acceptance band currently covers that value before the pulse passes by.", "scores": {"C1":2,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}}
+  ],
+  "finalists": [
+    {"title": "SPIRE DRIFT", "scores": {"C1":4,"C2":4,"C3":3,"C4":3,"C5":4,"C6":4,"C7":4}},
+    {"title": "MARQUEE HAUL", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "PATTERN BREAK", "scores": {"C1":4,"C2":3,"C3":4,"C4":4,"C5":3,"C6":4,"C7":3}}
+  ],
+  "selected": "SPIRE DRIFT",
+  "reason": "SPIRE DRIFT scored highest overall (26) and led outright on C7: because each drop's overlap becomes the exact width of the next drop's target, a player's own imprecision directly narrows and speeds up their future decisions, which is a stronger self-compounding link between one decision and later game state than MARQUEE HAUL's per-round risk sizing or PATTERN BREAK's per-round memory recall."
+}

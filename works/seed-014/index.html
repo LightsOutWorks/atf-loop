@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SPIRE DRIFT</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0a0c12;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0a0c12;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #d9e6ff; font-size: 18px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #7fd4ff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.86); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f2f6ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f2f6ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #a9b6cf; max-width: 540px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #7fd4ff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #7fd4ff; background: #071a24;
+    color: #e9f8ff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>HEIGHT <span id="heightVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>SPIRE DRIFT</h1>
+    <p class="sub" id="subDesc">Tap to drop the drifting block onto the tower — clean overlaps keep it wide, sloppy ones narrow your margin and speed up the drift.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalHeight">HEIGHT 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var heightVal = document.getElementById('heightVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalHeight = document.getElementById('finalHeight');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var LAYER_H = 30;
+  var TOP_Y = 440;
+  var MARGIN = 30;
+  var BASE_HALF = 130;
+  var MIN_OVERLAP = 28;
+  var BASE_SPEED = 140;
+  var SPEED_PER_LAYER = 9;
+  var SPEED_PER_SEC = 1.6;
+  var MAX_SPEED = 520;
+  var RESULT_GUARD_MS = 600;
+
+  var state = 'title';
+  var score = 0;
+  var timeLeft = 60;
+  var blocksPlaced = 0;
+  var comboCount = 0;
+  var bestCombo = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var towerBlocks = [];
+  var currentBlock = null;
+  var hitFlash = 0;
+  var hitPerfect = false;
+  var missFlash = 0;
+  var popText = '';
+  var popTimer = 0;
+  var spawnSide = 1;
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function hueForLayer(i) { return (i * 37) % 360; }
+
+  function computeSpeed(elapsed) {
+    var s = BASE_SPEED + towerBlocks.length * SPEED_PER_LAYER + elapsed * SPEED_PER_SEC;
+    return Math.min(MAX_SPEED, s);
+  }
+
+  function spawnBlock(halfW) {
+    var minX = MARGIN + halfW;
+    var maxX = VIEW_W - MARGIN - halfW;
+    if (minX > maxX) { minX = VIEW_W / 2; maxX = VIEW_W / 2; }
+    spawnSide = -spawnSide;
+    var anchorX = towerBlocks.length ? towerBlocks[towerBlocks.length - 1].x : VIEW_W / 2;
+    var elapsed = 60 - Math.max(0, timeLeft);
+    currentBlock = {
+      halfW: halfW,
+      x: clamp(anchorX, minX, maxX),
+      minX: minX,
+      maxX: maxX,
+      dir: spawnSide > 0 ? 1 : -1,
+      speed: computeSpeed(elapsed)
+    };
+  }
+
+  function resetGame() {
+    score = 0;
+    timeLeft = 60;
+    blocksPlaced = 0;
+    comboCount = 0;
+    bestCombo = 0;
+    lastFrameTime = null;
+    hitFlash = 0;
+    missFlash = 0;
+    popText = '';
+    popTimer = 0;
+    spawnSide = 1;
+    towerBlocks = [{ x: VIEW_W / 2, halfW: BASE_HALF, hue: hueForLayer(0) }];
+    spawnBlock(BASE_HALF);
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalHeight.textContent = 'HEIGHT ' + (towerBlocks.length - 1);
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    heightVal.textContent = String(towerBlocks.length - 1);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function drop() {
+    if (state !== 'play' || !currentBlock) return;
+    var top = towerBlocks[towerBlocks.length - 1];
+    var curLeft = currentBlock.x - currentBlock.halfW;
+    var curRight = currentBlock.x + currentBlock.halfW;
+    var topLeft = top.x - top.halfW;
+    var topRight = top.x + top.halfW;
+    var overlapLeft = Math.max(curLeft, topLeft);
+    var overlapRight = Math.min(curRight, topRight);
+    var overlapW = overlapRight - overlapLeft;
+
+    if (overlapW < MIN_OVERLAP) {
+      comboCount = 0;
+      missFlash = 1;
+      playTone(140, 0.18, 'sawtooth');
+      spawnBlock(top.halfW);
+      return;
+    }
+
+    var precision = clamp(overlapW / (top.halfW * 2), 0, 1);
+    var perfect = precision >= 0.85;
+    var pts = Math.round(30 + precision * 50);
+    if (perfect) {
+      comboCount++;
+      pts += comboCount * 10;
+    } else {
+      comboCount = 0;
+    }
+    bestCombo = Math.max(bestCombo, comboCount);
+    score += pts;
+
+    var newHalf = overlapW / 2;
+    var newX = (overlapLeft + overlapRight) / 2;
+    towerBlocks.push({ x: newX, halfW: newHalf, hue: hueForLayer(towerBlocks.length) });
+    blocksPlaced++;
+    hitFlash = 1;
+    hitPerfect = perfect;
+    popText = (perfect ? 'PERFECT +' : '+') + pts;
+    popTimer = 0.8;
+    playTone(perfect ? 720 : 480, 0.12, 'triangle');
+
+    spawnBlock(newHalf);
+  }
+
+  function update(dt, elapsed) {
+    if (currentBlock) {
+      var c = currentBlock;
+      c.x += c.dir * c.speed * dt;
+      if (c.x <= c.minX) { c.x = c.minX; c.dir = 1; }
+      else if (c.x >= c.maxX) { c.x = c.maxX; c.dir = -1; }
+      c.speed = computeSpeed(elapsed);
+    }
+    if (hitFlash > 0) hitFlash = Math.max(0, hitFlash - dt * 3);
+    if (missFlash > 0) missFlash = Math.max(0, missFlash - dt * 3);
+    if (popTimer > 0) popTimer = Math.max(0, popTimer - dt);
+  }
+
+  function layerScreenY(index) {
+    var topIndex = towerBlocks.length - 1;
+    return TOP_Y + (topIndex - index) * LAYER_H;
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0a0c12';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (missFlash > 0) {
+      ctx.fillStyle = 'rgba(255,60,60,' + (missFlash * 0.25) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    } else if (hitFlash > 0 && hitPerfect) {
+      ctx.fillStyle = 'rgba(120,255,190,' + (hitFlash * 0.16) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawTower() {
+    for (var i = 0; i < towerBlocks.length; i++) {
+      var b = towerBlocks[i];
+      var y = layerScreenY(i);
+      if (y > VIEW_H + LAYER_H || y < -LAYER_H) continue;
+      ctx.fillStyle = 'hsl(' + b.hue + ', 65%, 55%)';
+      ctx.fillRect(b.x - b.halfW, y - LAYER_H / 2, b.halfW * 2, LAYER_H - 3);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(b.x - b.halfW, y - LAYER_H / 2, b.halfW * 2, LAYER_H - 3);
+    }
+  }
+
+  function drawCurrentBlock() {
+    if (!currentBlock || state !== 'play') return;
+    var c = currentBlock;
+    var y = TOP_Y - LAYER_H;
+    ctx.fillStyle = 'hsl(' + hueForLayer(towerBlocks.length) + ', 75%, 65%)';
+    ctx.globalAlpha = 0.95;
+    ctx.fillRect(c.x - c.halfW, y - LAYER_H / 2, c.halfW * 2, LAYER_H - 3);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(c.x - c.halfW, y - LAYER_H / 2, c.halfW * 2, LAYER_H - 3);
+
+    var top = towerBlocks[towerBlocks.length - 1];
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(top.x - top.halfW, TOP_Y - LAYER_H / 2, top.halfW * 2, LAYER_H - 3);
+    ctx.setLineDash([]);
+  }
+
+  function drawPop() {
+    if (popTimer <= 0 || !popText) return;
+    var a = clamp(popTimer / 0.8, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = hitPerfect ? '#8fffc0' : '#eafcff';
+    ctx.font = '20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(popText, VIEW_W / 2, TOP_Y - LAYER_H - 24 - (1 - a) * 20);
+    ctx.restore();
+  }
+
+  function drawCombo() {
+    if (comboCount < 2) return;
+    ctx.fillStyle = '#ffd15f';
+    ctx.font = '15px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('COMBO x' + comboCount, VIEW_W / 2, TOP_Y - LAYER_H - 46);
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawTower();
+      drawCurrentBlock();
+      drawPop();
+      drawCombo();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+      var elapsed = 60 - Math.max(0, timeLeft);
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt, elapsed);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt, elapsed);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state === 'play') drop();
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'play') { drop(); return; }
+      if (state === 'over' && performance.now() >= resultGuardUntil) { start(); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  towerBlocks = [{ x: VIEW_W / 2, halfW: BASE_HALF, hue: hueForLayer(0) }];
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return towerBlocks.length > 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
