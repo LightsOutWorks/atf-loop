@@ -1,0 +1,7 @@
+{
+  "seed": "seed-015",
+  "title": "CARGO TILT",
+  "description": "Tap left or right to route the falling crate onto that dock — balance the seesaw, because a maxed-out side tips over and spills its cargo.",
+  "primary_input": "tap",
+  "success_condition": "crate_docked_1"
+}

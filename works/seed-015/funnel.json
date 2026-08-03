@@ -1,0 +1,21 @@
+{
+  "seed": "seed-015",
+  "candidates": [
+    {"title": "CARGO TILT", "description": "Tap left or right to route a falling crate onto that dock on a seesaw; dock loads persist and tilt the platform, so a maxed-out side tips and spills while a filled dock ships for bonus score.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "MASS SWAP", "description": "Tap one drifting orb then a second to instantly swap their positions in the queue heading toward the collector, letting the player reorder which orb (ally or hazard) arrives first.", "scores": {"C1":3,"C2":4,"C3":4,"C4":4,"C5":4,"C6":3,"C7":4}},
+    {"title": "QUEUE CUT", "description": "Tap to open a gate that diverts only the item currently at the gate into its matching color bin; hesitating lets the queue behind it keep advancing and pile up toward overflow.", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "CHAIN BOND", "description": "Tap an orb to select it, then tap a second orb within a short window to bond them into one larger, higher-value orb that can itself be bonded again into an even larger one.", "scores": {"C1":3,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4}},
+    {"title": "ANCHOR PULL", "description": "Drag out from a fixed anchor and release to launch a hook that permanently tethers whatever orb it hits, pulling that orb back whenever it drifts too far; the anchor holds only 2 tethers before the oldest snaps free.", "scores": {"C1":3,"C2":3,"C3":4,"C4":2,"C5":3,"C6":3,"C7":4}},
+    {"title": "TIDE POOL", "description": "Tap a shoreline meter to raise or lower the water level by one notch; each creature is only reachable and tappable at its own specific water level, and the tide keeps drifting on its own.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "FUSE LINE", "description": "Tap fuse nodes along a branching line to light them in order; a lit node auto-ignites its connected downstream nodes after a delay, but only branches whose upstream junction was already lit will finish before time runs out.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}},
+    {"title": "GRID FOLD", "description": "Tap a row or column header to shift that entire row or column by one cell with wraparound, sliding tokens around the grid to align matching-colored tokens with a collector token.", "scores": {"C1":3,"C2":2,"C3":4,"C4":3,"C5":2,"C6":3,"C7":4}},
+    {"title": "BEAM BOUNCE", "description": "Drag out a short mirror segment anywhere on the field; a beam fires periodically from a fixed emitter, bounces off any placed mirrors, and must reach a moving receiver before the mirrors are replaced by newer ones.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":2,"C7":4}}
+  ],
+  "finalists": [
+    {"title": "CARGO TILT", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "MASS SWAP", "scores": {"C1":3,"C2":4,"C3":4,"C4":4,"C5":4,"C6":3,"C7":4}},
+    {"title": "QUEUE CUT", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}}
+  ],
+  "selected": "CARGO TILT",
+  "reason": "CARGO TILT scored highest overall (26, tied with MASS SWAP) but led the group on C6: every tap gives an immediate, legible physical response (the seesaw visibly tilts, a fill bar moves, a score popup fires), and unlike MASS SWAP's two-tap selection step or QUEUE CUT's single-lane queue, its persistent dock-load state directly and continuously constrains every later tap's safety, giving it the strongest one-decision-shapes-future-state link (C3) among the top three."
+}

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>CARGO TILT</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0b0e14;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0b0e14;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #e7edff; font-size: 18px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #ffcf7f; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.86); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f6f8ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f8ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4bdd4; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #ffcf7f; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #ffcf7f; background: #241a07;
+    color: #fff3de; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>SHIPPED <span id="shipVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>CARGO TILT</h1>
+    <p class="sub" id="subDesc">Tap left or right to route the falling crate onto that dock — balance the seesaw, because a maxed-out side tips over and spills its cargo.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalShips">SHIPMENTS 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var shipVal = document.getElementById('shipVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalShips = document.getElementById('finalShips');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var TILT_SCALE = 16;
+  var SHIP_LIMIT = 10;
+  var MAX_TILT_ANGLE = 0.30;
+  var RESULT_GUARD_MS = 550;
+  var DOCK_GAIN_MULT = 4;
+  var SHIP_BONUS = 50;
+  var SPILL_PENALTY = 15;
+
+  var state = 'title';
+  var score = 0;
+  var timeLeft = 60;
+  var cratesPlaced = 0;
+  var shipsCount = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var docks = { left: { load: 0 }, right: { load: 0 } };
+  var tilt = 0;
+  var visualTilt = 0;
+  var currentCrate = { weight: 1 };
+
+  var popups = [];
+  var dockFlashSide = null;
+  var dockFlashTimer = 0;
+  var shipFlashSide = null;
+  var shipFlashTimer = 0;
+  var spillSide = null;
+  var spillFlashTimer = 0;
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function elapsedSeconds() { return 60 - Math.max(0, timeLeft); }
+
+  function rollWeight() {
+    var maxAdd = Math.min(4, 2 + Math.floor(elapsedSeconds() / 20));
+    return 1 + Math.floor(Math.random() * maxAdd);
+  }
+
+  function spawnCrate() {
+    currentCrate = { weight: rollWeight() };
+  }
+
+  function computeTilt() {
+    return clamp((docks.right.load - docks.left.load) / TILT_SCALE, -1, 1);
+  }
+
+  function addPopup(text, side, big) {
+    var x = side === 'left' ? VIEW_W * 0.25 : VIEW_W * 0.75;
+    popups.push({ text: text, x: x, y: VIEW_H * 0.5, timer: 0.9, big: !!big });
+  }
+
+  function resetGame() {
+    score = 0;
+    timeLeft = 60;
+    cratesPlaced = 0;
+    shipsCount = 0;
+    lastFrameTime = null;
+    docks = { left: { load: 0 }, right: { load: 0 } };
+    tilt = 0;
+    visualTilt = 0;
+    popups = [];
+    dockFlashSide = null;
+    dockFlashTimer = 0;
+    shipFlashSide = null;
+    shipFlashTimer = 0;
+    spillSide = null;
+    spillFlashTimer = 0;
+    spawnCrate();
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalShips.textContent = 'SHIPMENTS ' + shipsCount;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    shipVal.textContent = String(shipsCount);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function assign(side) {
+    if (state !== 'play') return;
+    var w = currentCrate.weight;
+    var dock = docks[side];
+    dock.load += w;
+    cratesPlaced++;
+
+    var gain = w * DOCK_GAIN_MULT;
+    score += gain;
+    addPopup('+' + gain, side, false);
+    dockFlashSide = side;
+    dockFlashTimer = 1;
+    playTone(360 + w * 60, 0.1, 'triangle');
+
+    if (dock.load >= SHIP_LIMIT) {
+      dock.load = Math.max(0, dock.load - SHIP_LIMIT);
+      score += SHIP_BONUS;
+      shipsCount++;
+      addPopup('SHIP +' + SHIP_BONUS, side, true);
+      shipFlashSide = side;
+      shipFlashTimer = 1;
+      playTone(720, 0.18, 'square');
+    }
+
+    tilt = computeTilt();
+    if (Math.abs(tilt) >= 1) {
+      var heavy = tilt > 0 ? 'right' : 'left';
+      docks[heavy].load = 0;
+      score = Math.max(0, score - SPILL_PENALTY);
+      spillSide = heavy;
+      spillFlashTimer = 1;
+      playTone(140, 0.22, 'sawtooth');
+      tilt = computeTilt();
+    }
+
+    spawnCrate();
+  }
+
+  function update(dt) {
+    visualTilt += (tilt - visualTilt) * Math.min(1, dt * 6);
+    if (dockFlashTimer > 0) dockFlashTimer = Math.max(0, dockFlashTimer - dt * 3);
+    if (shipFlashTimer > 0) shipFlashTimer = Math.max(0, shipFlashTimer - dt * 2);
+    if (spillFlashTimer > 0) spillFlashTimer = Math.max(0, spillFlashTimer - dt * 2.2);
+    for (var i = popups.length - 1; i >= 0; i--) {
+      popups[i].timer -= dt;
+      popups[i].y -= dt * 40;
+      if (popups[i].timer <= 0) popups.splice(i, 1);
+    }
+  }
+
+  function pivotPoint() {
+    return { x: VIEW_W / 2, y: VIEW_H * 0.72 };
+  }
+
+  function dockPoints() {
+    var p = pivotPoint();
+    var halfLen = Math.min(340, VIEW_W * 0.36);
+    var angle = visualTilt * MAX_TILT_ANGLE;
+    var dx = halfLen * Math.cos(angle);
+    var dy = halfLen * Math.sin(angle);
+    return {
+      pivot: p,
+      left: { x: p.x - dx, y: p.y - dy },
+      right: { x: p.x + dx, y: p.y + dy }
+    };
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (spillFlashTimer > 0) {
+      ctx.fillStyle = 'rgba(255,70,70,' + (spillFlashTimer * 0.22) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    } else if (shipFlashTimer > 0) {
+      ctx.fillStyle = 'rgba(255,210,120,' + (shipFlashTimer * 0.16) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawSeesaw() {
+    var pts = dockPoints();
+    ctx.strokeStyle = '#3b4459';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(pts.left.x, pts.left.y);
+    ctx.lineTo(pts.right.x, pts.right.y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#3b4459';
+    ctx.beginPath();
+    ctx.moveTo(pts.pivot.x - 26, pts.pivot.y + 40);
+    ctx.lineTo(pts.pivot.x + 26, pts.pivot.y + 40);
+    ctx.lineTo(pts.pivot.x, pts.pivot.y - 4);
+    ctx.closePath();
+    ctx.fill();
+
+    drawDock(pts.left, 'left');
+    drawDock(pts.right, 'right');
+  }
+
+  function drawDock(pt, side) {
+    var dock = docks[side];
+    var w = 130, h = 26;
+    var flash = (dockFlashSide === side ? dockFlashTimer : 0);
+    var shipFlash = (shipFlashSide === side ? shipFlashTimer : 0);
+    var spill = (spillSide === side ? spillFlashTimer : 0);
+
+    ctx.fillStyle = spill > 0 ? 'rgba(255,90,90,0.9)' : (shipFlash > 0 ? 'rgba(255,210,120,0.95)' : '#1c2436');
+    ctx.fillRect(pt.x - w / 2, pt.y - h / 2, w, h);
+    ctx.strokeStyle = flash > 0 ? '#ffe9b0' : '#5b6788';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pt.x - w / 2, pt.y - h / 2, w, h);
+
+    var fillRatio = clamp(dock.load / SHIP_LIMIT, 0, 1);
+    ctx.fillStyle = side === 'left' ? '#7fb2ff' : '#7fffc0';
+    ctx.fillRect(pt.x - w / 2 + 4, pt.y - h / 2 + 4, (w - 8) * fillRatio, h - 8);
+
+    ctx.fillStyle = '#e7edff';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(side.toUpperCase() + ' ' + dock.load + '/' + SHIP_LIMIT, pt.x, pt.y + h / 2 + 20);
+  }
+
+  function drawCrate() {
+    if (state !== 'play') return;
+    var x = VIEW_W / 2;
+    var y = VIEW_H * 0.28;
+    var size = 30 + currentCrate.weight * 8;
+    var hue = 200 - currentCrate.weight * 30;
+    ctx.fillStyle = 'hsl(' + hue + ', 70%, 58%)';
+    ctx.fillRect(x - size / 2, y - size / 2, size, size);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - size / 2, y - size / 2, size, size);
+    ctx.fillStyle = '#0b0e14';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(currentCrate.weight), x, y + 5);
+
+    ctx.fillStyle = '#b4bdd4';
+    ctx.font = '13px monospace';
+    ctx.fillText('TAP LEFT / RIGHT', x, y - size / 2 - 14);
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.9, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.big ? '#ffe9b0' : '#eafcff';
+      ctx.font = (p.big ? 'bold 20px monospace' : '16px monospace');
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawSeesaw();
+      drawCrate();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var rect = canvas.getBoundingClientRect();
+    var width = Math.max(1, rect.width);
+    var relX = (e.clientX - rect.left) / width;
+    assign(relX < 0.5 ? 'left' : 'right');
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+      if (state === 'play') { if (e && e.preventDefault) e.preventDefault(); assign('left'); }
+      return;
+    }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+      if (state === 'play') { if (e && e.preventDefault) e.preventDefault(); assign('right'); }
+      return;
+    }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over' && performance.now() >= resultGuardUntil) { start(); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  spawnCrate();
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return cratesPlaced >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
