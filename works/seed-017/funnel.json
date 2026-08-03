@@ -1,0 +1,24 @@
+{
+  "seed": "seed-017",
+  "candidates": [
+    {"title": "RICOCHET YARD", "description": "Drag out an angle and power for a single ball that bounces off canvas walls under real physics, chaining hits through every target its bounce path crosses before it stops.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4}},
+    {"title": "THRESHOLD VALVE", "description": "For each approaching orb the player chooses tap (instant small score, no risk) or hold (a charge meter for triple score that locks out new input while filling, risking an overflow hit if the orb arrives first).", "scores": {"C1":3,"C2":3,"C3":2,"C4":4,"C5":3,"C6":3,"C7":2}},
+    {"title": "MIRROR ARC", "description": "Drag a paddle left and right along the base; where a falling orb strikes the paddle sets its rebound angle, so aim decides whether it sails into the scoring band above or misses, while touching a hazard orb costs the streak.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "WIND CURRENT", "description": "Drag anywhere to release a directional gust whose vector pushes every drifting orb on screen at once, herding color-matched orbs toward a collector while blowing hazard orbs off the field.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "LASSO NET", "description": "Drag a freeform loop around a cluster of drifting orbs; releasing closes the loop and captures everything currently enclosed, but a hazard orb caught inside voids the whole catch.", "scores": {"C1":4,"C2":3,"C3":4,"C4":2,"C5":3,"C6":3,"C7":3}},
+    {"title": "ORBIT SHIFT", "description": "A collector auto-rotates on one of three concentric lanes; tapping shifts it in or out to the next lane before laned targets reach the collector's current angle, with each shift triggering a brief lockout.", "scores": {"C1":3,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "ROOT AND REAP", "description": "Tapping an empty plot plants a seed that visibly grows over a few seconds; tapping it again while ripe harvests it for points, but tapping too early kills it and leaving it too long lets it wilt for nothing.", "scores": {"C1":4,"C2":3,"C3":3,"C4":4,"C5":3,"C6":3,"C7":3}},
+    {"title": "SIMON PULSE", "description": "Four pads flash an ever-lengthening sequence; the player reproduces it by tapping the same pads in order, and a wrong tap shortens the sequence instead of ending the run.", "scores": {"C1":2,"C2":3,"C3":1,"C4":4,"C5":3,"C6":2,"C7":0}},
+    {"title": "ECHO RELAY", "description": "Tapping a drifting orb marks it before the relay's next timed pulse sweeps outward; only marked orbs are carried off by that pulse for points, so the player triages which orbs to mark before each sweep.", "scores": {"C1":4,"C2":3,"C3":3,"C4":3,"C5":3,"C6":2,"C7":3}},
+    {"title": "KEYLOCK CIPHER", "description": "Three toggles must be set to match the on/off pattern shown on each approaching orb before it arrives; matching all three unlocks full points, partial matches award partial credit.", "scores": {"C1":4,"C2":2,"C3":3,"C4":4,"C5":3,"C6":2,"C7":2}},
+    {"title": "PARRY WINDOW", "description": "Holding raises a shield that blocks but scores nothing; releasing at the instant an orb makes contact converts the block into a counter-hit for bonus score, while releasing early or late does nothing and starts a cooldown.", "scores": {"C1":3,"C2":3,"C3":3,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "SNAP FOCUS", "description": "A reticle drifts on its own inertia; tapping a shutter nudges its current heading rather than setting its position directly, so scoring a target means timing a tap for a heading you've been steering toward for several taps.", "scores": {"C1":4,"C2":1,"C3":3,"C4":2,"C5":1,"C6":2,"C7":3}}
+  ],
+  "finalists": [
+    {"title": "MIRROR ARC", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "RICOCHET YARD", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4}},
+    {"title": "WIND CURRENT", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":3}}
+  ],
+  "selected": "MIRROR ARC",
+  "reason": "MIRROR ARC scored highest overall (26) and led the top three on C2, C4, C5, and C6: the offset-based rebound angle is legible from the very first bounce, its single-paddle collision model is the simplest of the three to implement stably next to RICOCHET YARD's wall-reflection physics or WIND CURRENT's crowd-vector control, and every bounce returns instant visual and audio feedback while combo persistence and rising hazard density still give it comparable depth over a full run."
+}

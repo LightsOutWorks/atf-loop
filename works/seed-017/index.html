@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>MIRROR ARC</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0a0d13;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0a0d13;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #e7edff; font-size: 17px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #7fe8ff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.88); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f6f8ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f8ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4bdd4; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #7fe8ff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #7fe8ff; background: #0f2430;
+    color: #eafcff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>COMBO <span id="comboVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>MIRROR ARC</h1>
+    <p class="sub" id="subDesc">Drag left and right to slide the mirror. Bounce cyan orbs into the goal band above — where they hit the mirror sets their angle. Let red hazard orbs fall past untouched; touching one breaks your streak.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST COMBO 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var comboVal = document.getElementById('comboVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 550;
+  var ORB_COUNT = 6;
+  var PADDLE_W = 150;
+  var PADDLE_H = 14;
+  var PADDLE_MARGIN_BOTTOM = 64;
+  var MAX_BOUNCE_VX = 260;
+  var HAZARD_PENALTY = 5;
+  var GOAL_BAND_H = 46;
+  var GOAL_FRAC = 0.34; // half-width of goal zone as a fraction of VIEW_W
+  var KB_SPEED = 480;
+
+  var state = 'title';
+  var score = 0;
+  var combo = 0;
+  var bestCombo = 0;
+  var timeLeft = 60;
+  var deflectCount = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var paddleX = VIEW_W / 2;
+  var dragging = false;
+  var kbLeft = false, kbRight = false;
+
+  var orbs = [];
+  var popups = [];
+  var screenFlashTimer = 0;
+  var screenFlashColor = 'rgba(255,90,90,';
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    paddleX = clamp(paddleX, PADDLE_W / 2, VIEW_W - PADDLE_W / 2);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function elapsedSeconds() { return 60 - Math.max(0, timeLeft); }
+
+  function hazardChance() {
+    return clamp(0.24 + (elapsedSeconds() / 60) * 0.22, 0.24, 0.46);
+  }
+
+  function fallSpeedRange() {
+    var t = elapsedSeconds() / 60;
+    return { min: 90 + t * 90, max: 140 + t * 130 };
+  }
+
+  function paddleTopY() { return VIEW_H - PADDLE_MARGIN_BOTTOM; }
+  function goalX0() { return VIEW_W * (0.5 - GOAL_FRAC / 2); }
+  function goalX1() { return VIEW_W * (0.5 + GOAL_FRAC / 2); }
+
+  function respawnOrb(orb) {
+    var range = fallSpeedRange();
+    orb.x = rand(24, VIEW_W - 24);
+    orb.y = rand(-220, -30);
+    orb.vx = 0;
+    orb.vy = rand(range.min, range.max);
+    orb.type = Math.random() < hazardChance() ? 'hazard' : 'good';
+    orb.r = orb.type === 'hazard' ? 9 : 7;
+    orb.bounced = false;
+  }
+
+  function makeOrbs() {
+    var arr = [];
+    for (var i = 0; i < ORB_COUNT; i++) {
+      var orb = { x: 0, y: 0, vx: 0, vy: 0, r: 7, type: 'good', bounced: false };
+      respawnOrb(orb);
+      arr.push(orb);
+    }
+    return arr;
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#eafcff' });
+  }
+
+  function resetGame() {
+    score = 0;
+    combo = 0;
+    bestCombo = 0;
+    timeLeft = 60;
+    deflectCount = 0;
+    lastFrameTime = null;
+    paddleX = VIEW_W / 2;
+    dragging = false;
+    kbLeft = false; kbRight = false;
+    popups = [];
+    screenFlashTimer = 0;
+    orbs = makeOrbs();
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST COMBO ' + bestCombo;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    comboVal.textContent = String(combo);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function finishGoodOrb(orb, scored) {
+    if (scored) {
+      var gain = 10 + combo * 2;
+      score += gain;
+      combo++;
+      if (combo > bestCombo) bestCombo = combo;
+      addPopup('+' + gain, orb.x, Math.max(orb.y, 14), '#9dffe0');
+      playTone(560 + combo * 10, 0.12, 'triangle');
+    } else {
+      combo = 0;
+    }
+    respawnOrb(orb);
+  }
+
+  function updateOrbs(dt) {
+    var pTop = paddleTopY();
+    var pLeft = paddleX - PADDLE_W / 2;
+    var pRight = paddleX + PADDLE_W / 2;
+    var gx0 = goalX0(), gx1 = goalX1();
+
+    for (var i = 0; i < orbs.length; i++) {
+      var orb = orbs[i];
+      orb.x += orb.vx * dt;
+      orb.y += orb.vy * dt;
+
+      // paddle collision — only while falling and not yet bounced this life
+      if (!orb.bounced && orb.vy > 0 &&
+          orb.y + orb.r >= pTop && orb.y - orb.r <= pTop + PADDLE_H &&
+          orb.x + orb.r >= pLeft && orb.x - orb.r <= pRight) {
+        deflectCount++;
+        if (orb.type === 'hazard') {
+          score = Math.max(0, score - HAZARD_PENALTY);
+          combo = 0;
+          addPopup('-' + HAZARD_PENALTY, orb.x, orb.y, '#ff8a8a');
+          screenFlashTimer = 1;
+          screenFlashColor = 'rgba(255,90,90,';
+          playTone(140, 0.2, 'sawtooth');
+          respawnOrb(orb);
+          continue;
+        } else {
+          var off = clamp((orb.x - paddleX) / (PADDLE_W / 2), -1, 1);
+          orb.vx = off * MAX_BOUNCE_VX;
+          orb.vy = -Math.max(150, Math.abs(orb.vy));
+          orb.bounced = true;
+          playTone(340, 0.08, 'square');
+        }
+      }
+
+      // exits: bottom (missed), top (goal check), or sides (missed)
+      if (orb.y > VIEW_H + 40) {
+        if (orb.type === 'good') finishGoodOrb(orb, false);
+        else respawnOrb(orb);
+      } else if (orb.y < -40) {
+        if (orb.type === 'good' && orb.bounced) {
+          finishGoodOrb(orb, orb.x >= gx0 && orb.x <= gx1);
+        } else {
+          respawnOrb(orb);
+        }
+      } else if (orb.x < -40 || orb.x > VIEW_W + 40) {
+        if (orb.type === 'good' && orb.bounced) finishGoodOrb(orb, false);
+        else respawnOrb(orb);
+      }
+    }
+  }
+
+  function updateKeyboard(dt) {
+    var dx = (kbRight ? 1 : 0) - (kbLeft ? 1 : 0);
+    if (dx !== 0) {
+      paddleX = clamp(paddleX + dx * KB_SPEED * dt, PADDLE_W / 2, VIEW_W - PADDLE_W / 2);
+    }
+  }
+
+  function update(dt) {
+    updateKeyboard(dt);
+    updateOrbs(dt);
+    if (screenFlashTimer > 0) screenFlashTimer = Math.max(0, screenFlashTimer - dt * 2.2);
+    for (var i = popups.length - 1; i >= 0; i--) {
+      popups[i].timer -= dt;
+      popups[i].y -= dt * 30;
+      if (popups[i].timer <= 0) popups.splice(i, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0a0d13';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (screenFlashTimer > 0) {
+      ctx.fillStyle = screenFlashColor + (screenFlashTimer * 0.2) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawGoal() {
+    var gx0 = goalX0(), gx1 = goalX1();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(157,255,224,0.7)';
+    ctx.setLineDash([5, 6]);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(gx0, 6, gx1 - gx0, GOAL_BAND_H);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(157,255,224,0.55)';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('GOAL', (gx0 + gx1) / 2, GOAL_BAND_H + 20);
+  }
+
+  function drawPaddle() {
+    var pTop = paddleTopY();
+    ctx.fillStyle = '#7fe8ff';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(paddleX - PADDLE_W / 2, pTop, PADDLE_W, PADDLE_H, 6);
+    } else {
+      ctx.rect(paddleX - PADDLE_W / 2, pTop, PADDLE_W, PADDLE_H);
+    }
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawOrbs() {
+    for (var i = 0; i < orbs.length; i++) {
+      var orb = orbs[i];
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, orb.r, 0, Math.PI * 2);
+      ctx.fillStyle = orb.type === 'hazard' ? '#ff5f6d' : '#7fe8ff';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.stroke();
+    }
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 15px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawGoal();
+      drawOrbs();
+      drawPaddle();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    dragging = true;
+    var pos = getPos(e);
+    paddleX = clamp(pos.x, PADDLE_W / 2, VIEW_W - PADDLE_W / 2);
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    var pos = getPos(e);
+    paddleX = clamp(pos.x, PADDLE_W / 2, VIEW_W - PADDLE_W / 2);
+  }
+
+  function onPointerUp() {
+    dragging = false;
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerUp);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { kbLeft = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') { kbRight = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+    }
+  });
+
+  document.addEventListener('keyup', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { kbLeft = false; return; }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') { kbRight = false; return; }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  orbs = makeOrbs();
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return deflectCount >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

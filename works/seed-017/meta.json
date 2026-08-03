@@ -1,0 +1,7 @@
+{
+  "seed": "seed-017",
+  "title": "MIRROR ARC",
+  "description": "Drag left and right to slide the mirror. Bounce cyan orbs into the goal band above — where they hit the mirror sets their angle. Let red hazard orbs fall past untouched; touching one breaks your streak.",
+  "primary_input": "drag",
+  "success_condition": "orb_deflected_1"
+}
