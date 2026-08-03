@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GRAVITY SNARE</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0b0e14;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0b0e14;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #e7edff; font-size: 17px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #b98bff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.86); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f6f8ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f8ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4bdd4; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #b98bff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #b98bff; background: #1c1330;
+    color: #f2e9ff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>STREAK <span id="streakVal">0</span></div>
+    <div>WELLS <span id="wellsVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>GRAVITY SNARE</h1>
+    <p class="sub" id="subDesc">Hold anywhere on the field to charge a gravity well. Release to fire it and pull nearby cyan orbs into its center — keep red hazard orbs out of range.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalCaught">CAUGHT 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var streakVal = document.getElementById('streakVal');
+  var wellsVal = document.getElementById('wellsVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalCaught = document.getElementById('finalCaught');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 550;
+  var ORB_COUNT = 10;
+  var MAX_CHARGE_MS = 1100;
+  var MIN_CHARGE_FRAC = 0.15;
+  var ACTIVE_DURATION_MS = 2400;
+  var MAX_ACTIVE_WELLS = 2;
+  var WELL_MIN_RADIUS = 60;
+  var WELL_MAX_RADIUS = 190;
+  var CAPTURE_RADIUS = 17;
+  var PULL_ACCEL = 620;
+  var ORB_MAX_SPEED = 260;
+  var CORE_BASE_SCORE = 12;
+  var HAZARD_PENALTY = 8;
+  var KB_AIM_SPEED = 320;
+
+  var state = 'title';
+  var score = 0;
+  var streak = 0;
+  var timeLeft = 60;
+  var caughtCount = 0;
+  var wellsActivated = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var orbs = [];
+  var chargingWell = null;
+  var chargeSource = null; // 'pointer' | 'keyboard'
+  var activeWells = [];
+  var popups = [];
+  var kbAim = { x: VIEW_W / 2, y: VIEW_H / 2 };
+  var kbKeys = { left: false, right: false, up: false, down: false };
+  var spaceHeld = false;
+  var screenFlashTimer = 0;
+  var screenFlashColor = 'rgba(184,255,220,';
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function elapsedSeconds() { return 60 - Math.max(0, timeLeft); }
+
+  function hazardChance() {
+    return clamp(0.22 + (elapsedSeconds() / 60) * 0.2, 0.22, 0.42);
+  }
+
+  function respawnOrb(orb) {
+    var edge = Math.floor(rand(0, 4));
+    var x, y;
+    if (edge === 0) { x = -30; y = rand(0, VIEW_H); }
+    else if (edge === 1) { x = VIEW_W + 30; y = rand(0, VIEW_H); }
+    else if (edge === 2) { x = rand(0, VIEW_W); y = -30; }
+    else { x = rand(0, VIEW_W); y = VIEW_H + 30; }
+    var tx = rand(VIEW_W * 0.2, VIEW_W * 0.8);
+    var ty = rand(VIEW_H * 0.2, VIEW_H * 0.8);
+    var dx = tx - x, dy = ty - y;
+    var d = Math.hypot(dx, dy) || 1;
+    var speed = rand(30, 65);
+    orb.x = x; orb.y = y;
+    orb.vx = (dx / d) * speed;
+    orb.vy = (dy / d) * speed;
+    orb.type = Math.random() < hazardChance() ? 'hazard' : 'core';
+    orb.r = orb.type === 'hazard' ? 9 : 7;
+  }
+
+  function makeOrbs() {
+    var arr = [];
+    for (var i = 0; i < ORB_COUNT; i++) {
+      var orb = { x: 0, y: 0, vx: 0, vy: 0, r: 7, type: 'core' };
+      respawnOrb(orb);
+      arr.push(orb);
+    }
+    return arr;
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#eafcff' });
+  }
+
+  function resetGame() {
+    score = 0;
+    streak = 0;
+    timeLeft = 60;
+    caughtCount = 0;
+    wellsActivated = 0;
+    lastFrameTime = null;
+    chargingWell = null;
+    chargeSource = null;
+    activeWells = [];
+    popups = [];
+    kbAim = { x: VIEW_W / 2, y: VIEW_H / 2 };
+    kbKeys = { left: false, right: false, up: false, down: false };
+    spaceHeld = false;
+    screenFlashTimer = 0;
+    orbs = makeOrbs();
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalCaught.textContent = 'CAUGHT ' + caughtCount;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    streakVal.textContent = String(streak);
+    wellsVal.textContent = String(wellsActivated);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function startCharge(x, y, source) {
+    if (state !== 'play') return;
+    if (chargingWell) return;
+    chargingWell = { x: x, y: y, start: performance.now() };
+    chargeSource = source;
+  }
+
+  function releaseCharge() {
+    if (!chargingWell) return;
+    if (state !== 'play') { chargingWell = null; chargeSource = null; return; }
+    var elapsed = performance.now() - chargingWell.start;
+    var frac = clamp(elapsed / MAX_CHARGE_MS, 0, 1);
+    if (frac < MIN_CHARGE_FRAC) frac = MIN_CHARGE_FRAC;
+    var radius = WELL_MIN_RADIUS + (WELL_MAX_RADIUS - WELL_MIN_RADIUS) * frac;
+    var well = {
+      x: chargingWell.x,
+      y: chargingWell.y,
+      strength: frac,
+      radius: radius,
+      bornAt: performance.now(),
+      activeUntil: performance.now() + ACTIVE_DURATION_MS
+    };
+    activeWells.push(well);
+    while (activeWells.length > MAX_ACTIVE_WELLS) activeWells.shift();
+    wellsActivated++;
+    updateHud();
+    playTone(180 + frac * 260, 0.16, 'sine');
+    chargingWell = null;
+    chargeSource = null;
+  }
+
+  function captureOrb(orb, well) {
+    if (orb.type === 'core') {
+      var gain = CORE_BASE_SCORE + streak * 2;
+      score += gain;
+      streak++;
+      caughtCount++;
+      addPopup('+' + gain, orb.x, orb.y, '#9dffe0');
+      playTone(520 + streak * 12, 0.12, 'triangle');
+    } else {
+      score = Math.max(0, score - HAZARD_PENALTY);
+      streak = 0;
+      addPopup('-' + HAZARD_PENALTY, orb.x, orb.y, '#ff8a8a');
+      screenFlashTimer = 1;
+      screenFlashColor = 'rgba(255,90,90,';
+      playTone(140, 0.2, 'sawtooth');
+    }
+    respawnOrb(orb);
+  }
+
+  function updateWells(dt) {
+    var now = performance.now();
+    for (var i = activeWells.length - 1; i >= 0; i--) {
+      if (now >= activeWells[i].activeUntil) activeWells.splice(i, 1);
+    }
+  }
+
+  function updateOrbs(dt) {
+    for (var i = 0; i < orbs.length; i++) {
+      var orb = orbs[i];
+      for (var w = 0; w < activeWells.length; w++) {
+        var well = activeWells[w];
+        var dx = well.x - orb.x, dy = well.y - orb.y;
+        var dist = Math.hypot(dx, dy) || 0.0001;
+        if (dist < well.radius) {
+          var t = 1 - dist / well.radius;
+          var accel = PULL_ACCEL * well.strength * t;
+          orb.vx += (dx / dist) * accel * dt;
+          orb.vy += (dy / dist) * accel * dt;
+        }
+      }
+      var sp = Math.hypot(orb.vx, orb.vy);
+      if (sp > ORB_MAX_SPEED) {
+        var scale = ORB_MAX_SPEED / sp;
+        orb.vx *= scale; orb.vy *= scale;
+      }
+      orb.x += orb.vx * dt;
+      orb.y += orb.vy * dt;
+
+      var captured = false;
+      for (var w2 = 0; w2 < activeWells.length; w2++) {
+        var well2 = activeWells[w2];
+        var d2 = Math.hypot(well2.x - orb.x, well2.y - orb.y);
+        if (d2 < CAPTURE_RADIUS) {
+          captureOrb(orb, well2);
+          captured = true;
+          break;
+        }
+      }
+      if (!captured) {
+        if (orb.x < -60 || orb.x > VIEW_W + 60 || orb.y < -60 || orb.y > VIEW_H + 60) {
+          respawnOrb(orb);
+        }
+      }
+    }
+  }
+
+  function updateKbAim(dt) {
+    var dx = (kbKeys.right ? 1 : 0) - (kbKeys.left ? 1 : 0);
+    var dy = (kbKeys.down ? 1 : 0) - (kbKeys.up ? 1 : 0);
+    if (dx !== 0 || dy !== 0) {
+      var d = Math.hypot(dx, dy) || 1;
+      kbAim.x = clamp(kbAim.x + (dx / d) * KB_AIM_SPEED * dt, 10, VIEW_W - 10);
+      kbAim.y = clamp(kbAim.y + (dy / d) * KB_AIM_SPEED * dt, 10, VIEW_H - 10);
+    }
+    if (chargingWell && chargeSource === 'keyboard') {
+      chargingWell.x = kbAim.x;
+      chargingWell.y = kbAim.y;
+    }
+  }
+
+  function update(dt) {
+    updateKbAim(dt);
+    updateWells(dt);
+    updateOrbs(dt);
+    if (screenFlashTimer > 0) screenFlashTimer = Math.max(0, screenFlashTimer - dt * 2.2);
+    for (var i = popups.length - 1; i >= 0; i--) {
+      popups[i].timer -= dt;
+      popups[i].y -= dt * 30;
+      if (popups[i].timer <= 0) popups.splice(i, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (screenFlashTimer > 0) {
+      ctx.fillStyle = screenFlashColor + (screenFlashTimer * 0.2) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawOrbs() {
+    for (var i = 0; i < orbs.length; i++) {
+      var orb = orbs[i];
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, orb.r, 0, Math.PI * 2);
+      ctx.fillStyle = orb.type === 'hazard' ? '#ff5f6d' : '#7fe8ff';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.stroke();
+    }
+  }
+
+  function drawWells() {
+    if (chargingWell) {
+      var elapsed = performance.now() - chargingWell.start;
+      var frac = clamp(elapsed / MAX_CHARGE_MS, 0, 1);
+      var r = WELL_MIN_RADIUS + (WELL_MAX_RADIUS - WELL_MIN_RADIUS) * frac;
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(185,139,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(chargingWell.x, chargingWell.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#e6d8ff';
+      ctx.beginPath();
+      ctx.arc(chargingWell.x, chargingWell.y, 4 + frac * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (var i = 0; i < activeWells.length; i++) {
+      var well = activeWells[i];
+      var life = clamp((well.activeUntil - performance.now()) / ACTIVE_DURATION_MS, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = 0.25 + life * 0.55;
+      ctx.strokeStyle = '#b98bff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(well.x, well.y, well.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#d9c4ff';
+      ctx.beginPath();
+      ctx.arc(well.x, well.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (state === 'play' && chargeSource === 'keyboard') {
+      ctx.strokeStyle = 'rgba(230,216,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(kbAim.x - 8, kbAim.y);
+      ctx.lineTo(kbAim.x + 8, kbAim.y);
+      ctx.moveTo(kbAim.x, kbAim.y - 8);
+      ctx.lineTo(kbAim.x, kbAim.y + 8);
+      ctx.stroke();
+    }
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 15px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawOrbs();
+      drawWells();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    startCharge(pos.x, pos.y, 'pointer');
+  }
+
+  function onPointerUp(e) {
+    if (chargeSource === 'pointer') releaseCharge();
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerUp);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { kbKeys.left = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') { kbKeys.right = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { kbKeys.up = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowDown' || k === 's' || k === 'S') { kbKeys.down = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+      if (state === 'play' && !spaceHeld) {
+        spaceHeld = true;
+        startCharge(kbAim.x, kbAim.y, 'keyboard');
+      }
+    }
+  });
+
+  document.addEventListener('keyup', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { kbKeys.left = false; return; }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') { kbKeys.right = false; return; }
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { kbKeys.up = false; return; }
+    if (k === 'ArrowDown' || k === 's' || k === 'S') { kbKeys.down = false; return; }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (spaceHeld) {
+        spaceHeld = false;
+        if (chargeSource === 'keyboard') releaseCharge();
+      }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  orbs = makeOrbs();
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return wellsActivated >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

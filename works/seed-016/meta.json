@@ -1,0 +1,7 @@
+{
+  "seed": "seed-016",
+  "title": "GRAVITY SNARE",
+  "description": "Hold anywhere on the field to charge a gravity well. Release to fire it and pull nearby cyan orbs into its center — keep red hazard orbs out of range.",
+  "primary_input": "hold",
+  "success_condition": "well_activated_1"
+}

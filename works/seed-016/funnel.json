@@ -1,0 +1,23 @@
+{
+  "seed": "seed-016",
+  "candidates": [
+    {"title": "GRAVITY SNARE", "description": "Hold anywhere to charge a gravity well at that spot; release fires it, pulling nearby drifting orbs toward its center for a few seconds before it fades, with charge duration trading off radius/pull strength against how fast the next well can be placed.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":4,"C6":4,"C7":4}},
+    {"title": "LANE CHASE", "description": "The player's marker auto-advances through a 3-lane track and can be shifted with a tap left/right; incoming gates each show a target symbol that changes periodically, and the player must occupy the lane matching the current symbol before the next gate arrives.", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":3,"C7":3}},
+    {"title": "ORBIT CAPTURE", "description": "Small moons circle a central hub at different radii and speeds; the player drags outward from the hub and releases a hook timed to intercept a moon's orbital path, reeling it in for points on a good catch.", "scores": {"C1":2,"C2":3,"C3":2,"C4":2,"C5":2,"C6":3,"C7":3}},
+    {"title": "ECHO CHAIN", "description": "Nodes sit evenly spaced around a ring; a pulse launches from the center on a timer and must be relayed outward by tapping the nodes it will pass in the correct order, each within a shrinking window, or the chain breaks.", "scores": {"C1":3,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}},
+    {"title": "SPLIT DECISION", "description": "A single item approaches down the middle of the screen; before it arrives the player taps left or right to send it into one of two processing stations, each applying a different persistent scoring multiplier that carries forward onto every later item.", "scores": {"C1":2,"C2":4,"C3":3,"C4":4,"C5":4,"C6":3,"C7":3}},
+    {"title": "CHARGE SHARE", "description": "Two shield generators, one on each side of the screen, drain automatically over time; a single hold-input charges whichever generator the pointer currently rests on, and hazards approach unpredictably from both edges so only a charged-side shield blocks them.", "scores": {"C1":1,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "TIDE POOL", "description": "A shoreline water-level meter drifts up and down on its own; each creature on the shore is only reachable by a tap while the water sits at that creature's specific level band, so timing each tap to the drifting level is the whole decision.", "scores": {"C1":2,"C2":3,"C3":1,"C4":3,"C5":3,"C6":2,"C7":2}},
+    {"title": "MASS SWAP", "description": "Orbs drift in a queue toward a collector; tapping one orb then a second within a short window instantly swaps their positions in line, letting the player reorder which orb, safe or hazardous, reaches the collector first.", "scores": {"C1":3,"C2":4,"C3":4,"C4":4,"C5":4,"C6":3,"C7":4}},
+    {"title": "QUEUE CUT", "description": "A queue of items advances one lane toward a set of color-coded bins; a tap opens a gate that diverts only the item currently at the gate into its matching bin, and hesitating lets the queue behind it pile toward overflow.", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "BEAM BOUNCE", "description": "A beam fires periodically from a fixed emitter; the player drags out a short mirror segment anywhere on the field to redirect it toward a moving receiver, and old mirrors are replaced by new ones so the path must be re-solved each cycle.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":2,"C7":4}},
+    {"title": "FUSE LINE", "description": "A branching set of fuse nodes sits on the field; tapping a node lights it and a lit node auto-ignites its connected downstream nodes after a short delay, so only branches whose upstream junction was lit in time finish burning before time runs out.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}}
+  ],
+  "finalists": [
+    {"title": "GRAVITY SNARE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":4,"C6":4,"C7":4}},
+    {"title": "MASS SWAP", "scores": {"C1":3,"C2":4,"C3":4,"C4":4,"C5":4,"C6":3,"C7":4}},
+    {"title": "QUEUE CUT", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}}
+  ],
+  "selected": "GRAVITY SNARE",
+  "reason": "GRAVITY SNARE scored highest overall and led the field on C1 and C7: indirect field-placement control (charge a well, release it, watch it keep pulling orbs for seconds afterward) has no precedent among the 15 existing works, and multi-well timing plus the charge-duration/radius tradeoff gives it more room for strategies to emerge than MASS SWAP or QUEUE CUT, whose queue-sorting decisions sit structurally close to each other and to the existing bucket-routing catalog entry."
+}
