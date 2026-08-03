@@ -1,0 +1,7 @@
+{
+  "seed": "seed-012",
+  "title": "RECOIL BALANCE",
+  "description": "Tap to fire at your reticle — each shot kicks it off-target, and firing again before it settles only compounds the drift.",
+  "primary_input": "tap",
+  "success_condition": "target_hit_1"
+}

@@ -1,0 +1,23 @@
+{
+  "seed": "seed-012",
+  "candidates": [
+    {"title": "RECOIL BALANCE", "description": "Tap fires at the reticle's current position, but each shot kicks the reticle away by an amount that compounds if you fire again before it settles.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "FOCUS SIPHON", "description": "Tap an enemy to drain its fire rate from a shared focus meter that depletes with each tap and regenerates slowly; fully draining one enemy removes it, spreading taps only slows several.", "scores": {"C1":4,"C2":3,"C3":3,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "SPLIT AIM", "description": "Drag from the reticle out to a second point to fork one shot into two weaker halves, each traveling toward one of the two points instead of a single full-power shot.", "scores": {"C1":3,"C2":3,"C3":3,"C4":4,"C5":3,"C6":3,"C7":3}},
+    {"title": "LANE CURRENT", "description": "Drag switches which of three lanes a continuously auto-firing turret occupies, trading time spent clearing one lane's queue against jumping early to a lane about to overflow.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "GRAVITY DROP", "description": "Drag places a short-lived gravity well that pulls nearby targets toward its center to merge into a higher-value cluster, at the cost of slowing their approach to the collection line.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "PAIR LINK", "description": "Tap two targets in sequence to draw a connecting beam that destroys both after a completion time proportional to their distance, during which either can move out of range and cancel it.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}},
+    {"title": "ECHO MIRROR", "description": "Tap fires immediately and schedules a second shot at the same screen coordinate after a fixed delay, rewarding aiming ahead of a moving target's predicted future position rather than its current one.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":2,"C7":4}},
+    {"title": "OVERDRAW METER", "description": "Tap fires normally but also fills a shared board-wide meter; once it tops out, every visible target simultaneously surges in speed for a few seconds.", "scores": {"C1":3,"C2":3,"C3":2,"C4":4,"C5":3,"C6":3,"C7":2}},
+    {"title": "WEIGHT SHIFT", "description": "Hold anywhere tilts a suspended platform toward that side, rolling loose targets toward score chutes on either edge; releasing snaps the platform back level.", "scores": {"C1":3,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "RICOCHET COUNT", "description": "Tap fires a shot that bounces off screen edges a number of times equal to a counter that grows with consecutive hits and resets on a miss, with farther targets scoring more but needing more surviving bounces.", "scores": {"C1":2,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "PATIENCE GATE", "description": "Hold on a target keeps a gate open that queues its incoming reinforcements harmlessly behind it; releasing early collapses the gate and every queued reinforcement arrives at once.", "scores": {"C1":2,"C2":2,"C3":2,"C4":3,"C5":2,"C6":2,"C7":2}}
+  ],
+  "finalists": [
+    {"title": "RECOIL BALANCE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "FOCUS SIPHON", "scores": {"C1":4,"C2":3,"C3":3,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "SPLIT AIM", "scores": {"C1":3,"C2":3,"C3":3,"C4":4,"C5":3,"C6":3,"C7":3}}
+  ],
+  "selected": "RECOIL BALANCE",
+  "reason": "RECOIL BALANCE has the highest total (25 vs 24 and 22), ties for the top C1 and C6 scores, and leads outright on C3 and C7 — its firing decision is the only one where the player's own actions reshape the control space for the next action, which no existing work does and which keeps rewarding paced-vs-burst judgment as the player improves."
+}
