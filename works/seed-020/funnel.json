@@ -1,0 +1,24 @@
+{
+  "seed": "seed-020",
+  "candidates": [
+    {"title": "GEAR LOCK", "description": "Drag in an arc around a pivot to rotate a gear, releasing when its notch aligns with a shrinking-tolerance target angle.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "COMET LEAD", "description": "Tap ahead along a comet's revealed path to place an interceptor where it will be, not where it currently is.", "scores": {"C1":3,"C2":3,"C3":3,"C4":4,"C5":3,"C6":3,"C7":3}},
+    {"title": "SLING NODES", "description": "Drag back and release to flick a puck with vector-based power at holes, managing which queued puck to launch next.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3}},
+    {"title": "TRACE ROUTE", "description": "Drag one continuous stroke through numbered nodes in order without letting the line cross itself.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "PULSE GATE", "description": "Tap whichever gate is currently 'hot' on a shared rotating beat, tracking both the target and the shared tempo.", "scores": {"C1":2,"C2":3,"C3":2,"C4":4,"C5":3,"C6":4,"C7":2}},
+    {"title": "MIRROR HOLD", "description": "Hold one of two zones to pull a shared marker toward it while the unheld zone's stamina regenerates, forcing alternation to hold a moving band.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":2,"C6":3,"C7":4}},
+    {"title": "CIRCUIT ECHO", "description": "Watch a growing sequence of flashed circuit nodes, then tap them back in the same order from memory.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "DRIFT NET", "description": "Drag a sweeping net across the field to corral drifting orbs, where dragging faster covers more ground but narrows the capture width.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "COLOR MIX TAP", "description": "Tap two differently-colored source orbs in sequence to blend a compound matching a shifting target hue.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "BIN SORT MEMORY", "description": "Drag a stream of items into bins matching a mapping shown briefly at the round's start, then hidden.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3}},
+    {"title": "TENSION LINE", "description": "Drag to stretch a line from a fixed anchor, releasing to commit before rising stretch distance triggers a snap-back.", "scores": {"C1":3,"C2":3,"C3":3,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "PULSE SLICE", "description": "Drag one slicing stroke across a bundle of independently pulsing wires, scoring only the ones crossed during their lit phase.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}}
+  ],
+  "finalists": [
+    {"title": "CIRCUIT ECHO", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "TRACE ROUTE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "PULSE SLICE", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}}
+  ],
+  "selected": "CIRCUIT ECHO",
+  "reason": "CIRCUIT ECHO scored highest overall and led on C2/C4/C5/C6 since its watch-then-reproduce memory loop is instantly graspable, its tap-only input is the most reliable to implement and verify, and every tap resolves with immediate visual/score feedback, while its hidden-order recall decision is genuinely distinct from the scan-and-order and discrimination mechanics already in the catalog."
+}

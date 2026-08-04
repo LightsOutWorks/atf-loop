@@ -1,0 +1,7 @@
+{
+  "seed": "seed-020",
+  "title": "CIRCUIT ECHO",
+  "description": "A circuit-recall toy: watch the pulse sequence light up the grid, then tap the same nodes back in order — a wrong tap forces a replay, and each cleared pattern grows one step longer.",
+  "primary_input": "tap",
+  "success_condition": "echo_hit_1"
+}

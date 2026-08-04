@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>CIRCUIT ECHO</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0b0a14;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0b0a14;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #ece9ff; font-size: 16px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #c9b6ff; }
+  #hud .phaseWarn { color: #ffd166; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(8,7,16,0.92); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f7f5ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f7f5ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #bcb4d8; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .help {
+    font-family: sans-serif; color: #8d85a8; max-width: 560px;
+    font-size: 12.5px; line-height: 1.6; margin: 0;
+  }
+  .stat { font-family: monospace; color: #c9b6ff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #c9b6ff; background: #211a3a;
+    color: #f2ecff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>STREAK <span id="streakVal">0</span></div>
+    <div>LENGTH <span id="lengthVal">1</span></div>
+    <div>PHASE <span id="phaseVal" class="phaseWarn">WATCH</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>CIRCUIT ECHO</h1>
+    <p class="sub" id="subDesc">A circuit-recall toy: watch the pulse sequence light up the grid, then tap the same nodes back in order — a wrong tap forces a replay, and each cleared pattern grows one step longer.</p>
+    <p class="help">Mouse/touch: watch the lit sequence, then tap the nodes in the same order. Keyboard: Arrow keys to move the cursor, Enter/Space to tap the selected node during your turn. Matching the full pattern extends it by one node; a wrong tap resets your turn and replays the pattern.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST LENGTH 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var streakVal = document.getElementById('streakVal');
+  var lengthVal = document.getElementById('lengthVal');
+  var phaseVal = document.getElementById('phaseVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 600;
+  var COLS = 5, ROWS = 4;
+  var NODE_COUNT = COLS * ROWS;
+  var BASE_GAIN = 10, COMBO_STEP = 2, WRONG_PENALTY = 6;
+  var SHOW_LEAD = 0.30, SHOW_ON = 0.42, SHOW_GAP = 0.18;
+
+  var state = 'title';
+  var score = 0;
+  var combo = 0;
+  var bestCombo = 0;
+  var bestLength = 1;
+  var timeLeft = 60;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var sequence = [];
+  var phase = 'show';
+  var showState = 'lead';
+  var showTimer = 0;
+  var showIndex = 0;
+  var showingNode = -1;
+  var inputIndex = 0;
+  var roundIndex = 0;
+  var correctTapsTotal = 0;
+  var wrongTapsTotal = 0;
+
+  var nodeFlash = [];
+  var selIdx = 0;
+  var popups = [];
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function cellW() { return VIEW_W / COLS; }
+  function cellH() { return VIEW_H / ROWS; }
+  function cellCenterX(c) { return VIEW_W * ((c + 0.5) / COLS); }
+  function cellCenterY(r) { return VIEW_H * ((r + 0.5) / ROWS); }
+  function nodeCol(i) { return i % COLS; }
+  function nodeRow(i) { return Math.floor(i / COLS); }
+
+  function makeNodeFlash() {
+    var arr = [];
+    for (var i = 0; i < NODE_COUNT; i++) arr.push({ flash: 0, color: '' });
+    return arr;
+  }
+
+  function randomNode(avoid) {
+    var idx;
+    do {
+      idx = Math.floor(Math.random() * NODE_COUNT);
+    } while (NODE_COUNT > 1 && idx === avoid);
+    return idx;
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#f2ecff' });
+  }
+
+  function startShowPhase() {
+    phase = 'show';
+    showState = 'lead';
+    showTimer = SHOW_LEAD;
+    showIndex = 0;
+    showingNode = -1;
+    inputIndex = 0;
+    updateHud();
+  }
+
+  function growSequence() {
+    var last = sequence.length ? sequence[sequence.length - 1] : -1;
+    sequence.push(randomNode(last));
+    roundIndex++;
+    if (sequence.length > bestLength) bestLength = sequence.length;
+  }
+
+  function completeRound() {
+    var bonus = 25 + roundIndex * 6;
+    score += bonus;
+    addPopup('PATTERN +' + bonus, VIEW_W / 2, VIEW_H / 2 - 30, '#ffd166');
+    playTone(880, 0.22, 'triangle');
+    growSequence();
+    startShowPhase();
+  }
+
+  function tapNode(idx) {
+    if (state !== 'play' || phase !== 'input') return false;
+    if (idx < 0 || idx >= NODE_COUNT) return false;
+    var cx = cellCenterX(nodeCol(idx)), cy = cellCenterY(nodeRow(idx));
+    if (idx === sequence[inputIndex]) {
+      correctTapsTotal++;
+      nodeFlash[idx].flash = 1; nodeFlash[idx].color = 'rgba(125,255,176,';
+      var gain = BASE_GAIN + combo * COMBO_STEP;
+      score += gain;
+      combo++;
+      if (combo > bestCombo) bestCombo = combo;
+      addPopup('+' + gain, cx, cy - 26, '#7dffb0');
+      playTone(520 + combo * 8, 0.12, 'triangle');
+      inputIndex++;
+      updateHud();
+      if (inputIndex >= sequence.length) completeRound();
+    } else {
+      wrongTapsTotal++;
+      nodeFlash[idx].flash = 1; nodeFlash[idx].color = 'rgba(255,110,110,';
+      score = Math.max(0, score - WRONG_PENALTY);
+      combo = 0;
+      addPopup('-' + WRONG_PENALTY, cx, cy - 26, '#ff8a8a');
+      playTone(150, 0.2, 'sawtooth');
+      updateHud();
+      startShowPhase();
+    }
+    return true;
+  }
+
+  function resetGame() {
+    score = 0;
+    combo = 0;
+    bestCombo = 0;
+    bestLength = 1;
+    timeLeft = 60;
+    lastFrameTime = null;
+    roundIndex = 0;
+    correctTapsTotal = 0;
+    wrongTapsTotal = 0;
+    popups = [];
+    nodeFlash = makeNodeFlash();
+    selIdx = Math.floor(NODE_COUNT / 2);
+    sequence = [randomNode(-1)];
+    startShowPhase();
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST LENGTH ' + bestLength;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    streakVal.textContent = String(combo);
+    lengthVal.textContent = String(sequence.length);
+    phaseVal.textContent = phase === 'show' ? 'WATCH' : 'YOUR TURN';
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function updateShow(dt) {
+    showTimer -= dt;
+    if (showTimer > 0) return;
+    if (showState === 'lead') {
+      showState = 'on';
+      showTimer = SHOW_ON;
+      showingNode = sequence[showIndex];
+    } else if (showState === 'on') {
+      showingNode = -1;
+      showState = 'gap';
+      showTimer = SHOW_GAP;
+    } else {
+      showIndex++;
+      if (showIndex >= sequence.length) {
+        phase = 'input';
+        inputIndex = 0;
+        updateHud();
+      } else {
+        showState = 'on';
+        showTimer = SHOW_ON;
+        showingNode = sequence[showIndex];
+      }
+    }
+  }
+
+  function update(dt) {
+    for (var i = 0; i < nodeFlash.length; i++) {
+      if (nodeFlash[i].flash > 0) nodeFlash[i].flash = Math.max(0, nodeFlash[i].flash - dt * 2.4);
+    }
+    for (var j = popups.length - 1; j >= 0; j--) {
+      popups[j].timer -= dt;
+      popups[j].y -= dt * 30;
+      if (popups[j].timer <= 0) popups.splice(j, 1);
+    }
+    if (phase === 'show') updateShow(dt);
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0b0a14';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
+
+  function drawGridLines() {
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (var c = 1; c < COLS; c++) {
+      var x = VIEW_W * (c / COLS);
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, VIEW_H); ctx.stroke();
+    }
+    for (var r = 1; r < ROWS; r++) {
+      var y = VIEW_H * (r / ROWS);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(VIEW_W, y); ctx.stroke();
+    }
+  }
+
+  function drawNodes() {
+    var rad = Math.min(cellW(), cellH()) * 0.34;
+    for (var i = 0; i < NODE_COUNT; i++) {
+      var x = cellCenterX(nodeCol(i)), y = cellCenterY(nodeRow(i));
+      var nf = nodeFlash[i];
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, rad, 0, Math.PI * 2);
+      ctx.fillStyle = '#180f2e';
+      ctx.fill();
+      ctx.strokeStyle = '#8a6dff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (i === showingNode) {
+        ctx.beginPath();
+        ctx.arc(x, y, rad, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd166';
+        ctx.fill();
+      } else if (nf.flash > 0) {
+        ctx.beginPath();
+        ctx.arc(x, y, rad, 0, Math.PI * 2);
+        ctx.fillStyle = nf.color + (nf.flash * 0.55) + ')';
+        ctx.fill();
+      }
+      if (i === selIdx && state === 'play') {
+        ctx.beginPath();
+        ctx.arc(x, y, rad + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 15px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawGridLines();
+      drawNodes();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function nodeFromPos(x, y) {
+    var c = clamp(Math.floor(x / cellW()), 0, COLS - 1);
+    var r = clamp(Math.floor(y / cellH()), 0, ROWS - 1);
+    return r * COLS + c;
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    var idx = nodeFromPos(pos.x, pos.y);
+    selIdx = idx;
+    tapNode(idx);
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (state === 'play') {
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+        if (e.preventDefault) e.preventDefault();
+        var c1 = clamp(nodeCol(selIdx) - 1, 0, COLS - 1);
+        selIdx = nodeRow(selIdx) * COLS + c1;
+        return;
+      }
+      if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+        if (e.preventDefault) e.preventDefault();
+        var c2 = clamp(nodeCol(selIdx) + 1, 0, COLS - 1);
+        selIdx = nodeRow(selIdx) * COLS + c2;
+        return;
+      }
+      if (k === 'ArrowUp' || k === 'w' || k === 'W') {
+        if (e.preventDefault) e.preventDefault();
+        var r1 = clamp(nodeRow(selIdx) - 1, 0, ROWS - 1);
+        selIdx = r1 * COLS + nodeCol(selIdx);
+        return;
+      }
+      if (k === 'ArrowDown' || k === 's' || k === 'S') {
+        if (e.preventDefault) e.preventDefault();
+        var r2 = clamp(nodeRow(selIdx) + 1, 0, ROWS - 1);
+        selIdx = r2 * COLS + nodeCol(selIdx);
+        return;
+      }
+    }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+      if (state === 'play') { tapNode(selIdx); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  nodeFlash = makeNodeFlash();
+  sequence = [randomNode(-1)];
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return correctTapsTotal >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
