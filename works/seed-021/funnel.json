@@ -1,0 +1,22 @@
+{
+  "seed": "seed-021",
+  "candidates": [
+    {"title": "FLOW TRIAGE", "description": "Tap to open one of three tanks' valves at a time while the others keep filling on their own; deciding which tank to prioritize, and when to switch, determines which ones overflow.", "scores": {"C1":3,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "SWEEP RUNNER", "description": "Drag a marker through the gaps between rotating radar-sweep arms to bank checkpoints, timing and routing your path as the sweeps speed up.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4}},
+    {"title": "CHAIN IGNITE", "description": "Tap a node in a small connected graph to ignite it and let the ignition spread to its linked neighbors after a delay, choosing when and where to trigger the largest chain before nodes cool.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":4}},
+    {"title": "SLING ARC", "description": "Drag back from a target and release to launch a shot whose angle and power come straight from the drag vector, rewarding pulls calibrated to each target's specific power band over raw force.", "scores": {"C1":3,"C2":4,"C3":3,"C4":3,"C5":3,"C6":4,"C7":3}},
+    {"title": "PULSE DIAL", "description": "Drag to rotate a dial while a scoring window drifts around it at its own pace, requiring continuous correction to keep the needle inside the moving window long enough to lock it.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3}},
+    {"title": "TILT FIELD", "description": "Drag anywhere to set the whole field's gravity tilt, steering several simultaneous falling orbs toward a goal pocket with one shared control while keeping hazard orbs away.", "scores": {"C1":4,"C2":4,"C3":4,"C4":3,"C5":4,"C6":4,"C7":4}},
+    {"title": "HULL WARD", "description": "Hold anywhere to raise a shield that grows the longer it's held and blocks incoming debris from any direction, while draining an energy meter that only recharges once you let go.", "scores": {"C1":4,"C2":4,"C3":4,"C4":4,"C5":4,"C6":4,"C7":4}},
+    {"title": "RESOURCE BID", "description": "Tap fading targets to claim their value out of a slowly-regenerating tap budget, forcing a choice between cheap targets now and saving taps for higher-value ones soon after.", "scores": {"C1":2,"C2":4,"C3":3,"C4":4,"C5":3,"C6":4,"C7":3}},
+    {"title": "ORBIT LANES", "description": "Tap when the reticle aligns with a target on one of several concentric rings spinning at different speeds, but only one ring scores at a time, so reading which ring is hot comes first.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3}},
+    {"title": "MAGNET CHAIN", "description": "Hold to grow a magnet's pull radius, then release to snap together every same-polarity orb currently inside it for a combo, while mixed-polarity clusters cancel each other out.", "scores": {"C1":1,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}}
+  ],
+  "finalists": [
+    {"title": "HULL WARD", "scores": {"C1":4,"C2":4,"C3":4,"C4":4,"C5":4,"C6":4,"C7":4}},
+    {"title": "CHAIN IGNITE", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":4}},
+    {"title": "TILT FIELD", "scores": {"C1":4,"C2":4,"C3":4,"C4":3,"C5":4,"C6":4,"C7":4}}
+  ],
+  "selected": "HULL WARD",
+  "reason": "HULL WARD is the only finalist whose core loop — a growing omnidirectional shield that trades hold placement and duration against a drain/recharge energy budget — has no equivalent among the 20 published works (C1), and its success state is a direct geometric collision rather than emergent multi-object physics, making it the most reliably implementable of the three (C4) while still deepening in strategy as multi-directional debris waves and energy scarcity escalate together (C7)."
+}

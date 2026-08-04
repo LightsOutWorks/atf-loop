@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HULL WARD</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #070b12;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #070b12;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #e7edff; font-size: 17px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #5be7ff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(5,7,11,0.88); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f6f8ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f8ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4bdd4; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #5be7ff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #5be7ff; background: #0e1a24;
+    color: #eafcff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>STREAK <span id="streakVal">0</span></div>
+    <div>ENERGY <span id="energyVal">100</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>HULL WARD</h1>
+    <p class="sub" id="subDesc">Hold anywhere to raise a ward around your ship's core. It grows the longer you hold and blocks incoming debris, but drains your energy every second it's up &mdash; release to let it recharge.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBlocked">BLOCKED 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var streakVal = document.getElementById('streakVal');
+  var energyVal = document.getElementById('energyVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBlocked = document.getElementById('finalBlocked');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 550;
+  var CORE_RADIUS = 22;
+  var CORE_HIT_RADIUS = 34;
+  var DEBRIS_RADIUS = 7;
+  var WARD_MIN_RADIUS = 14;
+  var WARD_MAX_RADIUS = 140;
+  var WARD_RAMP_MS = 650;
+  var WARD_EFFECTIVE_MIN_FRAC = 0.45;
+  var ENERGY_FULL_EFFECT = 30;
+  var ENERGY_MAX = 100;
+  var ENERGY_DRAIN_PER_SEC = 32;
+  var ENERGY_RECHARGE_PER_SEC = 20;
+  var SPAWN_INTERVAL_START = 1100;
+  var SPAWN_INTERVAL_END = 550;
+  var DEBRIS_SPEED_START = 75;
+  var DEBRIS_SPEED_END = 170;
+  var MULTI_SPAWN_ELAPSED = 18;
+  var MULTI_SPAWN_CHANCE = 0.4;
+  var SCORE_HIT_BASE = 9;
+  var SCORE_HIT_STREAK_BONUS = 1;
+  var PENALTY = 6;
+  var KB_AIM_SPEED = 340;
+
+  var state = 'title';
+  var score = 0;
+  var streak = 0;
+  var timeLeft = 60;
+  var debrisBlocked = 0;
+  var debrisLeaked = 0;
+  var energy = ENERGY_MAX;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+  var spawnTimer = 0;
+
+  var debris = [];
+  var popups = [];
+  var ward = { active: false, x: 0, y: 0, startAt: 0, radius: 0, source: null };
+  var kbAim = { x: VIEW_W / 2, y: VIEW_H / 2 };
+  var kbKeys = { left: false, right: false, up: false, down: false };
+  var spaceHeld = false;
+  var screenFlashTimer = 0;
+  var screenFlashColor = 'rgba(255,90,90,';
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function elapsedSeconds() { return 60 - Math.max(0, timeLeft); }
+
+  function currentSpawnInterval() {
+    var frac = clamp(elapsedSeconds() / 60, 0, 1);
+    return SPAWN_INTERVAL_START + (SPAWN_INTERVAL_END - SPAWN_INTERVAL_START) * frac;
+  }
+
+  function currentDebrisSpeed() {
+    var frac = clamp(elapsedSeconds() / 60, 0, 1);
+    return DEBRIS_SPEED_START + (DEBRIS_SPEED_END - DEBRIS_SPEED_START) * frac;
+  }
+
+  function coreCenter() { return { x: VIEW_W / 2, y: VIEW_H / 2 }; }
+
+  function spawnDebris() {
+    var edge = Math.floor(rand(0, 4));
+    var x, y;
+    if (edge === 0) { x = -20; y = rand(0, VIEW_H); }
+    else if (edge === 1) { x = VIEW_W + 20; y = rand(0, VIEW_H); }
+    else if (edge === 2) { x = rand(0, VIEW_W); y = -20; }
+    else { x = rand(0, VIEW_W); y = VIEW_H + 20; }
+    var core = coreCenter();
+    var tx = core.x + rand(-90, 90);
+    var ty = core.y + rand(-90, 90);
+    var dx = tx - x, dy = ty - y;
+    var d = Math.hypot(dx, dy) || 1;
+    var speed = currentDebrisSpeed() * rand(0.85, 1.15);
+    debris.push({
+      x: x, y: y,
+      vx: (dx / d) * speed,
+      vy: (dy / d) * speed,
+      r: DEBRIS_RADIUS
+    });
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#eafcff' });
+  }
+
+  function resetGame() {
+    score = 0;
+    streak = 0;
+    timeLeft = 60;
+    debrisBlocked = 0;
+    debrisLeaked = 0;
+    energy = ENERGY_MAX;
+    lastFrameTime = null;
+    spawnTimer = 0;
+    debris = [];
+    popups = [];
+    ward.active = false;
+    ward.radius = 0;
+    ward.source = null;
+    kbAim = { x: VIEW_W / 2, y: VIEW_H / 2 };
+    kbKeys = { left: false, right: false, up: false, down: false };
+    spaceHeld = false;
+    screenFlashTimer = 0;
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBlocked.textContent = 'BLOCKED ' + debrisBlocked;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    streakVal.textContent = String(streak);
+    energyVal.textContent = String(Math.round(energy));
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function startWard(x, y, source) {
+    if (state !== 'play') return;
+    if (ward.active) return;
+    ward.active = true;
+    ward.x = x; ward.y = y;
+    ward.startAt = performance.now();
+    ward.radius = WARD_MIN_RADIUS;
+    ward.source = source;
+    playTone(300, 0.08, 'sine');
+  }
+
+  function releaseWard() {
+    if (!ward.active) return;
+    ward.active = false;
+    ward.radius = 0;
+    ward.source = null;
+  }
+
+  function wardEffectiveRadius() {
+    if (!ward.active) return 0;
+    var elapsed = performance.now() - ward.startAt;
+    var rampFrac = clamp(elapsed / WARD_RAMP_MS, 0, 1);
+    var rampRadius = WARD_MIN_RADIUS + (WARD_MAX_RADIUS - WARD_MIN_RADIUS) * rampFrac;
+    var effFrac = WARD_EFFECTIVE_MIN_FRAC + (1 - WARD_EFFECTIVE_MIN_FRAC) * clamp(energy / ENERGY_FULL_EFFECT, 0, 1);
+    return rampRadius * effFrac;
+  }
+
+  function updateWard(dt) {
+    if (ward.active) {
+      energy = Math.max(0, energy - ENERGY_DRAIN_PER_SEC * dt);
+      ward.radius = wardEffectiveRadius();
+      if (ward.source === 'keyboard') {
+        ward.x = kbAim.x;
+        ward.y = kbAim.y;
+      }
+    } else {
+      energy = Math.min(ENERGY_MAX, energy + ENERGY_RECHARGE_PER_SEC * dt);
+    }
+  }
+
+  function blockDebris(d) {
+    var gain = SCORE_HIT_BASE + streak * SCORE_HIT_STREAK_BONUS;
+    score += gain;
+    streak++;
+    debrisBlocked++;
+    addPopup('+' + gain, d.x, d.y, '#9dffe0');
+    playTone(520 + streak * 10, 0.1, 'triangle');
+  }
+
+  function leakDebris(d) {
+    score = Math.max(0, score - PENALTY);
+    streak = 0;
+    debrisLeaked++;
+    addPopup('-' + PENALTY, d.x, d.y, '#ff8a8a');
+    screenFlashTimer = 1;
+    screenFlashColor = 'rgba(255,90,90,';
+    playTone(130, 0.18, 'sawtooth');
+  }
+
+  function updateSpawns(dt) {
+    spawnTimer += dt * 1000;
+    var interval = currentSpawnInterval();
+    if (spawnTimer >= interval) {
+      spawnTimer = 0;
+      spawnDebris();
+      if (elapsedSeconds() >= MULTI_SPAWN_ELAPSED && Math.random() < MULTI_SPAWN_CHANCE) {
+        spawnDebris();
+      }
+    }
+  }
+
+  function updateDebris(dt) {
+    var core = coreCenter();
+    var wr = ward.active ? ward.radius : -1;
+    for (var i = debris.length - 1; i >= 0; i--) {
+      var d = debris[i];
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+
+      if (wr > 0) {
+        var wd = Math.hypot(ward.x - d.x, ward.y - d.y);
+        if (wd < wr + d.r) {
+          blockDebris(d);
+          debris.splice(i, 1);
+          continue;
+        }
+      }
+
+      var cd = Math.hypot(core.x - d.x, core.y - d.y);
+      if (cd < CORE_HIT_RADIUS) {
+        leakDebris(d);
+        debris.splice(i, 1);
+        continue;
+      }
+
+      if (d.x < -80 || d.x > VIEW_W + 80 || d.y < -80 || d.y > VIEW_H + 80) {
+        debris.splice(i, 1);
+      }
+    }
+  }
+
+  function updateKbAim(dt) {
+    var dx = (kbKeys.right ? 1 : 0) - (kbKeys.left ? 1 : 0);
+    var dy = (kbKeys.down ? 1 : 0) - (kbKeys.up ? 1 : 0);
+    if (dx !== 0 || dy !== 0) {
+      var d = Math.hypot(dx, dy) || 1;
+      kbAim.x = clamp(kbAim.x + (dx / d) * KB_AIM_SPEED * dt, 10, VIEW_W - 10);
+      kbAim.y = clamp(kbAim.y + (dy / d) * KB_AIM_SPEED * dt, 10, VIEW_H - 10);
+    }
+  }
+
+  function update(dt) {
+    updateKbAim(dt);
+    updateSpawns(dt);
+    updateWard(dt);
+    updateDebris(dt);
+    if (screenFlashTimer > 0) screenFlashTimer = Math.max(0, screenFlashTimer - dt * 2.2);
+    for (var i = popups.length - 1; i >= 0; i--) {
+      popups[i].timer -= dt;
+      popups[i].y -= dt * 30;
+      if (popups[i].timer <= 0) popups.splice(i, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#070b12';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (screenFlashTimer > 0) {
+      ctx.fillStyle = screenFlashColor + (screenFlashTimer * 0.2) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawCore() {
+    var core = coreCenter();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(91,231,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(core.x, core.y, CORE_HIT_RADIUS, 0, Math.PI * 2);
+    ctx.setLineDash([4, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#5be7ff';
+    ctx.beginPath();
+    ctx.arc(core.x, core.y, CORE_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0d2830';
+    ctx.beginPath();
+    ctx.arc(core.x, core.y, CORE_RADIUS * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawDebris() {
+    for (var i = 0; i < debris.length; i++) {
+      var d = debris[i];
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.rotate(Math.atan2(d.vy, d.vx));
+      ctx.fillStyle = '#ff7a4d';
+      ctx.beginPath();
+      ctx.moveTo(d.r * 1.6, 0);
+      ctx.lineTo(-d.r, d.r);
+      ctx.lineTo(-d.r * 0.4, 0);
+      ctx.lineTo(-d.r, -d.r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawWard() {
+    if (!ward.active) return;
+    ctx.save();
+    var frac = clamp(energy / ENERGY_FULL_EFFECT, 0, 1);
+    ctx.globalAlpha = 0.5 + frac * 0.3;
+    ctx.strokeStyle = '#7fe9ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(ward.x, ward.y, ward.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(127,233,255,0.10)';
+    ctx.beginPath();
+    ctx.arc(ward.x, ward.y, ward.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (state === 'play' && ward.source === 'keyboard') {
+      ctx.strokeStyle = 'rgba(230,250,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(kbAim.x - 8, kbAim.y);
+      ctx.lineTo(kbAim.x + 8, kbAim.y);
+      ctx.moveTo(kbAim.x, kbAim.y - 8);
+      ctx.lineTo(kbAim.x, kbAim.y + 8);
+      ctx.stroke();
+    }
+  }
+
+  function drawEnergyBar() {
+    var barW = 220, barH = 10;
+    var x = (VIEW_W - barW) / 2, y = VIEW_H - 26;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y, barW, barH);
+    var frac = clamp(energy / ENERGY_MAX, 0, 1);
+    ctx.fillStyle = frac > 0.25 ? '#5be7ff' : '#ff7a4d';
+    ctx.fillRect(x, y, barW * frac, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, barW, barH);
+    ctx.restore();
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 15px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawCore();
+      drawDebris();
+      drawWard();
+      drawEnergyBar();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    startWard(pos.x, pos.y, 'pointer');
+  }
+
+  function onPointerMove(e) {
+    if (ward.active && ward.source === 'pointer') {
+      var pos = getPos(e);
+      ward.x = pos.x;
+      ward.y = pos.y;
+    }
+  }
+
+  function onPointerUp() {
+    if (ward.source === 'pointer') releaseWard();
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerUp);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { kbKeys.left = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') { kbKeys.right = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { kbKeys.up = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === 'ArrowDown' || k === 's' || k === 'S') { kbKeys.down = true; if (state === 'play' && e.preventDefault) e.preventDefault(); return; }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+      if (state === 'play' && !spaceHeld) {
+        spaceHeld = true;
+        startWard(kbAim.x, kbAim.y, 'keyboard');
+      }
+    }
+  });
+
+  document.addEventListener('keyup', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { kbKeys.left = false; return; }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') { kbKeys.right = false; return; }
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { kbKeys.up = false; return; }
+    if (k === 'ArrowDown' || k === 's' || k === 'S') { kbKeys.down = false; return; }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (spaceHeld) {
+        spaceHeld = false;
+        if (ward.source === 'keyboard') releaseWard();
+      }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return debrisBlocked >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

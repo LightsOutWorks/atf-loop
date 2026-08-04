@@ -1,0 +1,7 @@
+{
+  "seed": "seed-021",
+  "title": "HULL WARD",
+  "description": "Hold anywhere to raise a ward around your ship's core. It grows the longer you hold and blocks incoming debris, but drains your energy every second it's up — release to let it recharge.",
+  "primary_input": "hold",
+  "success_condition": "debris_blocked_1"
+}
