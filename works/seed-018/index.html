@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GATE SHIFT</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0a0d13;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0a0d13;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #e7edff; font-size: 16px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #9dffe0; }
+  #hud .shiftWarn { color: #ffb15c; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.9); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f6f8ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f8ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4bdd4; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .help {
+    font-family: sans-serif; color: #8891a8; max-width: 560px;
+    font-size: 12.5px; line-height: 1.6; margin: 0;
+  }
+  .stat { font-family: monospace; color: #9dffe0; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #9dffe0; background: #0f2420;
+    color: #eafffa; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>COMBO <span id="comboVal">0</span></div>
+    <div>SHIFT <span id="shiftVal">0.0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>GATE SHIFT</h1>
+    <p class="sub" id="subDesc">Glyphs drift down three lanes. Tap a lane's gate to catch what's passing through it — but each gate's accepted color reshuffles over time, so check the label before you commit.</p>
+    <p class="help">Mouse/touch: tap a gate at the bottom of its lane. Keyboard: Left/Right to pick a gate, Enter/Space to catch. Matching the gate's current color builds your combo; a wrong color or a missed match resets it.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST COMBO 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var comboVal = document.getElementById('comboVal');
+  var shiftVal = document.getElementById('shiftVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 600;
+  var LANES = 3;
+  var COLORS = [
+    { name: 'CYAN', hex: '#7fe8ff' },
+    { name: 'AMBER', hex: '#ffd166' },
+    { name: 'MAGENTA', hex: '#ff6bcb' }
+  ];
+  var GLYPH_R = 24;
+  var CAP_GLYPHS = 8;
+  var SPAWN_MIN = 0.55, SPAWN_MAX = 1.05;
+  var FALL_MIN = 105, FALL_MAX = 140;
+  var SHIFT_MIN = 6.0, SHIFT_MAX = 8.5;
+  var BASE_GAIN = 10, COMBO_STEP = 2, WRONG_PENALTY = 6;
+
+  var state = 'title';
+  var score = 0;
+  var combo = 0;
+  var bestCombo = 0;
+  var timeLeft = 60;
+  var elapsed = 0;
+  var catchCount = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var gateColorIdx = [0, 1, 2];
+  var shiftTimer = SHIFT_MIN;
+  var spawnTimer = 0.4;
+  var selectedLane = 1;
+
+  var glyphs = [];
+  var popups = [];
+  var gateFlash = [0, 0, 0];
+  var gateFlashColor = ['', '', ''];
+  var shiftFlash = 0;
+  var nextId = 1;
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function laneX0(i) { return VIEW_W * (i / LANES); }
+  function laneX1(i) { return VIEW_W * ((i + 1) / LANES); }
+  function laneCenterX(i) { return VIEW_W * ((i + 0.5) / LANES); }
+  function gateTopY() { return VIEW_H * 0.55; }
+  function gateBottomY() { return VIEW_H - 12; }
+
+  function shuffleGates() {
+    var prev = gateColorIdx.slice();
+    var arr;
+    do {
+      arr = [0, 1, 2];
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      }
+    } while (arr[0] === prev[0] && arr[1] === prev[1] && arr[2] === prev[2]);
+    gateColorIdx = arr;
+    shiftFlash = 1;
+    playTone(720, 0.16, 'triangle');
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#eafcff' });
+  }
+
+  function spawnGlyph() {
+    var lane = Math.floor(Math.random() * LANES);
+    var t = clamp(elapsed / 60, 0, 1);
+    glyphs.push({
+      id: nextId++,
+      lane: lane,
+      colorIdx: Math.floor(Math.random() * COLORS.length),
+      y: -GLYPH_R,
+      r: GLYPH_R,
+      vy: rand(FALL_MIN, FALL_MAX) + t * 40
+    });
+  }
+
+  function findCatchTarget(lane) {
+    var best = null;
+    for (var i = 0; i < glyphs.length; i++) {
+      var g = glyphs[i];
+      if (g.lane !== lane) continue;
+      if (g.y + g.r < gateTopY() || g.y - g.r > gateBottomY()) continue;
+      if (!best || g.y > best.y) best = g;
+    }
+    return best;
+  }
+
+  function removeGlyph(id) {
+    for (var i = 0; i < glyphs.length; i++) {
+      if (glyphs[i].id === id) { glyphs.splice(i, 1); return; }
+    }
+  }
+
+  function catchLane(lane) {
+    if (state !== 'play') return false;
+    lane = clamp(lane, 0, LANES - 1);
+    var g = findCatchTarget(lane);
+    if (!g) return false;
+    catchCount++;
+    removeGlyph(g.id);
+    var cx = laneCenterX(lane);
+    var cy = (gateTopY() + gateBottomY()) / 2;
+    if (g.colorIdx === gateColorIdx[lane]) {
+      var gain = BASE_GAIN + combo * COMBO_STEP;
+      score += gain;
+      combo++;
+      if (combo > bestCombo) bestCombo = combo;
+      addPopup('+' + gain, cx, cy - 20, '#9dffe0');
+      gateFlash[lane] = 1; gateFlashColor[lane] = 'rgba(157,255,224,';
+      playTone(520 + combo * 8, 0.12, 'triangle');
+    } else {
+      score = Math.max(0, score - WRONG_PENALTY);
+      combo = 0;
+      addPopup('-' + WRONG_PENALTY, cx, cy - 20, '#ff8a8a');
+      gateFlash[lane] = 1; gateFlashColor[lane] = 'rgba(255,110,110,';
+      playTone(150, 0.2, 'sawtooth');
+    }
+    updateHud();
+    return true;
+  }
+
+  function resetGame() {
+    score = 0;
+    combo = 0;
+    bestCombo = 0;
+    timeLeft = 60;
+    elapsed = 0;
+    catchCount = 0;
+    lastFrameTime = null;
+    gateColorIdx = [0, 1, 2];
+    shuffleGates();
+    shiftTimer = rand(SHIFT_MIN, SHIFT_MAX);
+    spawnTimer = 0.4;
+    selectedLane = 1;
+    glyphs = [];
+    popups = [];
+    gateFlash = [0, 0, 0];
+    shiftFlash = 0;
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST COMBO ' + bestCombo;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    comboVal.textContent = String(combo);
+    shiftVal.textContent = shiftTimer.toFixed(1);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function updateGlyphs(dt) {
+    for (var i = glyphs.length - 1; i >= 0; i--) {
+      var g = glyphs[i];
+      g.y += g.vy * dt;
+      if (g.y - g.r > VIEW_H) {
+        if (g.colorIdx === gateColorIdx[g.lane]) combo = 0;
+        glyphs.splice(i, 1);
+      }
+    }
+  }
+
+  function update(dt) {
+    elapsed += dt;
+    spawnTimer -= dt;
+    if (spawnTimer <= 0 && glyphs.length < CAP_GLYPHS) {
+      spawnGlyph();
+      spawnTimer = rand(SPAWN_MIN, SPAWN_MAX);
+    }
+    shiftTimer -= dt;
+    if (shiftTimer <= 0) {
+      shuffleGates();
+      shiftTimer = rand(SHIFT_MIN, SHIFT_MAX);
+    }
+    updateGlyphs(dt);
+    for (var i = 0; i < LANES; i++) {
+      if (gateFlash[i] > 0) gateFlash[i] = Math.max(0, gateFlash[i] - dt * 2.4);
+    }
+    if (shiftFlash > 0) shiftFlash = Math.max(0, shiftFlash - dt * 1.6);
+    for (var j = popups.length - 1; j >= 0; j--) {
+      popups[j].timer -= dt;
+      popups[j].y -= dt * 30;
+      if (popups[j].timer <= 0) popups.splice(j, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0a0d13';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (shiftFlash > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (shiftFlash * 0.08) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawLanes() {
+    for (var i = 1; i < LANES; i++) {
+      var x = laneX0(i);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, gateTopY());
+      ctx.stroke();
+    }
+  }
+
+  function drawGates() {
+    var gy0 = gateTopY(), gy1 = gateBottomY();
+    for (var i = 0; i < LANES; i++) {
+      var x0 = laneX0(i), x1 = laneX1(i);
+      var col = COLORS[gateColorIdx[i]];
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      ctx.fillRect(x0 + 3, gy0, x1 - x0 - 6, gy1 - gy0);
+      if (gateFlash[i] > 0) {
+        ctx.fillStyle = gateFlashColor[i] + (gateFlash[i] * 0.35) + ')';
+        ctx.fillRect(x0 + 3, gy0, x1 - x0 - 6, gy1 - gy0);
+      }
+      ctx.strokeStyle = i === selectedLane ? '#ffffff' : col.hex;
+      ctx.lineWidth = i === selectedLane ? 3 : 2;
+      ctx.strokeRect(x0 + 3, gy0, x1 - x0 - 6, gy1 - gy0);
+      ctx.fillStyle = col.hex;
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(col.name, (x0 + x1) / 2, gy1 - 14);
+      ctx.restore();
+    }
+  }
+
+  function drawGlyphs() {
+    for (var i = 0; i < glyphs.length; i++) {
+      var g = glyphs[i];
+      var x = laneCenterX(g.lane);
+      var col = COLORS[g.colorIdx];
+      ctx.beginPath();
+      ctx.arc(x, g.y, g.r, 0, Math.PI * 2);
+      ctx.fillStyle = col.hex;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.stroke();
+    }
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 15px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawLanes();
+      drawGates();
+      drawGlyphs();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function laneFromX(x) {
+    return clamp(Math.floor(x / (VIEW_W / LANES)), 0, LANES - 1);
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    if (pos.y < gateTopY()) return;
+    var lane = laneFromX(pos.x);
+    selectedLane = lane;
+    catchLane(lane);
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') selectedLane = clamp(selectedLane - 1, 0, LANES - 1);
+      return;
+    }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+      if (e.preventDefault) e.preventDefault();
+      if (state === 'play') selectedLane = clamp(selectedLane + 1, 0, LANES - 1);
+      return;
+    }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+      if (state === 'play') { catchLane(selectedLane); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  shuffleGates();
+  shiftTimer = rand(SHIFT_MIN, SHIFT_MAX);
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return catchCount >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

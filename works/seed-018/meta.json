@@ -1,0 +1,7 @@
+{
+  "seed": "seed-018",
+  "title": "GATE SHIFT",
+  "description": "Glyphs drift down three lanes. Tap a lane's gate to catch what's passing through it — but each gate's accepted color reshuffles over time, so check the label before you commit.",
+  "primary_input": "tap",
+  "success_condition": "catch_1"
+}

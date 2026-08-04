@@ -1,0 +1,21 @@
+{
+  "seed": "seed-018",
+  "candidates": [
+    { "title": "GATE SHIFT", "description": "Tap a lane's gate to catch the glyph passing through it, correct only if its color matches that gate's currently assigned color, which reshuffles every few seconds.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3} },
+    { "title": "SPARK CHAIN", "description": "Tap a charged node in a grid to ignite it, propagating to adjacent charged-enough nodes for a chained multiplier; timing and node choice decide chain length.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4} },
+    { "title": "PULSE ECHO", "description": "The game flashes a growing sequence of glowing pads; tap pads back in the same order from memory to extend the streak, a wrong tap resets the sequence length.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3} },
+    { "title": "FRONTIER CLAIM", "description": "Tap tiles to claim them before a hazard spreading from a source overtakes them; claimed tiles both score over time and block the hazard's path.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4} },
+    { "title": "SLOT TRIAGE", "description": "Catch falling items into 3 limited inventory slots, then drag each to its matching output bin; capacity forces deciding what to keep versus discard.", "scores": {"C1":3,"C2":3,"C3":3,"C4":4,"C5":3,"C6":3,"C7":3} },
+    { "title": "DECAY VAULT", "description": "Stored items lose value over time unless spent holds reinforce them; deciding which items to protect with a limited reinforcement budget drives score.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":3,"C7":4} },
+    { "title": "SIGIL MATCH", "description": "Tap the set of cells matching a briefly shown glyph pattern among distractor cells before it changes to a new pattern elsewhere on the grid.", "scores": {"C1":2,"C2":4,"C3":2,"C4":4,"C5":4,"C6":4,"C7":2} },
+    { "title": "MOMENTUM FLING", "description": "Drag to fling an object with a direction and power set by the drag vector into differently scored zones based on entry angle.", "scores": {"C1":2,"C2":3,"C3":2,"C4":4,"C5":3,"C6":3,"C7":2} },
+    { "title": "BEACON RELAY", "description": "Hold a beacon to charge it, then relay that charge onward through a chain of beacons before it decays, choosing relay order and pacing.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3} }
+  ],
+  "finalists": [
+    { "title": "GATE SHIFT", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3} },
+    { "title": "PULSE ECHO", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3} },
+    { "title": "SPARK CHAIN", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4} }
+  ],
+  "selected": "GATE SHIFT",
+  "reason": "GATE SHIFT and PULSE ECHO tie on total, but GATE SHIFT's per-item routing decision under a periodically reshuffling rule is structurally unlike anything in works/ (C1/C3), while PULSE ECHO's memorize-and-reproduce sequence is a well-worn toy pattern; SPARK CHAIN scored highest on C7 but lower on C4/C5 since propagation timing is harder to teach in the first few taps."
+}
