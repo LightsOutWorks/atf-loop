@@ -1,0 +1,76 @@
+{
+  "seed": "seed-023",
+  "candidates": [
+    {
+      "title": "BANK SHOT",
+      "description": "Drag back from a fixed launcher and release to fire a ball whose entire bounce path off the walls is committed at release, with no control afterward; chaining hits on one flight raises the payout.",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 4, "C5": 4, "C6": 4, "C7": 4}
+    },
+    {
+      "title": "RELAY GRID",
+      "description": "Drag to wire the core to multiple docks; wiring persists and routes recurring pulses automatically, so the player must keep rerouting connections as overload risk shifts between docks.",
+      "scores": {"C1": 2, "C2": 2, "C3": 4, "C4": 3, "C5": 2, "C6": 3, "C7": 4}
+    },
+    {
+      "title": "QUEUE SHUFFLE",
+      "description": "Drag to reorder waiting tiles in a line before a gate opens; the order in place at that moment decides which tiles get served and which get a multiplier.",
+      "scores": {"C1": 3, "C2": 3, "C3": 3, "C4": 3, "C5": 3, "C6": 2, "C7": 3}
+    },
+    {
+      "title": "SIGNAL WEAVE",
+      "description": "Drag a single continuous stroke through moving nodes, keeping it only on same-colored nodes; the stroke commits on release and chain length sets the score.",
+      "scores": {"C1": 3, "C2": 4, "C3": 3, "C4": 4, "C5": 4, "C6": 4, "C7": 3}
+    },
+    {
+      "title": "TRACK DRAWER",
+      "description": "Drag to draw a short track segment; once released, a ball rolls along the drawn slope under gravity toward scoring gates, so the drawn shape decides speed and direction.",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 2, "C5": 3, "C6": 3, "C7": 4}
+    },
+    {
+      "title": "VALVE SPLIT",
+      "description": "Hold one of several valves to direct flow into its tank while the others keep filling untouched; the player must keep switching holds to stop any tank from overflowing.",
+      "scores": {"C1": 2, "C2": 3, "C3": 2, "C4": 3, "C5": 3, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "LEDGE STACKER",
+      "description": "Tap to drop a platform tile that must land aligned with the edge of the previous tile to keep the tower's footprint wide; misalignment narrows the landing zone for the next drop.",
+      "scores": {"C1": 1, "C2": 3, "C3": 2, "C4": 3, "C5": 3, "C6": 3, "C7": 2}
+    },
+    {
+      "title": "ORBIT TETHER",
+      "description": "Drag to set launch angle and power for a tethered satellite around a planet, releasing commits it to a gravity-curved path the player must have aimed to land inside a capture ring.",
+      "scores": {"C1": 3, "C2": 2, "C3": 3, "C4": 2, "C5": 2, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "ECHO CIRCUIT",
+      "description": "Tap glowing nodes in the order they just pulsed, with the required sequence growing by one node after each successful repeat.",
+      "scores": {"C1": 0, "C2": 3, "C3": 1, "C4": 4, "C5": 3, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "FLOW GATE",
+      "description": "Tap to flip a bridge segment up or down so a falling colored item passes only through the matching gate state; the flip must be committed before the item arrives.",
+      "scores": {"C1": 2, "C2": 4, "C3": 2, "C4": 4, "C5": 4, "C6": 4, "C7": 2}
+    },
+    {
+      "title": "TENSION LATCH",
+      "description": "Hold to wind a spring latch and release inside the correct tension window to launch a hook that grabs a passing crate; overwinding wastes the shot.",
+      "scores": {"C1": 2, "C2": 3, "C3": 2, "C4": 3, "C5": 3, "C6": 3, "C7": 2}
+    }
+  ],
+  "finalists": [
+    {
+      "title": "BANK SHOT",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 4, "C5": 4, "C6": 4, "C7": 4}
+    },
+    {
+      "title": "SIGNAL WEAVE",
+      "scores": {"C1": 3, "C2": 4, "C3": 3, "C4": 4, "C5": 4, "C6": 4, "C7": 3}
+    },
+    {
+      "title": "TRACK DRAWER",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 2, "C5": 3, "C6": 3, "C7": 4}
+    }
+  ],
+  "selected": "BANK SHOT",
+  "reason": "BANK SHOT scores highest on C1/C3/C7 by introducing a mechanic none of the 22 existing works use — a fully pre-committed, no-control bounce trajectory — while also scoring the strongest C4 of the three finalists (simple wall-reflection physics vs. TRACK DRAWER's harder freeform-track collision), giving the best combination of novelty and stable implementability."
+}

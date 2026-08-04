@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BANK SHOT</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0b0e14;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0b0e14;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #ffe9d2; font-size: 17px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #ffa64d; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(8,7,6,0.9); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 44px);
+    color: #fff3e6; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #fff3e6; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #c9b8a9; max-width: 580px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #ffa64d; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #ffa64d; background: #231708;
+    color: #ffe9d2; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>BEST CHAIN <span id="chainVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>BANK SHOT</h1>
+    <p class="sub" id="subDesc">Drag anywhere and release to fire a ball from the launcher, opposite of your pull — like a slingshot. Bank it off the walls to chain hits across multiple targets before it runs out of momentum.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST CHAIN 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var chainVal = document.getElementById('chainVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 550;
+
+  var PUCK_RADIUS = 9;
+  var TARGET_RADIUS = 22;
+  var TARGET_COUNT = 6;
+  var MIN_TARGET_ANCHOR_DIST = 140;
+  var MIN_TARGET_TARGET_DIST = 90;
+
+  var MIN_PULL_DIST = 24;
+  var PULL_MAX = 220;
+  var LAUNCH_SPEED_MIN = 280;
+  var LAUNCH_SPEED_MAX = 920;
+  var BOUNCE_DAMPING = 0.93;
+  var PUCK_MAX_BOUNCES = 9;
+  var PUCK_MIN_SPEED = 70;
+  var PUCK_MAX_LIFE = 6;
+
+  var state = 'title';
+  var score = 0;
+  var bestChain = 0;
+  var hitCount = 0;
+  var timeLeft = 60;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var targets = [];
+  var pucks = [];
+  var popups = [];
+
+  var dragging = false;
+  var dragStart = { x: 0, y: 0 };
+  var dragCur = { x: 0, y: 0 };
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function dist(x1, y1, x2, y2) { var dx = x2 - x1, dy = y2 - y1; return Math.sqrt(dx * dx + dy * dy); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function anchorPos() { return { x: VIEW_W / 2, y: VIEW_H / 2 }; }
+
+  function farEnoughFromTargets(x, y, arr) {
+    for (var i = 0; i < arr.length; i++) {
+      if (dist(x, y, arr[i].x, arr[i].y) < MIN_TARGET_TARGET_DIST) return false;
+    }
+    return true;
+  }
+
+  function randomTargetPos(existing) {
+    var a = anchorPos();
+    var best = null;
+    for (var tries = 0; tries < 40; tries++) {
+      var x = rand(TARGET_RADIUS + 14, VIEW_W - TARGET_RADIUS - 14);
+      var y = rand(TARGET_RADIUS + 14, VIEW_H - TARGET_RADIUS - 14);
+      if (dist(x, y, a.x, a.y) < MIN_TARGET_ANCHOR_DIST) continue;
+      if (!farEnoughFromTargets(x, y, existing)) continue;
+      return { x: x, y: y };
+    }
+    return best || { x: rand(TARGET_RADIUS + 14, VIEW_W - TARGET_RADIUS - 14), y: rand(TARGET_RADIUS + 14, VIEW_H - TARGET_RADIUS - 14) };
+  }
+
+  function makeTargets() {
+    var arr = [];
+    for (var i = 0; i < TARGET_COUNT; i++) {
+      var p = randomTargetPos(arr);
+      arr.push({ x: p.x, y: p.y, seed: rand(0, Math.PI * 2), flashTimer: 0 });
+    }
+    return arr;
+  }
+
+  function respawnTarget(t) {
+    var p = randomTargetPos(targets);
+    t.x = p.x; t.y = p.y; t.seed = rand(0, Math.PI * 2); t.flashTimer = 0;
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#fff3e6' });
+  }
+
+  function resetGame() {
+    score = 0;
+    bestChain = 0;
+    hitCount = 0;
+    timeLeft = 60;
+    lastFrameTime = null;
+    targets = makeTargets();
+    pucks = [];
+    popups = [];
+    dragging = false;
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST CHAIN ' + bestChain;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    chainVal.textContent = String(bestChain);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function spawnPuck(dirX, dirY, power) {
+    var a = anchorPos();
+    var speed = LAUNCH_SPEED_MIN + (LAUNCH_SPEED_MAX - LAUNCH_SPEED_MIN) * power;
+    pucks.push({
+      x: a.x, y: a.y,
+      vx: dirX * speed, vy: dirY * speed,
+      bounces: 0, hits: 0, life: 0
+    });
+    playTone(220, 0.08, 'square');
+  }
+
+  function handleTargetHit(puck, t) {
+    t.flashTimer = 1;
+    var gain = 10 + puck.hits * 5;
+    score += gain;
+    puck.hits++;
+    hitCount++;
+    if (puck.hits > bestChain) bestChain = puck.hits;
+    addPopup('+' + gain, t.x, t.y - TARGET_RADIUS - 8, '#ffd7a8');
+    if (puck.hits >= 2) addPopup('CHAIN x' + puck.hits, t.x, t.y + TARGET_RADIUS + 18, '#ffa64d');
+    playTone(360 + puck.hits * 60, 0.12, 'triangle');
+    respawnTarget(t);
+  }
+
+  function updatePucks(dt) {
+    for (var i = pucks.length - 1; i >= 0; i--) {
+      var p = pucks[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life += dt;
+
+      if (p.x < PUCK_RADIUS) { p.x = PUCK_RADIUS; p.vx = -p.vx * BOUNCE_DAMPING; p.bounces++; }
+      if (p.x > VIEW_W - PUCK_RADIUS) { p.x = VIEW_W - PUCK_RADIUS; p.vx = -p.vx * BOUNCE_DAMPING; p.bounces++; }
+      if (p.y < PUCK_RADIUS) { p.y = PUCK_RADIUS; p.vy = -p.vy * BOUNCE_DAMPING; p.bounces++; }
+      if (p.y > VIEW_H - PUCK_RADIUS) { p.y = VIEW_H - PUCK_RADIUS; p.vy = -p.vy * BOUNCE_DAMPING; p.bounces++; }
+
+      for (var j = 0; j < targets.length; j++) {
+        var t = targets[j];
+        if (dist(p.x, p.y, t.x, t.y) < PUCK_RADIUS + TARGET_RADIUS) {
+          handleTargetHit(p, t);
+        }
+      }
+
+      var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (p.bounces >= PUCK_MAX_BOUNCES || speed < PUCK_MIN_SPEED || p.life > PUCK_MAX_LIFE) {
+        pucks.splice(i, 1);
+      }
+    }
+  }
+
+  function update(dt) {
+    updatePucks(dt);
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i].flashTimer > 0) targets[i].flashTimer = Math.max(0, targets[i].flashTimer - dt * 2.4);
+    }
+    for (var j = popups.length - 1; j >= 0; j--) {
+      popups[j].timer -= dt;
+      popups[j].y -= dt * 30;
+      if (popups[j].timer <= 0) popups.splice(j, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
+
+  function drawAnchor() {
+    var a = anchorPos();
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 16, 0, Math.PI * 2);
+    ctx.fillStyle = '#231708';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffa64d';
+    ctx.stroke();
+  }
+
+  function drawTargets(now) {
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i];
+      var pulse = Math.sin(now / 400 + t.seed) * 2;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, TARGET_RADIUS + pulse, 0, Math.PI * 2);
+      ctx.fillStyle = t.flashTimer > 0 ? '#ffe9d2' : '#1c2230';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = t.flashTimer > 0 ? '#fff3e6' : '#4d7cff';
+      ctx.stroke();
+    }
+  }
+
+  function drawPucks() {
+    for (var i = 0; i < pucks.length; i++) {
+      var p = pucks[i];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, PUCK_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffa64d';
+      ctx.fill();
+    }
+  }
+
+  function drawAim() {
+    if (!dragging) return;
+    var a = anchorPos();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,166,77,0.55)';
+    ctx.setLineDash([6, 6]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(dragCur.x, dragCur.y);
+    ctx.stroke();
+
+    var dx = a.x - dragCur.x, dy = a.y - dragCur.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 1) {
+      var nx = dx / d, ny = dy / d;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(255,233,210,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x + nx * 60, a.y + ny * 60);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render(now) {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawTargets(now);
+      drawAnchor();
+      drawAim();
+      drawPucks();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render(now);
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render(now);
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    dragging = true;
+    dragStart.x = pos.x; dragStart.y = pos.y;
+    dragCur.x = pos.x; dragCur.y = pos.y;
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    var pos = getPos(e);
+    dragCur.x = pos.x; dragCur.y = pos.y;
+  }
+
+  function onPointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    if (state !== 'play') return;
+    var pos = dragCur;
+    if (e) {
+      try { pos = getPos(e); } catch (err) { pos = dragCur; }
+    }
+    var a = anchorPos();
+    var pullDx = pos.x - a.x, pullDy = pos.y - a.y;
+    var pullDist = Math.sqrt(pullDx * pullDx + pullDy * pullDy);
+    if (pullDist < MIN_PULL_DIST) return;
+    var power = clamp(pullDist, 0, PULL_MAX) / PULL_MAX;
+    var dirX = -pullDx / pullDist, dirY = -pullDy / pullDist;
+    spawnPuck(dirX, dirY, power);
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', function () { dragging = false; });
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  targets = makeTargets();
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return hitCount >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

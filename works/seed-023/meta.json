@@ -1,0 +1,7 @@
+{
+  "seed": "seed-023",
+  "title": "BANK SHOT",
+  "description": "Drag anywhere and release to fire a ball from the launcher, opposite of your pull — like a slingshot. Bank it off the walls to chain hits across multiple targets before it runs out of momentum.",
+  "primary_input": "drag",
+  "success_condition": "target_hit_1"
+}
