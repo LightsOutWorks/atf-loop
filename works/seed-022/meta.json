@@ -1,0 +1,7 @@
+{
+  "seed": "seed-022",
+  "title": "RELAY RATION",
+  "description": "Drag from the core to an outpost to send a ration of power. Fill an outpost's gauge to 100 before its ring runs out — let one run dry and your streak resets.",
+  "primary_input": "drag",
+  "success_condition": "ration_delivered_1"
+}

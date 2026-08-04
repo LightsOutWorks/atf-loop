@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>RELAY RATION</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0b0f10;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0b0f10;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #eafff2; font-size: 17px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #7fffc7; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,9,9,0.9); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 44px);
+    color: #f2fff8; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f2fff8; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #a9c2b8; max-width: 580px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #7fffc7; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #7fffc7; background: #0f231d;
+    color: #eafff2; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>STREAK <span id="streakVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>RELAY RATION</h1>
+    <p class="sub" id="subDesc">Drag from the core to an outpost to send a ration of power. Fill an outpost's gauge to 100 before its ring runs out — let one run dry and your streak resets.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST STREAK 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var streakVal = document.getElementById('streakVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 550;
+  var RESERVOIR_MAX = 100;
+  var RESERVOIR_REGEN = 15; // per second
+  var DRAG_COST = 24;
+  var DELIVER_AMOUNT = 34;
+  var MIN_DRAG_DIST = 40;
+  var OUTPOST_RADIUS = 30;
+  var CORE_RADIUS = 44;
+  var UNLOCK_5TH_AT = 20; // seconds elapsed
+
+  var OUTPOST_DEFS = [
+    { fx: 0.18, fy: 0.26 },
+    { fx: 0.82, fy: 0.26 },
+    { fx: 0.18, fy: 0.80 },
+    { fx: 0.82, fy: 0.80 },
+    { fx: 0.50, fy: 0.15 }
+  ];
+
+  var state = 'title';
+  var score = 0;
+  var streak = 0;
+  var bestStreak = 0;
+  var timeLeft = 60;
+  var deliveryCount = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var reservoir = RESERVOIR_MAX;
+  var outposts = [];
+  var focusedIndex = 0;
+
+  var dragging = false;
+  var dragStart = { x: 0, y: 0 };
+  var dragCur = { x: 0, y: 0 };
+
+  var popups = [];
+  var screenFlashTimer = 0;
+  var screenFlashColor = 'rgba(255,90,90,';
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function dist(x1, y1, x2, y2) { var dx = x2 - x1, dy = y2 - y1; return Math.sqrt(dx * dx + dy * dy); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function elapsedSeconds() { return 60 - Math.max(0, timeLeft); }
+
+  function newDeadline() {
+    var t = clamp(elapsedSeconds() / 60, 0, 1);
+    var base = clamp(12 - t * 6, 6, 12);
+    return rand(base - 1.5, base + 1.5);
+  }
+
+  function makeOutposts() {
+    var arr = [];
+    for (var i = 0; i < OUTPOST_DEFS.length; i++) {
+      arr.push({
+        fx: OUTPOST_DEFS[i].fx,
+        fy: OUTPOST_DEFS[i].fy,
+        gauge: 0,
+        deadline: newDeadline(),
+        maxDeadline: 0,
+        active: i < 4,
+        flashTimer: 0,
+        flashColor: '#7fffc7'
+      });
+      arr[i].maxDeadline = arr[i].deadline;
+    }
+    return arr;
+  }
+
+  function outpostPos(o) { return { x: o.fx * VIEW_W, y: o.fy * VIEW_H }; }
+  function corePos() { return { x: VIEW_W / 2, y: VIEW_H / 2 }; }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#eafff2' });
+  }
+
+  function resetGame() {
+    score = 0;
+    streak = 0;
+    bestStreak = 0;
+    timeLeft = 60;
+    deliveryCount = 0;
+    lastFrameTime = null;
+    reservoir = RESERVOIR_MAX;
+    outposts = makeOutposts();
+    focusedIndex = 0;
+    dragging = false;
+    popups = [];
+    screenFlashTimer = 0;
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST STREAK ' + bestStreak;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    streakVal.textContent = String(streak);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function nearestActiveOutpost(x, y) {
+    var best = null, bestD = Infinity;
+    for (var i = 0; i < outposts.length; i++) {
+      var o = outposts[i];
+      if (!o.active) continue;
+      var p = outpostPos(o);
+      var d = dist(x, y, p.x, p.y);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  function deliverTo(index) {
+    if (index === null || index < 0 || index >= outposts.length) return;
+    var o = outposts[index];
+    if (!o || !o.active) return;
+    var p = outpostPos(o);
+    if (reservoir < DRAG_COST) {
+      addPopup('LOW', p.x, p.y - OUTPOST_RADIUS - 10, '#9fb0ac');
+      playTone(160, 0.1, 'square');
+      return;
+    }
+    reservoir -= DRAG_COST;
+    o.gauge += DELIVER_AMOUNT;
+    deliveryCount++;
+    o.flashTimer = 1;
+    o.flashColor = '#7fffc7';
+    addPopup('+' + DELIVER_AMOUNT, p.x, p.y - OUTPOST_RADIUS - 10, '#7fffc7');
+    playTone(420 + index * 30, 0.1, 'triangle');
+    if (o.gauge >= 100) {
+      o.gauge = 100;
+      var gain = 20 + streak * 3;
+      score += gain;
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+      addPopup('SERVED +' + gain, p.x, p.y + OUTPOST_RADIUS + 20, '#c8ffe6');
+      playTone(680, 0.16, 'triangle');
+      o.gauge = 0;
+      o.deadline = newDeadline();
+      o.maxDeadline = o.deadline;
+    }
+  }
+
+  function handleBlackout(o) {
+    var p = outpostPos(o);
+    score = Math.max(0, score - 10);
+    streak = 0;
+    addPopup('BLACKOUT', p.x, p.y - OUTPOST_RADIUS - 10, '#ff8a8a');
+    o.flashTimer = 1;
+    o.flashColor = '#ff5f6d';
+    screenFlashTimer = 1;
+    screenFlashColor = 'rgba(255,90,90,';
+    playTone(140, 0.2, 'sawtooth');
+    o.gauge = 0;
+    o.deadline = newDeadline();
+    o.maxDeadline = o.deadline;
+  }
+
+  function update(dt) {
+    reservoir = clamp(reservoir + RESERVOIR_REGEN * dt, 0, RESERVOIR_MAX);
+
+    if (!outposts[4].active && elapsedSeconds() >= UNLOCK_5TH_AT) {
+      outposts[4].active = true;
+      outposts[4].gauge = 0;
+      outposts[4].deadline = newDeadline();
+      outposts[4].maxDeadline = outposts[4].deadline;
+    }
+
+    for (var i = 0; i < outposts.length; i++) {
+      var o = outposts[i];
+      if (!o.active) continue;
+      o.deadline -= dt;
+      if (o.flashTimer > 0) o.flashTimer = Math.max(0, o.flashTimer - dt * 2.4);
+      if (o.deadline <= 0) handleBlackout(o);
+    }
+
+    if (screenFlashTimer > 0) screenFlashTimer = Math.max(0, screenFlashTimer - dt * 2.2);
+    for (var j = popups.length - 1; j >= 0; j--) {
+      popups[j].timer -= dt;
+      popups[j].y -= dt * 30;
+      if (popups[j].timer <= 0) popups.splice(j, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0b0f10';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (screenFlashTimer > 0) {
+      ctx.fillStyle = screenFlashColor + (screenFlashTimer * 0.18) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawCore() {
+    var c = corePos();
+    var frac = clamp(reservoir / RESERVOIR_MAX, 0, 1);
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, CORE_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = '#132420';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(127,255,199,0.25)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, CORE_RADIUS - 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#7fffc7';
+    ctx.stroke();
+    ctx.fillStyle = '#eafff2';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CORE', c.x, c.y + 4);
+  }
+
+  function drawOutposts() {
+    for (var i = 0; i < outposts.length; i++) {
+      var o = outposts[i];
+      if (!o.active) continue;
+      var p = outpostPos(o);
+      var urgency = o.maxDeadline > 0 ? clamp(o.deadline / o.maxDeadline, 0, 1) : 1;
+      var ringColor = urgency > 0.5 ? '#7fffc7' : (urgency > 0.22 ? '#ffd27f' : '#ff8a8a');
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, OUTPOST_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = i === focusedIndex && state === 'play' ? '#1c2f2a' : '#151d1c';
+      ctx.fill();
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, OUTPOST_RADIUS + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * urgency);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = ringColor;
+      ctx.stroke();
+
+      var gfrac = clamp(o.gauge / 100, 0, 1);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, OUTPOST_RADIUS - 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * gfrac);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = o.flashTimer > 0 ? o.flashColor : '#4fd8a8';
+      ctx.stroke();
+
+      ctx.fillStyle = '#eafff2';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(i + 1), p.x, p.y + 4);
+    }
+  }
+
+  function drawDragLine() {
+    if (!dragging) return;
+    var c = corePos();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(127,255,199,0.55)';
+    ctx.setLineDash([6, 6]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(dragCur.x, dragCur.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawDragLine();
+      drawCore();
+      drawOutposts();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    dragging = true;
+    dragStart.x = pos.x; dragStart.y = pos.y;
+    dragCur.x = pos.x; dragCur.y = pos.y;
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    var pos = getPos(e);
+    dragCur.x = pos.x; dragCur.y = pos.y;
+  }
+
+  function onPointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    if (state !== 'play') return;
+    var pos = dragCur;
+    if (e) {
+      try { pos = getPos(e); } catch (err) { pos = dragCur; }
+    }
+    var d = dist(dragStart.x, dragStart.y, pos.x, pos.y);
+    if (d < MIN_DRAG_DIST) return;
+    var idx = nearestActiveOutpost(pos.x, pos.y);
+    deliverTo(idx);
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', function () { dragging = false; });
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k >= '1' && k <= '5') {
+      var idx = parseInt(k, 10) - 1;
+      if (outposts[idx] && outposts[idx].active) focusedIndex = idx;
+      return;
+    }
+    if (k === 'ArrowLeft' || k === 'ArrowUp') {
+      for (var i = 1; i <= outposts.length; i++) {
+        var ni = (focusedIndex - i + outposts.length) % outposts.length;
+        if (outposts[ni].active) { focusedIndex = ni; break; }
+      }
+      return;
+    }
+    if (k === 'ArrowRight' || k === 'ArrowDown') {
+      for (var j = 1; j <= outposts.length; j++) {
+        var nj = (focusedIndex + j) % outposts.length;
+        if (outposts[nj].active) { focusedIndex = nj; break; }
+      }
+      return;
+    }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+      if (state === 'play') { deliverTo(focusedIndex); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  outposts = makeOutposts();
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return deliveryCount >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
