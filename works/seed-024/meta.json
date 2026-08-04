@@ -1,0 +1,7 @@
+{
+  "seed": "seed-024",
+  "title": "RING RUNNER",
+  "description": "Drag anywhere to sweep your runner around the ring. Catch cyan supply pods the instant they cross the ring, and let red hazard pods pass through untouched.",
+  "primary_input": "drag",
+  "success_condition": "pod_caught_1"
+}

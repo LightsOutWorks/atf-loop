@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>RING RUNNER</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0a0a14;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0a0a14;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #efe9ff; font-size: 17px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #b98bff; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(8,7,16,0.92); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 44px);
+    color: #f6f2ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f2ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4a9cf; max-width: 580px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .stat { font-family: monospace; color: #b98bff; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #b98bff; background: #1b1430;
+    color: #f6f2ff; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>STREAK <span id="streakVal">0</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>RING RUNNER</h1>
+    <p class="sub" id="subDesc">Drag anywhere to sweep your runner around the ring. Catch cyan supply pods the instant they cross the ring, and let red hazard pods pass through untouched.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST STREAK 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var streakVal = document.getElementById('streakVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 550;
+  var BAND_HALF = 24;
+  var TOLERANCE_START = 0.36;
+  var TOLERANCE_END = 0.20;
+  var SPAWN_START = 1.0;
+  var SPAWN_END = 0.55;
+  var HAZARD_START = 0.15;
+  var HAZARD_END = 0.42;
+  var POD_SPEED_BASE = 87;
+
+  var cx = VIEW_W / 2, cy = VIEW_H / 2;
+  var ringRadius = 180;
+  var catchRadius = 180;
+  var spawnRadius = 297;
+
+  var state = 'title';
+  var score = 0;
+  var streak = 0;
+  var bestStreak = 0;
+  var timeLeft = 60;
+  var catchCount = 0;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var runnerAngle = -Math.PI / 2;
+  var dragging = false;
+  var spawnTimer = 0.6;
+
+  var pods = [];
+  var popups = [];
+  var screenFlashTimer = 0;
+  var screenFlashColor = 'rgba(255,90,90,';
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function lerp(a, b, t) { return a + (b - a) * clamp(t, 0, 1); }
+
+  function angleDiff(a, b) {
+    var d = (a - b) % (Math.PI * 2);
+    if (d > Math.PI) d -= Math.PI * 2;
+    if (d < -Math.PI) d += Math.PI * 2;
+    return Math.abs(d);
+  }
+
+  function recomputeGeometry() {
+    cx = VIEW_W / 2;
+    cy = VIEW_H / 2;
+    ringRadius = Math.min(VIEW_W, VIEW_H) * 0.30;
+    catchRadius = ringRadius;
+    spawnRadius = ringRadius * 1.65;
+  }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    recomputeGeometry();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function elapsedSeconds() { return 60 - Math.max(0, timeLeft); }
+  function elapsedFrac() { return clamp(elapsedSeconds() / 60, 0, 1); }
+
+  function currentTolerance() { return lerp(TOLERANCE_START, TOLERANCE_END, elapsedFrac()); }
+  function currentHazardProb() { return lerp(HAZARD_START, HAZARD_END, elapsedFrac()); }
+  function currentSpawnInterval() { return lerp(SPAWN_START, SPAWN_END, elapsedFrac()); }
+  function currentPodSpeed() { return POD_SPEED_BASE * (1 + 0.25 * elapsedFrac()); }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#f6f2ff' });
+  }
+
+  function spawnPod() {
+    var isHazard = Math.random() < currentHazardProb();
+    pods.push({
+      angle: rand(0, Math.PI * 2),
+      radius: spawnRadius,
+      speed: currentPodSpeed(),
+      type: isHazard ? 'hazard' : 'supply',
+      resolved: false
+    });
+  }
+
+  function resolveCatch(pod) {
+    pod.resolved = true;
+    var px = cx + Math.cos(pod.angle) * catchRadius;
+    var py = cy + Math.sin(pod.angle) * catchRadius;
+    if (pod.type === 'supply') {
+      var gain = 10 + Math.min(streak, 8) * 2;
+      score += gain;
+      streak++;
+      catchCount++;
+      if (streak > bestStreak) bestStreak = streak;
+      addPopup('+' + gain, px, py, '#7fe8ff');
+      playTone(560 + streak * 12, 0.12, 'triangle');
+    } else {
+      score = Math.max(0, score - 8);
+      streak = 0;
+      addPopup('HIT', px, py, '#ff8a8a');
+      screenFlashTimer = 1;
+      screenFlashColor = 'rgba(255,90,90,';
+      playTone(140, 0.18, 'sawtooth');
+    }
+  }
+
+  function resolveMiss(pod) {
+    pod.resolved = true;
+    if (pod.type === 'supply') {
+      streak = 0;
+      var px = cx + Math.cos(pod.angle) * catchRadius;
+      var py = cy + Math.sin(pod.angle) * catchRadius;
+      addPopup('MISS', px, py, '#7a7186');
+    }
+  }
+
+  function resetGame() {
+    score = 0;
+    streak = 0;
+    bestStreak = 0;
+    timeLeft = 60;
+    catchCount = 0;
+    lastFrameTime = null;
+    runnerAngle = -Math.PI / 2;
+    dragging = false;
+    spawnTimer = 0.6;
+    pods = [];
+    popups = [];
+    screenFlashTimer = 0;
+    recomputeGeometry();
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST STREAK ' + bestStreak;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    streakVal.textContent = String(streak);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function update(dt) {
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnPod();
+      spawnTimer = currentSpawnInterval() + rand(-0.12, 0.12);
+    }
+
+    var tol = currentTolerance();
+    var outer = catchRadius + BAND_HALF;
+    var inner = catchRadius - BAND_HALF;
+    for (var i = pods.length - 1; i >= 0; i--) {
+      var pod = pods[i];
+      pod.radius -= pod.speed * dt;
+      if (!pod.resolved) {
+        if (pod.radius <= outer && pod.radius >= inner) {
+          if (angleDiff(pod.angle, runnerAngle) <= tol) resolveCatch(pod);
+        } else if (pod.radius < inner) {
+          resolveMiss(pod);
+        }
+      }
+      if (pod.resolved || pod.radius <= 0) pods.splice(i, 1);
+    }
+
+    if (screenFlashTimer > 0) screenFlashTimer = Math.max(0, screenFlashTimer - dt * 2.2);
+    for (var j = popups.length - 1; j >= 0; j--) {
+      popups[j].timer -= dt;
+      popups[j].y -= dt * 26;
+      if (popups[j].timer <= 0) popups.splice(j, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (screenFlashTimer > 0) {
+      ctx.fillStyle = screenFlashColor + (screenFlashTimer * 0.18) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawRing() {
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(185,139,255,0.35)';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, catchRadius + BAND_HALF, 0, Math.PI * 2);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(185,139,255,0.14)';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, catchRadius - BAND_HALF, 0, Math.PI * 2);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(185,139,255,0.14)';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#241b3d';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(185,139,255,0.4)';
+    ctx.stroke();
+  }
+
+  function drawToleranceArc() {
+    if (state !== 'play') return;
+    var tol = currentTolerance();
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringRadius, runnerAngle - tol, runnerAngle + tol);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(127,232,255,0.55)';
+    ctx.stroke();
+  }
+
+  function drawRunner() {
+    var x = cx + Math.cos(runnerAngle) * ringRadius;
+    var y = cy + Math.sin(runnerAngle) * ringRadius;
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, Math.PI * 2);
+    ctx.fillStyle = '#f6f2ff';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#7fe8ff';
+    ctx.stroke();
+  }
+
+  function drawPods() {
+    for (var i = 0; i < pods.length; i++) {
+      var pod = pods[i];
+      var x = cx + Math.cos(pod.angle) * pod.radius;
+      var y = cy + Math.sin(pod.angle) * pod.radius;
+      if (pod.type === 'supply') {
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#7fe8ff';
+        ctx.fill();
+      } else {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = '#ff8a8a';
+        ctx.fillRect(-6, -6, 12, 12);
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawRing();
+      drawToleranceArc();
+      drawPods();
+      drawRunner();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: x, y: y };
+  }
+
+  function setAngleFromPos(pos) {
+    var dx = pos.x - cx;
+    var dy = pos.y - cy;
+    if (dx * dx + dy * dy < 1) return;
+    runnerAngle = Math.atan2(dy, dx);
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    dragging = true;
+    setAngleFromPos(getPos(e));
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    setAngleFromPos(getPos(e));
+  }
+
+  function onPointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    if (state !== 'play') return;
+    if (e) {
+      try { setAngleFromPos(getPos(e)); } catch (err) { /* ignore */ }
+    }
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', function () { dragging = false; });
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (k === 'ArrowLeft' || k === 'ArrowUp') {
+      if (state === 'play') runnerAngle -= 0.14;
+      return;
+    }
+    if (k === 'ArrowRight' || k === 'ArrowDown') {
+      if (state === 'play') runnerAngle += 0.14;
+      return;
+    }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return catchCount >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

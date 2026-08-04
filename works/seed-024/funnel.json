@@ -1,0 +1,81 @@
+{
+  "seed": "seed-024",
+  "candidates": [
+    {
+      "title": "THREAD WEAVE",
+      "description": "Draw one continuous non-crossing line to link a set of moving nodes; the route order you choose determines which links complete.",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 3, "C5": 3, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "SORT SPIN",
+      "description": "Drag falling items into one of several rotating bins whose accepted color keeps shifting, requiring you to predict bin position and timing.",
+      "scores": {"C1": 2, "C2": 4, "C3": 2, "C4": 4, "C5": 4, "C6": 4, "C7": 2}
+    },
+    {
+      "title": "DIAL LOCK",
+      "description": "Drag around a circular dial's rim to rotate it onto a shifting target angle, choosing rotation speed and exact stop timing.",
+      "scores": {"C1": 3, "C2": 3, "C3": 3, "C4": 3, "C5": 3, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "TETHER SWING",
+      "description": "Drag to wind a hanging weight into pendulum motion, then release at the right arc phase to fling it into a moving basket, with leftover momentum carrying into the next swing.",
+      "scores": {"C1": 4, "C2": 2, "C3": 4, "C4": 2, "C5": 2, "C6": 3, "C7": 4}
+    },
+    {
+      "title": "GRAFT LINE",
+      "description": "Drag links between glowing nodes to grow a network, choosing which pairs to connect before any node overloads from too many links.",
+      "scores": {"C1": 4, "C2": 2, "C3": 4, "C4": 2, "C5": 2, "C6": 3, "C7": 4}
+    },
+    {
+      "title": "FOLD CREASE",
+      "description": "Drag a corner of a paper shape across a crease to fold it, choosing which corner and how far to fold to match a rotating target silhouette.",
+      "scores": {"C1": 4, "C2": 1, "C3": 3, "C4": 1, "C5": 1, "C6": 2, "C7": 2}
+    },
+    {
+      "title": "RING RUNNER",
+      "description": "Drag to sweep a runner around a fixed ring, choosing where to be as multiple falling pods approach from different angles so only the ones you're under get caught.",
+      "scores": {"C1": 3, "C2": 4, "C3": 3, "C4": 4, "C5": 4, "C6": 4, "C7": 3}
+    },
+    {
+      "title": "RIVER CUT",
+      "description": "Drag to carve a permanent channel through sand that redirects a flowing stream, with each cut constraining where later channels can go.",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 3, "C5": 3, "C6": 3, "C7": 4}
+    },
+    {
+      "title": "KNOT PULL",
+      "description": "Drag to pull one loop of a tightening knot at a time, choosing which loop loosens the whole knot versus which tightens it further.",
+      "scores": {"C1": 4, "C2": 2, "C3": 4, "C4": 2, "C5": 2, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "KITE LINE",
+      "description": "Drag to steer a wind-drifting kite through a sequence of gates, choosing lead angles to counter gusts before each gate.",
+      "scores": {"C1": 2, "C2": 3, "C3": 2, "C4": 4, "C5": 4, "C6": 3, "C7": 2}
+    },
+    {
+      "title": "RAIL SWITCH",
+      "description": "Drag track-switch levers to route several simultaneously moving carts onto color-matched branches, choosing which switch to flip and when before a cart passes it.",
+      "scores": {"C1": 2, "C2": 3, "C3": 3, "C4": 3, "C5": 3, "C6": 3, "C7": 3}
+    },
+    {
+      "title": "SPOOL WIND",
+      "description": "Continuously drag in circles to reel in a hooked line against tension, choosing when to sustain versus pause across multiple simultaneous lines before one snaps.",
+      "scores": {"C1": 3, "C2": 3, "C3": 0, "C4": 3, "C5": 3, "C6": 3, "C7": 1}
+    }
+  ],
+  "finalists": [
+    {
+      "title": "RING RUNNER",
+      "scores": {"C1": 3, "C2": 4, "C3": 3, "C4": 4, "C5": 4, "C6": 4, "C7": 3}
+    },
+    {
+      "title": "RIVER CUT",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 3, "C5": 3, "C6": 3, "C7": 4}
+    },
+    {
+      "title": "THREAD WEAVE",
+      "scores": {"C1": 4, "C2": 3, "C3": 4, "C4": 3, "C5": 3, "C6": 3, "C7": 3}
+    }
+  ],
+  "selected": "RING RUNNER",
+  "reason": "RING RUNNER scores highest overall by combining the clearest 60-second readability and most reliable single-file implementability (C2/C4/C5/C6) of the three finalists with a genuinely novel single-degree-of-freedom multi-target prioritization decision (C1/C3) that deepens as pod density and precision demands ramp up (C7), whereas RIVER CUT and THREAD WEAVE score slightly higher on raw novelty but carry more implementation risk."
+}
