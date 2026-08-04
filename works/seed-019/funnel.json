@@ -1,0 +1,23 @@
+{
+  "seed": "seed-019",
+  "candidates": [
+    {"title": "GRID PATROL", "description": "Tap numbered nodes in strict ascending order among distractors; correct order builds combo, a wrong-number tap resets it and the grid gets denser each round.", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "ECHO CHAIN", "description": "Tap an armed node to ignite it, which arms its unlit neighbors for one beat only; chain from node to node before the beat lapses, choosing paths that keep the reaction alive longest.", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "SIGNAL RECALL", "description": "The game flashes a growing tile sequence; reproduce it by tapping tiles back in the same order, with each success adding one more step to memorize.", "scores": {"C1":4,"C2":3,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "NODE SIEGE", "description": "Hold a node to claim it; claiming spreads instantly to already-claimed neighbors but takes a full hold on isolated nodes, while unclaimed territory can decay back if left too long.", "scores": {"C1":4,"C2":2,"C3":4,"C4":2,"C5":2,"C6":3,"C7":4}},
+    {"title": "PAIR SPLICE", "description": "Tap two covered tiles to test a symbol match; matches clear permanently, mismatches flip back after a beat, so decisions rely on memory of prior reveals.", "scores": {"C1":3,"C2":3,"C3":3,"C4":3,"C5":3,"C6":3,"C7":3}},
+    {"title": "SPARK BRIDGE", "description": "Drag from one drifting node to another to forge a link between them; link quality depends on distance and angle at release, and overused nodes fatigue and vanish.", "scores": {"C1":3,"C2":2,"C3":3,"C4":3,"C5":2,"C6":3,"C7":3}},
+    {"title": "FRACTURE LINE", "description": "Tap to seed a crack on a glass pane; cracks grow toward the nearest edge but stop dead if they cross an existing crack, so each new tap must be placed to avoid intersecting your own lines.", "scores": {"C1":4,"C2":2,"C3":3,"C4":2,"C5":2,"C6":3,"C7":3}},
+    {"title": "SORT CASCADE", "description": "Tap a junction the instant before an approaching item arrives to switch it onto the matching-color track; mistimed or wrong-color switches send it to the wrong bin.", "scores": {"C1":2,"C2":3,"C3":2,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "ORBIT CAPTURE", "description": "Tap an orbiting body the instant it aligns within a highlighted arc window to capture it into a growing stable ring.", "scores": {"C1":1,"C2":3,"C3":1,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "SHIELD ARC", "description": "Drag a shield segment around a rotating arena to intercept incoming pings before a sweeping line reaches them; position, not timing a single tap, determines what gets blocked.", "scores": {"C1":1,"C2":3,"C3":1,"C4":3,"C5":3,"C6":3,"C7":2}},
+    {"title": "HEAT RELAY", "description": "A single heat token auto-relays between three hubs when it maxes out; hold whichever hub currently carries it, and anticipate where it will jump to next before it drains away.", "scores": {"C1":1,"C2":2,"C3":2,"C4":2,"C5":2,"C6":2,"C7":2}}
+  ],
+  "finalists": [
+    {"title": "GRID PATROL", "scores": {"C1":4,"C2":4,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}},
+    {"title": "ECHO CHAIN", "scores": {"C1":4,"C2":3,"C3":4,"C4":3,"C5":3,"C6":4,"C7":4}},
+    {"title": "SIGNAL RECALL", "scores": {"C1":4,"C2":3,"C3":3,"C4":4,"C5":4,"C6":4,"C7":3}}
+  ],
+  "selected": "GRID PATROL",
+  "reason": "GRID PATROL scored highest overall (26) and led on C2/C4/C5/C6 — its ordered-search decision reads instantly, hit-tests to a stable grid without timing-precision risk, and every tap gives immediate visual/score feedback, while tying for the top C1 novelty score against the existing catalog."
+}

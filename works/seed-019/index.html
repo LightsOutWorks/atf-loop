@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GRID PATROL</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0a0d13;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #0a0d13;
+  }
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; justify-content: space-between;
+    padding: 14px 20px; pointer-events: none;
+    font-family: monospace; color: #e7edff; font-size: 16px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.7);
+  }
+  #hud span { color: #9dffe0; }
+  #hud .nextWarn { color: #ffd166; }
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; background: rgba(6,7,12,0.9); text-align: center; padding: 24px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; font-size: clamp(26px, 6vw, 46px);
+    color: #f6f8ff; letter-spacing: 3px; margin: 0;
+  }
+  h2 {
+    font-family: sans-serif; font-size: clamp(22px, 5vw, 34px);
+    color: #f6f8ff; letter-spacing: 2px; margin: 0;
+  }
+  .sub {
+    font-family: sans-serif; color: #b4bdd4; max-width: 560px;
+    font-size: 15px; line-height: 1.55; margin: 0;
+  }
+  .help {
+    font-family: sans-serif; color: #8891a8; max-width: 560px;
+    font-size: 12.5px; line-height: 1.6; margin: 0;
+  }
+  .stat { font-family: monospace; color: #9dffe0; font-size: 17px; margin: 0; }
+  button {
+    font-family: monospace; font-size: 18px; padding: 13px 34px;
+    border-radius: 10px; border: 2px solid #9dffe0; background: #0f2420;
+    color: #eafffa; cursor: pointer; letter-spacing: 2px; margin-top: 6px;
+  }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>SCORE <span id="scoreVal">0</span></div>
+    <div>COMBO <span id="comboVal">0</span></div>
+    <div>NEXT <span id="nextVal" class="nextWarn">1</span></div>
+    <div>TIME <span id="timeVal">60</span></div>
+  </div>
+
+  <div id="titleScreen">
+    <h1>GRID PATROL</h1>
+    <p class="sub" id="subDesc">A security-grid patrol toy: tap the numbered checkpoints in ascending order before time runs out — misreading the sequence breaks your streak, and each cleared grid fills in denser than the last.</p>
+    <p class="help">Mouse/touch: tap the checkpoint showing the NEXT number in the HUD. Keyboard: Arrow keys to move the cursor between checkpoints, Enter/Space to tap the selected one. Correct order builds your combo; a wrong number resets it.</p>
+    <button id="startBtn" type="button">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2>TIME UP</h2>
+    <p class="stat" id="finalScore">SCORE 0</p>
+    <p class="stat" id="finalBest">BEST COMBO 0</p>
+    <button id="replayBtn" type="button">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var scoreVal = document.getElementById('scoreVal');
+  var comboVal = document.getElementById('comboVal');
+  var nextVal = document.getElementById('nextVal');
+  var timeVal = document.getElementById('timeVal');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var finalScore = document.getElementById('finalScore');
+  var finalBest = document.getElementById('finalBest');
+
+  var VIEW_W = 960, VIEW_H = 600;
+  var DPR = 1;
+
+  var RESULT_GUARD_MS = 600;
+  var COLS = 5, ROWS = 4;
+  var BASE_GAIN = 10, COMBO_STEP = 2, WRONG_PENALTY = 5;
+  var START_COUNT = 9, MAX_COUNT = COLS * ROWS;
+
+  var state = 'title';
+  var score = 0;
+  var combo = 0;
+  var bestCombo = 0;
+  var timeLeft = 60;
+  var lastFrameTime = null;
+  var resultGuardUntil = 0;
+
+  var roundIndex = 0;
+  var roundCount = START_COUNT;
+  var expectedNext = 1;
+  var correctTaps = 0;
+  var wrongTaps = 0;
+
+  var grid = [];
+  var selC = 2, selR = 1;
+  var popups = [];
+  var roundFlash = 0;
+
+  var audioCtx = null;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function resize() {
+    var w = (typeof window.innerWidth === 'number' && window.innerWidth > 0) ? window.innerWidth : VIEW_W;
+    var h = (typeof window.innerHeight === 'number' && window.innerHeight > 0) ? window.innerHeight : VIEW_H;
+    VIEW_W = w; VIEW_H = h;
+    DPR = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * DPR));
+    canvas.height = Math.max(1, Math.floor(h * DPR));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    if (typeof ctx.setTransform === 'function') {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function playTone(freq, dur, type) {
+    if (!audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    } catch (e) { /* ignore audio failures */ }
+  }
+
+  function cellW() { return VIEW_W / COLS; }
+  function cellH() { return VIEW_H / ROWS; }
+  function cellCenterX(c) { return VIEW_W * ((c + 0.5) / COLS); }
+  function cellCenterY(r) { return VIEW_H * ((r + 0.5) / ROWS); }
+
+  function makeEmptyGrid() {
+    var g = [];
+    for (var r = 0; r < ROWS; r++) {
+      var row = [];
+      for (var c = 0; c < COLS; c++) row.push(null);
+      g.push(row);
+    }
+    return g;
+  }
+
+  function generateRound(count) {
+    grid = makeEmptyGrid();
+    var cells = [];
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) cells.push({ c: c, r: r });
+    }
+    for (var i = cells.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = cells[i]; cells[i] = cells[j]; cells[j] = t;
+    }
+    var nums = [];
+    for (var n = 1; n <= count; n++) nums.push(n);
+    for (var k = nums.length - 1; k > 0; k--) {
+      var kj = Math.floor(Math.random() * (k + 1));
+      var kt = nums[k]; nums[k] = nums[kj]; nums[kj] = kt;
+    }
+    for (var idx = 0; idx < count; idx++) {
+      var cell = cells[idx];
+      grid[cell.r][cell.c] = { number: nums[idx], done: false, flash: 0, flashColor: '' };
+    }
+    roundCount = count;
+    expectedNext = 1;
+    var firstCell = cells[0];
+    selC = firstCell.c; selR = firstCell.r;
+  }
+
+  function addPopup(text, x, y, color) {
+    popups.push({ text: text, x: x, y: y, timer: 0.8, color: color || '#eafcff' });
+  }
+
+  function completeRound() {
+    var bonus = 50 + roundIndex * 10;
+    score += bonus;
+    addPopup('ROUND CLEAR +' + bonus, VIEW_W / 2, VIEW_H / 2 - 40, '#ffd166');
+    roundFlash = 1;
+    playTone(880, 0.22, 'triangle');
+    roundIndex++;
+    generateRound(Math.min(START_COUNT + roundIndex, MAX_COUNT));
+  }
+
+  function tapCell(c, r) {
+    if (state !== 'play') return false;
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return false;
+    var node = grid[r][c];
+    if (!node || node.done) return false;
+    var cx = cellCenterX(c), cy = cellCenterY(r);
+    if (node.number === expectedNext) {
+      correctTaps++;
+      node.done = true;
+      node.flash = 1; node.flashColor = 'rgba(157,255,224,';
+      var gain = BASE_GAIN + combo * COMBO_STEP;
+      score += gain;
+      combo++;
+      if (combo > bestCombo) bestCombo = combo;
+      addPopup('+' + gain, cx, cy - 26, '#9dffe0');
+      playTone(520 + combo * 8, 0.12, 'triangle');
+      expectedNext++;
+      updateHud();
+      if (expectedNext > roundCount) completeRound();
+    } else {
+      wrongTaps++;
+      node.flash = 1; node.flashColor = 'rgba(255,110,110,';
+      score = Math.max(0, score - WRONG_PENALTY);
+      combo = 0;
+      addPopup('-' + WRONG_PENALTY, cx, cy - 26, '#ff8a8a');
+      playTone(150, 0.2, 'sawtooth');
+      updateHud();
+    }
+    return true;
+  }
+
+  function resetGame() {
+    score = 0;
+    combo = 0;
+    bestCombo = 0;
+    timeLeft = 60;
+    lastFrameTime = null;
+    roundIndex = 0;
+    correctTaps = 0;
+    wrongTaps = 0;
+    popups = [];
+    roundFlash = 0;
+    generateRound(START_COUNT);
+  }
+
+  function start() {
+    resetGame();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    updateHud();
+  }
+
+  function endGame() {
+    state = 'over';
+    resultGuardUntil = performance.now() + RESULT_GUARD_MS;
+    finalScore.textContent = 'SCORE ' + score;
+    finalBest.textContent = 'BEST COMBO ' + bestCombo;
+    overScreen.style.display = 'flex';
+  }
+
+  function updateHud() {
+    scoreVal.textContent = String(score);
+    comboVal.textContent = String(combo);
+    nextVal.textContent = String(expectedNext <= roundCount ? expectedNext : roundCount);
+    timeVal.textContent = String(Math.max(0, Math.ceil(timeLeft)));
+  }
+
+  function update(dt) {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var node = grid[r][c];
+        if (node && node.flash > 0) node.flash = Math.max(0, node.flash - dt * 2.4);
+      }
+    }
+    if (roundFlash > 0) roundFlash = Math.max(0, roundFlash - dt * 1.0);
+    for (var j = popups.length - 1; j >= 0; j--) {
+      popups[j].timer -= dt;
+      popups[j].y -= dt * 30;
+      if (popups[j].timer <= 0) popups.splice(j, 1);
+    }
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillStyle = '#0a0d13';
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    if (roundFlash > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (roundFlash * 0.08) + ')';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
+  function drawGridLines() {
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (var c = 1; c < COLS; c++) {
+      var x = VIEW_W * (c / COLS);
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, VIEW_H); ctx.stroke();
+    }
+    for (var r = 1; r < ROWS; r++) {
+      var y = VIEW_H * (r / ROWS);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(VIEW_W, y); ctx.stroke();
+    }
+  }
+
+  function drawNodes() {
+    var rad = Math.min(cellW(), cellH()) * 0.34;
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var node = grid[r][c];
+        if (!node) continue;
+        var x = cellCenterX(c), y = cellCenterY(r);
+        ctx.save();
+        if (node.done) {
+          ctx.beginPath();
+          ctx.arc(x, y, rad, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(157,255,224,0.10)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(157,255,224,0.35)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(x, y, rad, 0, Math.PI * 2);
+          ctx.fillStyle = '#0f2420';
+          ctx.fill();
+          ctx.strokeStyle = '#7fe8ff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          if (node.flash > 0) {
+            ctx.beginPath();
+            ctx.arc(x, y, rad, 0, Math.PI * 2);
+            ctx.fillStyle = node.flashColor + (node.flash * 0.45) + ')';
+            ctx.fill();
+          }
+          ctx.fillStyle = '#eafcff';
+          ctx.font = 'bold ' + Math.round(rad * 0.9) + 'px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(node.number), x, y + 1);
+        }
+        if (c === selC && r === selR && !node.done) {
+          ctx.beginPath();
+          ctx.arc(x, y, rad + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawPopups() {
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      var a = clamp(p.timer / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 15px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    drawBackground();
+    if (state === 'play' || state === 'over') {
+      drawGridLines();
+      drawNodes();
+      drawPopups();
+    }
+  }
+
+  function tick(now) {
+    if (state === 'play') {
+      if (lastFrameTime === null) lastFrameTime = now;
+      var dt = (now - lastFrameTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      lastFrameTime = now;
+
+      timeLeft -= dt;
+
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        update(dt);
+        updateHud();
+        render();
+        endGame();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      update(dt);
+      updateHud();
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var w = Math.max(1, rect.width);
+    var h = Math.max(1, rect.height);
+    var x = (e.clientX - rect.left) * (VIEW_W / w);
+    var y = (e.clientY - rect.top) * (VIEW_H / h);
+    return { x: clamp(x, 0, VIEW_W), y: clamp(y, 0, VIEW_H) };
+  }
+
+  function cellFromPos(x, y) {
+    var c = clamp(Math.floor(x / cellW()), 0, COLS - 1);
+    var r = clamp(Math.floor(y / cellH()), 0, ROWS - 1);
+    return { c: c, r: r };
+  }
+
+  function onPointerDown(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initAudio();
+    if (state !== 'play') return;
+    var pos = getPos(e);
+    var cell = cellFromPos(pos.x, pos.y);
+    selC = cell.c; selR = cell.r;
+    tapCell(cell.c, cell.r);
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+
+  document.addEventListener('keydown', function (e) {
+    var k = e && (e.key || e.code);
+    if (state === 'play') {
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+        if (e.preventDefault) e.preventDefault();
+        selC = clamp(selC - 1, 0, COLS - 1);
+        return;
+      }
+      if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+        if (e.preventDefault) e.preventDefault();
+        selC = clamp(selC + 1, 0, COLS - 1);
+        return;
+      }
+      if (k === 'ArrowUp' || k === 'w' || k === 'W') {
+        if (e.preventDefault) e.preventDefault();
+        selR = clamp(selR - 1, 0, ROWS - 1);
+        return;
+      }
+      if (k === 'ArrowDown' || k === 's' || k === 'S') {
+        if (e.preventDefault) e.preventDefault();
+        selR = clamp(selR + 1, 0, ROWS - 1);
+        return;
+      }
+    }
+    if (k === ' ' || k === 'Space' || k === 'Enter') {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      initAudio();
+      if (state === 'title') { start(); return; }
+      if (state === 'over') { if (performance.now() >= resultGuardUntil) start(); return; }
+      if (state === 'play') { tapCell(selC, selR); return; }
+    }
+  });
+
+  startBtn.addEventListener('click', function () {
+    initAudio();
+    if (state === 'title') start();
+  });
+
+  replayBtn.addEventListener('click', function () {
+    if (state === 'over' && performance.now() >= resultGuardUntil) start();
+  });
+
+  generateRound(START_COUNT);
+
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    checkSuccess: function () { return correctTaps >= 1; }
+  };
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

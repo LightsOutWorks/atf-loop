@@ -1,0 +1,7 @@
+{
+  "seed": "seed-019",
+  "title": "GRID PATROL",
+  "description": "A security-grid patrol toy: tap the numbered checkpoints in ascending order before time runs out — misreading the sequence breaks your streak, and each cleared grid fills in denser than the last.",
+  "primary_input": "tap",
+  "success_condition": "correct_tap_1"
+}
