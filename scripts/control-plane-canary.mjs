@@ -36,7 +36,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const SCHEMA_VERSION = 'atf.control-plane-canary/1.0.0';
+export const SCHEMA_VERSION = 'atf.control-plane-canary/1.1.0';
 export const CONTROL_DOCS = ['OS.md', 'CURRENT_STATE.md', 'ROADMAP.md'];
 export const FACTORY_WORKFLOW = '.github/workflows/factory.yml';
 export const WATCHED_FILES = [...CONTROL_DOCS, FACTORY_WORKFLOW];
@@ -47,8 +47,8 @@ export const EXIT_CODES = { PASS: 0, FAIL: 1, VOID: 2, STALE: 3, HOLD: 4 };
 const GATE_ID_SRC = '[A-Z]\\d+[A-Z]?';
 const DASH_SRC = '[—–-]';
 
-// 「<ID> … PASS」の同一行共起を PASS 記録候補とみなすが、否定語を含む行は
-// 曖昧(ambiguous)として prerequisite の充足には使わない(fail-closed)。
+// PASS 証拠の判定に使う否定語(deny-list・heuristic)。
+// 明示宣言(下記の厳密文法)と否定語入り共起行が同居する gate は矛盾として扱う。
 const NEGATION_TOKENS = [
   'していない', 'してない', 'ではない', 'ではありません', 'せず', '未',
   'not yet', 'has not', "hasn't", 'NOT PASS',
@@ -132,24 +132,46 @@ export function parseRoadmapGates(roadmapText) {
   return { gates, duplicates };
 }
 
-// gate 定義配下の明示的な「Prerequisite:」ブロックを返す(無ければ null)。
+// gate 定義配下の明示的な「Prerequisite:」ブロックを解析する。
 // 「Prerequisite:」単独行 + リスト、太字、「Prerequisite: <本文>」の inline 形式を許容する。
 const PREREQ_HEADER_RE = /^(?:\*\*)?Prerequisites?(?:\*\*)?\s*[::]?\s*(.*)$/i;
 
-export function parseExplicitPrereqs(gateBody) {
+// 同一 gate に複数の Prerequisite ブロックがあっても全件を返す(最初のブロックだけを
+// 読んで後続の未達条件を無視しない)。加えて、header にもリスト項目にも属さないのに
+// prerequisite に言及する行(解析不能な言及)を unconsumedMentionLines として返す。
+export function parsePrereqBlocks(gateBody) {
   const lines = gateBody.split('\n');
-  const start = lines.findIndex((l) => PREREQ_HEADER_RE.test(l.trim()));
-  if (start === -1) return null;
-  const items = [];
-  const inline = PREREQ_HEADER_RE.exec(lines[start].trim())[1].trim();
-  if (inline !== '') items.push(inline);
-  for (let i = start + 1; i < lines.length; i++) {
+  const blocks = [];
+  const consumed = new Set();
+  for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
-    if (t === '') continue;
-    if (/^[-*]\s+/.test(t)) items.push(t.replace(/^[-*]\s+/, ''));
-    else break;
+    if (!PREREQ_HEADER_RE.test(t)) continue;
+    consumed.add(i);
+    const items = [];
+    const inline = PREREQ_HEADER_RE.exec(t)[1].trim();
+    if (inline !== '') items.push(inline);
+    for (let j = i + 1; j < lines.length; j++) {
+      const u = lines[j].trim();
+      if (u === '') continue;
+      if (/^[-*]\s+/.test(u)) {
+        items.push(u.replace(/^[-*]\s+/, ''));
+        consumed.add(j);
+      } else break;
+    }
+    blocks.push({ header: t, items });
   }
-  return items;
+  const unconsumedMentionLines = lines
+    .map((l, i) => ({ line: l.trim(), i }))
+    .filter(({ line, i }) => !consumed.has(i) && /\bPrerequisites?\b/i.test(line))
+    .map(({ line }) => line);
+  return { blocks, unconsumedMentionLines };
+}
+
+// 後方互換 wrapper: 全ブロックの項目を平坦化して返す(ブロックが無ければ null)。
+export function parseExplicitPrereqs(gateBody) {
+  const { blocks } = parsePrereqBlocks(gateBody);
+  if (blocks.length === 0) return null;
+  return blocks.flatMap((b) => b.items);
 }
 
 // 「独立lane / 独立canary として候補」と明記された文か(candidacy 指定として解釈済み扱い)
@@ -230,19 +252,36 @@ export function parseSmallestNextGate(currentStateText) {
   return { sections: parsed, sectionCount: sections.length };
 }
 
-// 「<gate ID> と PASS の同一行共起」を機械的に列挙する。否定語を含む行は
-// ambiguous とし、prerequisite 充足の根拠にしない。
+// PASS 証拠として認める厳密文法: gate result/status の明示宣言だけ。
+//   <gate ID> + 接続子(は / : / ： / = / — / – / - / | / 空白)+ PASS +
+//   直後が行末または区切り記号(。 . 、 , ) ） 」 』 ] | *)のもの。
+//   例: 「OS正本化F0はPASS。」「W0: PASS」「| F0 | PASS |」
+// 「W0 PASS条件は計測中」のような同一行の単なる文字列共起は証拠にしない。
+const STRICT_PASS_RE = new RegExp(
+  `(?<![A-Za-z0-9])(${GATE_ID_SRC})\\s*(?:は|:|：|=|—|–|-|\\|)?\\s*(?:\\*\\*)?PASS(?:\\*\\*)?(?=\\s*(?:$|[。.、,)）」』\\]|*]))`,
+  'g',
+);
+
+// gate ごとの PASS 記録を 3 区分で列挙する。
+//   explicitLines … 厳密文法に一致する明示宣言(否定語を含む行は除く)= 唯一の PASS 証拠
+//   negatedLines  … gate ID と PASS が共起し否定語を含む行(証拠にならない。明示宣言と同居すれば矛盾)
+//   proseLines    … その他の共起行(証拠にならない。監査用に記録のみ)
 export function parsePassMarkers(currentStateText) {
-  const markers = new Map(); // id -> { positive: bool, ambiguous: bool, lines: [] }
+  const markers = new Map();
+  const get = (id) => {
+    if (!markers.has(id)) markers.set(id, { explicitLines: [], negatedLines: [], proseLines: [] });
+    return markers.get(id);
+  };
   for (const rawLine of currentStateText.split('\n')) {
     if (!/(?<![A-Za-z])PASS(?![A-Za-z])/.test(rawLine)) continue;
+    const line = rawLine.trim();
     const negated = NEGATION_TOKENS.some((t) => rawLine.includes(t));
+    const explicitIds = new Set([...rawLine.matchAll(STRICT_PASS_RE)].map((m) => m[1]));
     for (const id of new Set(gateIdsIn(rawLine))) {
-      const cur = markers.get(id) ?? { positive: false, ambiguous: false, lines: [] };
-      if (negated) cur.ambiguous = true;
-      else cur.positive = true;
-      cur.lines.push(rawLine.trim());
-      markers.set(id, cur);
+      const m = get(id);
+      if (negated) m.negatedLines.push(line);
+      else if (explicitIds.has(id)) m.explicitLines.push(line);
+      else m.proseLines.push(line);
     }
   }
   return markers;
@@ -396,13 +435,19 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
   }
 
   // --- prerequisite 照合(主候補 + 独立候補) ---
-  // PASS 記録の状態: satisfied(肯定のみ)/ ambiguous(否定語を含む、または肯定と否定が
-  // 同居して矛盾)/ absent。satisfied 以外は前提充足の根拠にしない(fail-closed)。
+  // PASS 記録の状態:
+  //   satisfied … 厳密文法の明示宣言があり、否定語入り共起行が無い(唯一の充足根拠)
+  //   ambiguous … 明示宣言と否定語入り共起行が同居(矛盾。意味判断が必要 → HOLD)
+  //   absent    … 明示宣言なし(否定文・単なる文字列共起は証拠にしない → 未達)
   const markerStateOf = (gid) => {
     const m = passMarkers.get(gid);
-    if (!m) return 'absent';
-    if (m.positive && !m.ambiguous) return 'satisfied';
-    return 'ambiguous';
+    if (!m || m.explicitLines.length === 0) return 'absent';
+    if (m.negatedLines.length > 0) return 'ambiguous';
+    return 'satisfied';
+  };
+  const markerLinesOf = (gid) => {
+    const m = passMarkers.get(gid);
+    return m ? [...m.explicitLines, ...m.negatedLines] : [];
   };
 
   const prerequisites = {};
@@ -424,8 +469,11 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
     };
     if (gates.has(id)) {
       const body = gates.get(id).body;
-      const ex = parseExplicitPrereqs(body);
+      // 複数の Prerequisite ブロックを全件解析する(最初のブロックだけで打ち切らない)
+      const { blocks, unconsumedMentionLines } = parsePrereqBlocks(body);
+      const ex = blocks.length > 0 ? blocks.flatMap((b) => b.items) : null;
       entry.explicit = ex;
+      entry.prereqBlockCount = blocks.length;
       if (ex) {
         for (const item of ex) {
           const ids = gateIdsIn(item);
@@ -438,8 +486,10 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
           }
         }
       }
-      // 本文が prerequisite に言及するのにブロックとして解析できない場合も検証不能扱い
-      if (/\bPrerequisites?\b/i.test(body) && (!ex || ex.length === 0)) entry.unparsedPrereqMention = true;
+      // 項目ゼロのブロック、またはブロック外での prerequisite 言及は解析不能 → 検証不能扱い
+      if (blocks.some((b) => b.items.length === 0) || unconsumedMentionLines.length > 0) {
+        entry.unparsedPrereqMention = true;
+      }
     }
     for (const pid of entry.chain) {
       const st = markerStateOf(pid);
@@ -470,12 +520,12 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
     if (!e.definedInRoadmap) problems.push(`存在しない gate: 主候補 ${primary.id} が ROADMAP.md に定義されていない`);
     else {
       if (e.alreadyPassMarked) {
-        problems.push(`矛盾: 主候補 ${primary.id} は CURRENT_STATE.md 上で既に PASS と記録されている(該当行: ${passMarkers.get(primary.id).lines.join(' / ')})`);
+        problems.push(`矛盾: 主候補 ${primary.id} は CURRENT_STATE.md 上で既に PASS と記録されている(該当行: ${markerLinesOf(primary.id).join(' / ')})`);
       }
       if (e.unmetChain.length > 0) problems.push(`prerequisite 未達: 主候補 ${primary.id} の前提 ${e.unmetChain.join(', ')} に PASS 記録が無い`);
       if (e.unmetExplicit.length > 0) problems.push(`prerequisite 未達: 主候補 ${primary.id} の明示前提 ${e.unmetExplicit.join(', ')} に PASS 記録が無い`);
       if (e.selfMarkerAmbiguous) {
-        holds.push(`主候補 ${primary.id} の PASS 記録が矛盾または曖昧(該当行: ${passMarkers.get(primary.id).lines.join(' / ')})`);
+        holds.push(`主候補 ${primary.id} の PASS 記録が矛盾または曖昧(該当行: ${markerLinesOf(primary.id).join(' / ')})`);
       }
       if (e.ambiguousChain.length > 0) holds.push(`前提 ${e.ambiguousChain.join(', ')} の PASS 記述が否定語を含むか矛盾しており曖昧(意味判断が必要)`);
       if (e.ambiguousExplicit.length > 0) holds.push(`明示前提 ${e.ambiguousExplicit.join(', ')} の PASS 記述が曖昧(意味判断が必要)`);
@@ -525,6 +575,7 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
 
   // 恒常的な既知の限界(意味理解の偽装をしない旨の明示)
   unknowns.push('矢印連鎖の無い散文の routing 文は意味解釈しない。gate ID を含む未解釈 routing 文に現れる gate は前提を検証できないため、主候補なら HOLD、候補なら eligible から除外する(fail-closed)');
+  unknowns.push('PASS 証拠は「<gate ID> は/:/=/| PASS」形式の明示宣言だけを認める厳密文法。文法外の正当な status 表記(例: PASSした)は証拠と認められず未達側へ倒れる(fail-closed)');
   unknowns.push('独立 lane 候補の列挙は「独立lane/独立canary」明記行からの正規表現抽出(heuristic)であり、意味理解ではない');
   unknowns.push('依存順序の「A / B」並記は保守的に「両方とも前提」と解釈する');
   unknowns.push('提案 gate の実行に人間専権(identity / credentials 等)が必要かは機械判定できない。本カナリアは提案のみで実行しない');
@@ -539,8 +590,20 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
     // 未解釈 routing 文(散文の依存)も判断が依存する要素。run 中の書き換えは materially stale
     uninterpretedRoutingSentences: deps.proseSentences,
     primaryPrereqs: primary ? prerequisites[primary.id] ?? null : null,
+    // 候補資格も判断が依存する要素: eligible・独立 lane 候補・全 gate の除外理由
+    // (prerequisites entry)を含め、run 中に候補資格が変われば materially stale にする
+    eligible: [...eligible],
+    independentLaneCandidates: [...independentLaneCandidates].sort(),
+    prerequisitesByGate: Object.keys(prerequisites)
+      .sort()
+      .map((id) => [id, prerequisites[id]]),
     passMarkers: [...passMarkers.entries()]
-      .map(([id, m]) => ({ id, positive: m.positive, ambiguous: m.ambiguous }))
+      .map(([id, m]) => ({
+        id,
+        explicit: m.explicitLines.length > 0,
+        negated: m.negatedLines.length > 0,
+        prose: m.proseLines.length > 0,
+      }))
       .sort((a, b) => a.id.localeCompare(b.id)),
     evidencePins,
     osAnchors: Object.fromEntries(

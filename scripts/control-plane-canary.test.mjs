@@ -27,6 +27,7 @@ import {
   decide,
   materialSignature,
   parseExplicitPrereqs,
+  parsePrereqBlocks,
   runCanary,
 } from './control-plane-canary.mjs';
 
@@ -109,6 +110,8 @@ function makeRoadmap({
   duplicateW0 = false,
   w0PassBody = '- compare channels',
   foundationProse = REAL_FOUNDATION_PROSE,
+  w0aPrereqBlocks = '',
+  omitC0 = false,
 } = {}) {
   return `# Test Roadmap
 
@@ -154,19 +157,19 @@ PASS:
 ${w0PassBody}
 ${duplicateW0 ? '\n#### W0 — Duplicated gate\n\nPASS:\n\n- dup\n' : ''}
 #### W0A — Distribution automation
-
+${w0aPrereqBlocks}
 PASS:
 
 - automation works
 
 ### Capability
-
+${omitC0 ? '' : `
 #### C0 — Configuration provenance
 
 PASS:
 
 - provenance recorded
-
+`}
 ## 8. Dependency-Safe Routing
 
 Gateの現在statusと次の1件はCURRENT_STATE.mdだけに置く。
@@ -268,11 +271,14 @@ test('prerequisite が PASS 記録で満たされれば提案できる', () => {
   assert.equal(decision.proposal.gate, 'W0A');
 });
 
-test('否定語を含む曖昧な PASS 記述は前提充足に使わず HOLD', () => {
+test('否定文は PASS 証拠にならない(前提は未達として FAIL)', () => {
+  // 「PASSしていない」は明示的な非 PASS の記述 = 証拠なし → 未達 FAIL。
+  // 明示 PASS 宣言と否定文が同居する「矛盾」の HOLD は別テストで検証する。
   const { decision } = analyzeAndDecide({
     state: { nextGate: 'W0A', passLines: ['OS正本化F0はPASS。', 'W0はまだPASSしていない。'] },
   });
-  assert.equal(decision.result, 'HOLD');
+  assert.equal(decision.result, 'FAIL');
+  assert.match(decision.failureReason, /prerequisite 未達/);
   assert.notEqual(decision.result, 'PASS');
 });
 
@@ -365,6 +371,78 @@ test('Prerequisite の inline 形式は解析され、言及のみ(解析不能)
   });
   assert.equal(decision.result, 'HOLD');
   assert.match(decision.failureReason, /prerequisite/i);
+});
+
+// ---------- EL 監査対応の敵対的テスト ----------
+
+test('「W0 PASS条件は計測中」の文字列共起を W0 PASS と誤認しない', () => {
+  // prerequisite 側: 共起は証拠にならず、W0A の前提 W0 は未達 → FAIL(fail-open しない)
+  const a = analyzeAndDecide({
+    state: { nextGate: 'W0A', passLines: ['OS正本化F0はPASS。', 'W0 PASS条件は計測中。'] },
+  });
+  assert.equal(a.decision.result, 'FAIL');
+  assert.match(a.decision.failureReason, /prerequisite 未達/);
+  assert.match(a.decision.failureReason, /W0/);
+  // 主候補側: 共起で「W0 は既に PASS 済み」とも誤認しない(W0 の提案は正常に通る)
+  const b = analyzeAndDecide({
+    state: { nextGate: 'W0', passLines: ['OS正本化F0はPASS。', 'W0 PASS条件は計測中。'] },
+  });
+  assert.equal(b.decision.result, 'PASS');
+  assert.equal(b.decision.proposal.gate, 'W0');
+});
+
+test('明示的な gate result/status 宣言だけを PASS 証拠として認める', () => {
+  // 認める形式: 「W0はPASS。」「W0: PASS」「| W0 | PASS |」
+  for (const passLine of ['W0はPASS。', 'W0: PASS', '| W0 | PASS |']) {
+    const { decision } = analyzeAndDecide({
+      state: { nextGate: 'W0A', passLines: ['OS正本化F0はPASS。', passLine] },
+    });
+    assert.equal(decision.result, 'PASS', `明示宣言 "${passLine}" は証拠になるべき`);
+    assert.equal(decision.proposal.gate, 'W0A');
+  }
+  // 認めない形式: 文字列共起・後続に本文が続く形
+  for (const proseLine of ['W0 PASS条件は計測中。', 'W0のPASS条件を事前登録した。', 'PASS報告にW0を含める。']) {
+    const { decision } = analyzeAndDecide({
+      state: { nextGate: 'W0A', passLines: ['OS正本化F0はPASS。', proseLine] },
+    });
+    assert.equal(decision.result, 'FAIL', `共起 "${proseLine}" を証拠にしてはならない`);
+  }
+});
+
+test('同一 gate の複数 Prerequisite ブロックを全件解析する(後続の未達を無視しない)', () => {
+  // parsePrereqBlocks が 2 ブロックとも返すこと
+  const { blocks } = parsePrereqBlocks(
+    'Prerequisite:\n\n- A1の完了\n\nPrerequisite:\n\n- B2の完了\n\nPASS:\n\n- x',
+  );
+  assert.equal(blocks.length, 2);
+  assert.deepEqual(blocks.map((b) => b.items), [['A1の完了'], ['B2の完了']]);
+
+  // 第 1 ブロック(W0)は充足済み・第 2 ブロック(W9)が未達 → PASS してはならない
+  const twoBlocks = 'Prerequisite:\n\n- W0の反復成功\n\nPrerequisite:\n\n- W9の完了\n';
+  const { decision } = analyzeAndDecide({
+    roadmap: { w0aPrereqBlocks: `\n${twoBlocks}` },
+    state: { nextGate: 'W0A', passLines: ['OS正本化F0はPASS。', 'W0はPASS。'] },
+  });
+  assert.equal(decision.result, 'FAIL');
+  assert.match(decision.failureReason, /W9/);
+});
+
+test('候補資格の変化(独立 lane 候補の定義削除)も materially stale', () => {
+  // C0 の gate 定義だけを削除: 旧署名の対象(主候補 section・chains・散文・SNG)は不変のまま
+  // C0 が eligible から落ちる。この変化を materially stale として検出できること
+  const base = analyzeControlPlane(makeDocs());
+  const changed = analyzeControlPlane(makeDocs({ roadmap: { omitC0: true } }));
+
+  // 変化が「候補資格のみ」であることを確認(主候補まわりの署名要素は同一)
+  assert.equal(base.signatureParts.smallestNextGateSection, changed.signatureParts.smallestNextGateSection);
+  assert.equal(base.signatureParts.primaryRoadmapSection, changed.signatureParts.primaryRoadmapSection);
+  assert.deepEqual(base.signatureParts.dependencyChains, changed.signatureParts.dependencyChains);
+  assert.ok(base.eligible.includes('C0'));
+  assert.ok(!changed.eligible.includes('C0'));
+
+  const cmp = compareForStaleness(base, changed);
+  assert.equal(cmp.materiallyStale, true);
+  assert.ok(cmp.diffKeys.some((k) => ['eligible', 'prerequisitesByGate', 'independentLaneCandidates'].includes(k)));
 });
 
 // ---------- materiality 署名 ----------
@@ -557,6 +635,31 @@ test('E2E: run 中の material な main 変更(次 gate 変更)は STALE', async
   assert.ok(artifact.staleness.changedWatchedFiles.includes('CURRENT_STATE.md'));
   assert.equal(artifact.proposal, null);
   assert.ok(fs.existsSync(artifactPath));
+});
+
+test('E2E: run 中に候補資格が変わる main 変更(C0 定義の削除)は STALE', async () => {
+  const docs = pinnedDocs();
+  const { upstream, clone } = makeFixtureRepos('candidate-stale', docs);
+  const artifactPath = path.join(tmpRoot, 'candidate-stale-artifact.json');
+
+  const { artifact, exitCode } = await runCanary({
+    repoDir: clone,
+    artifactPath,
+    env: {},
+    afterStartSnapshot: async () => {
+      commitUpstreamChange(
+        upstream,
+        (dir) => fs.writeFileSync(path.join(dir, 'ROADMAP.md'), makeRoadmap({ omitC0: true })),
+        'material: drop C0 gate definition (candidate eligibility change)',
+      );
+    },
+  });
+
+  assert.equal(artifact.result, 'STALE');
+  assert.notEqual(exitCode, 0);
+  assert.equal(artifact.staleness.materiallyStale, true);
+  assert.ok(artifact.staleness.changedWatchedFiles.includes('ROADMAP.md'));
+  assert.equal(artifact.proposal, null);
 });
 
 test('E2E: non-material な main 変更(無関係ファイル追加)では STALE にせず継続', async () => {
