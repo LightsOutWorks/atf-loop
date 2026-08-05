@@ -1,36 +1,50 @@
-# W0 事前登録 — Comparable Distribution Canary
+# W0 Native-Instrument Feasibility Precursor — 事前登録
 
 Experiment ID: `W0-DIST-CANARY-001`
-Schema: `atf-w0-preregistration/1.1`
+Classification: **W0 native-instrument feasibility precursor**(W0 本体の前段。**W0 本体ではない**)
+Schema: `atf-w0-preregistration/1.2`
 作成日時: **2026-08-05T04:58Z (UTC) / 2026-08-05 13:58 JST**
-改訂: **Revision 2 — 2026-08-05T09:44Z (UTC)。EL 監査(REQUEST CHANGES)の反映。観測開始前・merge 前の改訂であり、観測結果はまだ一切存在しない**
-状態: **W0 PREPARATION — HOLD**(§10 参照。実験は未開始)
+改訂: **Revision 3 — 2026-08-05T10:20Z (UTC)。EL 指示の反映。観測開始前・merge 前の改訂であり、観測結果はまだ一切存在しない**
+状態: **PRECURSOR PREPARATION — HOLD**(§11 参照。実験は未開始)
 
-この文書は、結果を観測する **前** に固定した事前登録である。ROADMAP.md の W0 gate(hypothesis と channel 別操作の事前登録、**impressions 同士** の等価指標、`VOID` 条件と attribution confidence の定義、identity / credentials / cost Boundary の遵守)を実装する。
+この文書は、結果を観測する **前** に固定した事前登録である。
 
 改訂履歴:
 
 - Revision 1(head `5ab41f1659277396db58103c3329c4444a46ade4`): 初版。一次指標を referrer 別 page view としていた。
-- Revision 2(本版): EL 監査により、一次指標を canonical ROADMAP の「impressions 同士」へ変更(X View count / itch.io Impressions)、referrer 分析を補助観測へ降格、観測窓をチャンネル別 7×24 時間へ一本化、itch 側 channel operation 表を追加、Boundary を明文化、判定を決定論化、§7 の循環要求を除去。
+- Revision 2(head `24f4ce0cdedf02e0bd57d81f6ece495782c41d80`): EL 監査により一次指標を X View count / itch Impressions へ変更、観測窓をチャンネル別 7×24h へ一本化、itch 設定表・Boundary・決定論判定を追加。
+- Revision 3(本版): EL 指示により **W0 本体から「native-instrument feasibility precursor」へ再分類**。2 計器の数値直接比較を禁止し記録専用へ、判定を PASS/VOID の fail-closed 二値へ、itch Impressions を「直近 1 週間のローリング値」へ訂正し取得許容差を明記、T_pub / T_idx の分離記録と index 期限を追加、Draft 段階の実数表示要求を撤回、itch 説明文への生成 AI 明記を追加、§7 根拠 URL を一次資料 4 件へ置換、公開前照合工程を追加。
 
 ---
 
-## 1. 目的と仮説
+## 1. 分類・目的・仮説
+
+### 分類
+
+本実験は **W0 native-instrument feasibility precursor** である。W0 本体(流入経路の比較・等価指標の確立・主経路の判断材料収集)は、本 precursor の後に別途設計する。**本実験は W0 本体の PASS を与えない。**
 
 ### 目的
 
-同じ作品を同じ条件で X と itch.io へ出したとき、**同じ露出段階の指標で、流入経路別の比較可能な観測が得られるか** を試す。これは計測カナリアであり、作品価値の評価でも、主経路の勝者決定でもない。
+W0 本体の問い(同一作品を X と itch.io へ出したとき、経路別の比較可能な観測が得られるか)へ進む **前段** として、各チャンネルの native 計器 —
 
-### HYPOTHESIS-1(計測仮説・主)
+- X: 当該投稿の **View count**
+- itch.io: Project Analytics の **Impressions**
 
-> X 投稿と itch.io project の Public 化を 15 分以内に行ったとき、各チャンネルの同じ露出段階の一次指標 — X: 当該投稿の View count、itch.io: Project Analytics の Impressions — を、各々の公開時刻から始まる 7×24 時間について数値として取得でき、かつ両方が 0 より大きい。
+— が、固定した条件・固定した時刻の下で「**数値として取得でき、0 より大きい値を示す**」ことを確認する。計器そのものの成立性(feasibility)だけを検証する。
 
-- HYPOTHESIS-1 の評価は §10 の決定論条件(PASS / VOID / FAIL)でのみ行う。
-- **W0 PASS は「同じ露出段階の比較可能な観測を取得できた」ことだけを意味し、経路の勝者や作品価値を意味しない。**
+### 2 計器の関係(固定)
+
+X View count と itch Impressions は **別々の計器** として記録する。定義・母集団・集計方式が異なるため、**数値の直接比較、比率・差の計算、勝者判定、主経路決定を行わない**。W0 本体で経路比較をどう設計するかは、本 precursor の結果(両計器の実挙動)を見て別途事前登録する。
+
+### HYPOTHESIS-1(計測可能性仮説・唯一の仮説)
+
+> X 投稿と itch.io project の Public 化を 15 分以内に行ったとき、X View count と itch Impressions の両方を、事前固定した取得時刻(§6)に数値として取得でき、かつ両方が 0 より大きい。
+
+評価は §10 の決定論条件(PASS / VOID)でのみ行う。**UNKNOWN・部分取得・判定不能を PASS にしない(fail-closed)。**
 
 ### 副次観測(記録のみ、判定に使わない)
 
-downloads / browser plays、CTR(itch が表示する場合)、itch Analytics の referrer 別 page view(取得できる範囲)、X 側 engagement。解釈・勝者決定・作品価値評価は、この実験 1 回では行わない。
+downloads / browser plays、CTR(itch が表示する場合)、itch Analytics の referrer 別 page view(取得できる範囲)、X 側 engagement。解釈・比較・勝者決定・作品価値評価はしない。
 
 ---
 
@@ -43,9 +57,9 @@ downloads / browser plays、CTR(itch が表示する場合)、itch Analytics の
 | `CURRENT_STATE.md` blob SHA | `a92c9643cea1fcec8cca9d113e55f872b1a4f452` |
 | `ROADMAP.md` blob SHA | `8fd95f3f81a4d593043b6dc1a613f1e68c249107` |
 
-Revision 2 時点(2026-08-05T09:44Z)で origin/main を再取得し、上記全 SHA と対象作品 blob SHA が不変であることを再確認した — **material STALE なし**。
+Revision 3 時点(2026-08-05T10:20Z)で origin/main を再取得し、上記全 SHA と対象作品 blob SHA が不変であることを再確認した — **material STALE なし**。
 
-STALE 規則(F3 と同型): main SHA が変わっただけでは STALE としない。base 以降の diff が **対象作品(works/seed-010)または W0 の前提・計測契約を実質変更した場合だけ** materially STALE とする。
+STALE 規則(F3 と同型): main SHA が変わっただけでは STALE としない。base 以降の diff が **対象作品(works/seed-010)または本実験の前提・計測契約を実質変更した場合だけ** materially STALE とする。
 
 ---
 
@@ -60,7 +74,7 @@ STALE 規則(F3 と同型): main SHA が変わっただけでは STALE としな
 
 **作品本体・ゲームロジックは一切変更していない。** 本実験のために変更してもならない。
 
-### 配布素材(この PR で固定。Revision 2 でも無変更)
+### 配布素材(この PR で固定。Revision 2 / 3 でも無変更)
 
 | ファイル | SHA-256 | 内容 |
 |---|---|---|
@@ -87,8 +101,18 @@ SEED 010 — PRISM SPLIT
 A dusk-canyon light toy: tap a drifting prism to split it into two smaller shards, or tap a fully-split shard to pop it for points.
 ```
 
-- **itch.io 側**: project title に 1 行目 `SEED 010 — PRISM SPLIT`、description に 2 行目以降の本文を一字一句使用する。
-- **X 側**: 共通部分の末尾に次の 1 行を付けた全文を 1 回だけ投稿する。画像は `seed-010-cover.png`(SHA-256 固定)を添付する。ハッシュタグ・メンション・その他の文字は追加しない。
+### itch.io 側
+
+- project title: `SEED 010 — PRISM SPLIT`(共通部分 1 行目)
+- description: 共通部分 2 行目以降の本文に続けて、空行を挟み、次の生成 AI 明記文を一字一句加える:
+
+```
+Generative AI was used for the code, graphics, and audio.
+```
+
+### X 側
+
+共通部分の末尾に次の 1 行を付けた全文を 1 回だけ投稿する。画像は `seed-010-cover.png`(SHA-256 固定)を添付する。ハッシュタグ・メンション・その他の文字は追加しない。
 
 ```
 Play: [ITCH_PROJECT_URL]
@@ -98,16 +122,19 @@ Play: [ITCH_PROJECT_URL]
 
 ---
 
-## 5. 比較契約 — channel 別操作(事前登録)
+## 5. 実施契約 — channel 別操作(事前登録)
 
-### 5.1 共通
+### 5.1 共通・時刻の定義
 
-- 着地点: 同一の itch.io project `[ITCH_PROJECT_URL]`(1 件のみ)。この カナリアで作る project は SEED 010 の 1 件だけ。大量の AI 生成 project を作らない。
-- 開始: **X 投稿時刻 T_x と itch.io Public 化時刻 T_i の差は 15 分以内**。両時刻を UTC / JST で記録する。
-- 観測窓(チャンネル別に一本化):
-  - **X 窓 = T_x から T_x+168h(7×24 時間)**
-  - **itch 窓 = T_i から T_i+168h(7×24 時間)**
-  - 各窓の開始・終了時刻を UTC / JST で固定・記録する。
+- 着地点: 同一の itch.io project `[ITCH_PROJECT_URL]`(1 件のみ)。この precursor で作る project は SEED 010 の 1 件だけ。大量の AI 生成 project を作らない。
+- 記録する時刻(全て UTC / JST 併記):
+  - **T_x** = X 投稿時刻
+  - **T_pub** = itch.io Public 化時刻
+  - **T_idx** = itch.io で **first verified indexed** を確認した時刻(§5.5。T_pub とは別に記録する)
+- 開始: **|T_x − T_pub| ≤ 15 分**。
+- 観測窓:
+  - **X 窓 = [T_x, T_x+168h]**
+  - **itch 窓 = [T_pub, T_pub+168h]**
 - 期間中の禁止事項: 投稿の編集・削除・再投稿、追加宣伝(他チャンネル含む)、有料流入、個人アカウントからの拡散(リポスト・引用等)、bot 流入、itch ページ設定(§5.3 の全項目)の変更。
 - 使用する X アカウントは 1 つ。アカウント ID は merge 前確定フィールドとして記録する(§11)。
 
@@ -130,56 +157,69 @@ Play: [ITCH_PROJECT_URL]
 | Language | `[TO BE FIXED]`(English を想定) |
 | Mobile friendly | `[TO BE FIXED]` |
 | Embed 方式・寸法・fullscreen | `[TO BE FIXED]` |
-| AI disclosure | `[TO BE FIXED]` — 事実に合う項目を選ぶ(この作品のコード・グラフィック・音は AI 生成。虚偽選択をしない) |
+| AI disclosure | `[TO BE FIXED]` — 事実に合う項目を選ぶ(この作品のコード・グラフィック・音は AI 生成。虚偽選択をしない)。加えて description に §4 の生成 AI 明記文を含める |
 | Cover / Title / Description / ZIP | §3 の固定素材と §4 の固定文章(SHA-256 一致を確認して設定) |
 
 確定後、Public 化から itch 窓の終了まで全項目を変更しない。
 
 ### 5.4 自己アクセス・手動閲覧の扱い
 
-- **X の View count には投稿者自身の閲覧・同一ユーザーの反復閲覧が含まれる。** itch の Impressions も non-unique である。したがって期間中の手動閲覧は一次指標を直接汚染する。
-- 動作確認アクセスは **原則 Draft 段階(公開前)に完了させる**。
-- 両窓の期間中、ヒロは当該 X 投稿・当該 itch ページの手動閲覧を必要最小限にし、**閲覧の都度、時刻(JST)・回数・surface(X 投稿 / itch ページ / Analytics 画面)を台帳に記録** する。Analytics のダッシュボード閲覧は露出指標に乗らない想定だが、想定に反する挙動を確認した場合は記録して報告する。
+- **X の View count は、投稿者自身の閲覧・同一ユーザーの反復閲覧を含む**(X 公式 help、§7)。itch の Impressions も non-unique である。期間中の手動閲覧は計器値を直接汚染する。
+- 動作確認アクセスは **原則 Draft 段階(公開前)に完了させる**。公開後の動作確認はしない。
+- 両窓の期間中、ヒロは当該 X 投稿・当該 itch ページの手動閲覧を必要最小限にし、**閲覧の都度、時刻(JST)・回数・surface(X 投稿 / itch ページ / itch 検索結果 / Analytics 画面)を台帳に記録** する。Analytics のダッシュボード閲覧は露出計器に乗らない想定だが、想定に反する挙動を確認した場合は記録して報告する。
+
+### 5.5 index 確認(T_idx)の手順
+
+- Public 化後、**1 日 1 回まで**、ログアウト状態(またはシークレットウィンドウ)で itch.io の検索に `PRISM SPLIT` を入力し、検索結果一覧に当該 project が表示されるかを確認する。
+- 最初に表示を確認できた時刻を **T_idx** として記録する。**project ページはクリックしない。** 検索結果に表示された回数は自己由来 impressions の可能性として台帳に記録する(§5.4)。
+- **期限: T_idx が T_pub + 72 時間以内に確認できなければ VOID(§10)。**
 
 ---
 
-## 6. 指標
+## 6. 計器(2 本、別々に記録。直接比較禁止)
 
-### 一次指標(canonical ROADMAP「impressions 同士」に整合)
+### 計器 1 — X: 当該投稿の View count
 
-| チャンネル | 一次指標 | 取得面 |
-|---|---|---|
-| X | **当該投稿の View count** | 投稿に表示される View count(数値とスクリーンショット) |
-| itch.io | **Project Analytics の Impressions** | project の Analytics 画面(数値とスクリーンショット) |
+- 定義(一次資料 §7): 投稿が閲覧された回数。**投稿者自身の閲覧・同一ユーザーの反復閲覧を含む。** 投稿時点からの累積値。
+- 取得プロトコル: **T_x+168h から遅延 60 分以内**(早期取得は禁止)に、投稿 UI に表示された View count の数値+スクリーンショットを取得し、取得時刻(UTC/JST)を記録する。
+- 許容差の根拠: 累積値のため取得遅延分だけ窓外の閲覧が混入する。遅延上限 60 分(窓 168h の 0.6% 未満)を超えた取得は **VOID**。
 
-- 一次値 = **各窓の終了時点の累積値**。窓終了後すみやかに取得し、取得時刻(UTC/JST)と終了時刻からの遅延を記録する。
-- 両サーフェスは新規作成のため、窓開始時点の累積は 0 のはずである。0 でない事前値を確認した場合は記録の上、§10 の VOID 判定で扱う。
-- 「公開直前スナップショットと公開直後スナップショットの差分」を一次値の定義には **使わない**(Revision 1 の baseline 記述は削除した)。開始直後の画面保存(§12 手順 11)は証拠記録であり、一次値の計算には使わない。
+### 計器 2 — itch.io: Project Analytics の Impressions
 
-### attribution confidence: **MEDIUM**(事前固定)
+- 定義(EL 指示による訂正、一次資料 §7): itch.io 上で project が表示された回数。**Analytics に表示される値は「直近 1 週間(7 日間)のローリング値」である。** 累積値ではない。
+- 取得プロトコル: **T_pub+168h から遅延 60 分以内**(早期取得は禁止)に、Analytics 画面の Impressions の数値+スクリーンショットを取得し、取得時刻(UTC/JST)を記録する。この時点のローリング値は itch 窓 [T_pub, T_pub+168h] の近似となる。
+- 許容差の根拠: ローリング値のため、取得が Δ 遅れると窓先頭 Δ 分が脱落し窓外 Δ 分が混入する。**Δ ≤ 60 分** を超えた取得は **VOID**。
+- 実 UI に期間フィルタが存在する場合は、[T_pub, T_pub+168h] 相当を指定した値も補助記録する(一次値は上記プロトコルの値)。
 
-- 両指標とも **non-unique な surface exposure** である(同一ユーザーの反復・自己閲覧を含み、ユニーク訪問者数ではない)。
-- 露出のカウント定義はプラットフォーム実装に依存し、**完全同一ではない**(X は投稿表示、itch は itch.io 上での project 表示)。同じ「露出段階」を測るが等価性は近似である。
-- この非等価リスクが実物確認で「等価に扱えない」水準と判明した場合は §10 の FAIL とする。
+### 計器の既知の限界(事前固定)
 
-### 補助観測(降格済み。記録のみ、判定に使わない)
-
-- itch Analytics の **referrer 別 project page view**(取得できる範囲で記録。X 系 referrer と itch 内部の分離は attribution confidence を補強する参考情報。referrer 欠落・Discord が itch.io 表示になる等の既知の帰属損失があるため一次指標にしない)
-- downloads / browser plays、CTR(itch が表示する場合)
-- X 側 engagement(いいね・リポスト数等は記録のみ。リポストの依頼・誘発はしない)
+- 両計器とも non-unique な表示回数であり、ユニーク到達数ではない。計数信頼度は **MEDIUM** とする。
+- 定義・母集団・集計方式(累積 vs ローリング、表示面)が異なるため **相互換算・直接比較は不能**。これが本実験を W0 本体ではなく precursor とする理由である。2 値は同一表・同一グラフ上で対比表示せず、別々の記録として保存する。
 
 ---
 
-## 7. 計測可能性の確認(循環なし)
+## 7. 計測可能性の根拠(一次資料)と確認手順
 
-**新規 Draft には実流入が存在しないため、公開前に X / itch referrer の実例が存在することは要求しない。** merge 前の確認は次の 2 点のみとする(いずれも実流入を必要としない):
+### 一次資料(canonical URL。Revision 3 で置換・固定)
 
-1. **実 UI 確認**: ヒロの Draft project の Analytics / ダッシュボード画面に **Impressions 項目** と **期間表示(日別グラフまたは期間指定)** が存在することを確認し、スクリーンショットを本 PR のコメントに添付する。
-2. **公式仕様の参照**: itch.io 公式資料の canonical URL を記録する — `https://itch.io/docs/creators/analytics`, `https://itch.io/docs/creators/dashboard`(本準備の実行環境からは HTTP 403 で直接閲覧不可のため、ヒロがブラウザで開き、Impressions と期間表示に関する記載の有無を確認する)。
+| URL | 根拠として使う内容 |
+|---|---|
+| `https://itch.io/updates/updates-to-project-analytics-filtering-collections-impressions-and-more` | Project Analytics に Impressions が存在すること、表示仕様(ローリング表示・フィルタ) |
+| `https://itch.io/docs/creators/getting-indexed` | 新規 project の index 手続き・所要・条件(T_idx 検証と 72h 期限の根拠) |
+| `https://itch.io/docs/creators/quality-guidelines` | 掲載条件・AI disclosure を含むページ品質要件(index / 表出への影響確認) |
+| `https://help.x.com/en/using-x/view-counts` | X View count の定義(自己閲覧・反復閲覧を含むこと) |
 
-X 側の View count は投稿 UI に標準表示される仕様であり、投稿後に実表示を記録する。
+本準備の実行環境からは itch.io / help.x.com へ直接アクセスできない(HTTP 403 / proxy 遮断)ため、**ヒロがブラウザで上記 4 件を開いて内容を確認し、確認日時と要点(スクリーンショット)を本 PR のコメントへ添付する**(HOLD-2 の解除条件)。
 
-**低データ等の理由で公開後に Impressions が非表示・取得不能となった場合は、公開前ゲートに遡らず、公開後判定の VOID として扱う(§10)。**
+### Draft 段階の確認(実数表示は要求しない)
+
+- **Draft では Impressions の実数値の表示を要求しない**(新規 Draft には実流入がなく、低データでは項目自体が非表示になり得る)。
+- merge 前に確認するのは次だけ: (a) 上記一次資料に Impressions と index 手続きの記載が存在すること、(b) 実 UI の Analytics 画面の状態記録(Impressions 項目が見えればその実物、低データで非表示ならその旨の記録で足りる)。
+- **公開後も Impressions が非表示・取得不能のままなら、公開後判定の VOID とする**(公開前ゲートに遡らない)。
+
+### 既知のリスク(事前記録)
+
+- AI disclosure により browse / 検索での表出が制限される可能性は、上記 quality-guidelines / getting-indexed の実文で確認する。表出が制限されても **観測を捏造しない**(計器が 0 なら VOID として記録する)。
 
 ---
 
@@ -196,54 +236,64 @@ X 側の View count は投稿 UI に標準表示される仕様であり、投�
 
 1. 本 PR が EL の監査を経て merge されている。
 2. `[ITCH_PROJECT_URL]` と §5.3 の全設定値が実 UI で確定している(username のヒロ承認込み)。
-3. §7 の実 UI 確認(Impressions 項目・期間表示)が完了している。
-4. itch.io Draft に ZIP(`seed-010-itch.zip`)とカバー(`seed-010-cover.png`)が SHA-256 一致のまま設定され、AI disclosure が事実どおり選択され、実プレイ確認が Draft 段階で完了している。
+3. §7 の一次資料 4 件の確認と、実 UI の Analytics 画面の状態記録が完了している。
+4. itch.io Draft に ZIP(`seed-010-itch.zip`)とカバー(`seed-010-cover.png`)が SHA-256 一致のまま設定され、AI disclosure(設定項目+description の明記文)が事実どおりで、実プレイ確認が Draft 段階で完了している。
 5. 使用する X アカウント ID を記録済み。
-6. X 投稿と Public 化を 15 分以内に実施し、T_x / T_i を記録できる態勢である。
-7. incremental spend が $0 のままである(§8)。
+6. **公開前照合(§12 手順 10)が完了し、不一致が 0 件である。**
+7. X 投稿と Public 化を 15 分以内に実施し、T_x / T_pub を記録できる態勢である。
+8. incremental spend が $0 のままである(§8)。
 
 ---
 
-## 10. 判定条件(決定論)
+## 10. 判定条件(決定論・fail-closed)
 
 ### この PR の範囲
 
-- **PREPARATION PASS**: 事前登録・固定素材・ZIP・手順が検証できた状態。**PREPARATION PASS は W0 PASS ではない。**
+- **PREPARATION PASS**: 事前登録・固定素材・ZIP・手順が検証できた状態。**PREPARATION PASS は instrument PASS でも W0 PASS でもない。**
 
 ### 事前登録の状態判定
 
 - **HOLD**: §11 の HOLD-n が未解除、または Boundary 発動(課金・認証・権限が必要になった、証拠不足)。
-- **STALE**: 対象作品(works/seed-010)または W0 契約(3 正本の W0 関連記述)が main 上で実質変更された場合。main SHA の変化のみでは STALE としない。
+- **STALE**: 対象作品(works/seed-010)または本実験の契約(3 正本の W0 関連記述)が main 上で実質変更された場合。main SHA の変化のみでは STALE としない。
 
-### 公開後の結果判定(別 PR でのみ行う)
+### 公開後の結果判定(別 PR でのみ行う。PASS / VOID の二値)
 
-- **W0 PASS**: 次を **全て** 満たす。
-  1. X View count と itch Impressions の両方を、各々の 7×24 時間窓(§5.1)の終了時点の累積値として数値取得できた。
-  2. 両方の値が 0 より大きい。
-  3. T_x / T_i の差 15 分以内を含む §5 の全固定条件・§8 Boundary に違反がない。
-  4. 使用素材が固定 SHA-256 と一致している。
-  **PASS は同じ露出段階の比較可能な観測を取得できたことのみを意味し、経路の勝者や作品価値を意味しない。**
-- **VOID**: どちらかの一次指標が 0、非表示、低データで取得不能。itch の indexing 不能・X の配信なし。時刻差 15 分超過。期間中の設定変更・素材差・追加宣伝・拡散・有料流入・bot。スナップショット取得不能等の計測欠損。窓開始時点の事前値が 0 でなかった場合。
-- **FAIL**: 両指標とも十分な非ゼロ露出と数値が得られたが、実物確認(実 UI の指標定義・期間表示)により、**指標の露出段階または 7 日窓を等価に扱えない** と判明した場合。
-- `VOID` を `FAIL` として学習しない。`STALE` な結果を再利用しない(ROADMAP.md §3)。
+- **INSTRUMENT PASS(計測可能性 PASS)**: 次を **全て** 満たす場合のみ。
+  1. X View count を §6 のプロトコル(T_x+168h、遅延 ≤ 60 分、早期取得なし)で数値取得できた。
+  2. itch Impressions を §6 のプロトコル(T_pub+168h、遅延 ≤ 60 分、早期取得なし)で数値取得できた。
+  3. 両方の値が 0 より大きい。
+  4. T_idx が T_pub+72h 以内に記録されている。
+  5. |T_x − T_pub| ≤ 15 分を含む §5 の全固定条件・§8 Boundary に違反がない。
+  6. 使用素材が固定 SHA-256 と一致している。
+  **これは計測可能性 PASS であり、W0 PASS ではない。経路の勝者・作品価値・主経路決定を意味しない。**
+- **VOID**: 次のいずれか 1 つでも該当した場合。
+  - どちらかの計器が 0、非表示、または取得不能。
+  - 取得遅延(> 60 分)または早期取得。
+  - itch が T_pub+72h 以内に index されない(T_idx 未確認)。
+  - 窓不明(T_x / T_pub の記録欠落・曖昧)。
+  - |T_x − T_pub| > 15 分。
+  - 期間中の設定変更・素材差・追加宣伝・拡散・有料流入・bot・計測欠損。
+  - 窓開始時点で 0 でない事前値を確認した場合。
+- **UNKNOWN・部分取得・判定不能は全て VOID 側へ倒す。PASS にしない。**
+- 本 precursor では FAIL を定義しない(比較仮説を持たないため。計器不成立は VOID)。`VOID` を `FAIL` として学習しない。`STALE` な結果を再利用しない(ROADMAP.md §3)。
 
 ---
 
 ## 11. 現在の判定と HOLD 台帳(この Revision 時点)
 
-**W0 PREPARATION — HOLD**
+**PRECURSOR PREPARATION — HOLD**
 
 | ID | 内容 | 解除条件 |
 |---|---|---|
 | **HOLD-1** | `[ITCH_PROJECT_URL]` と §5.3 設定値が未受領・未確定(公開 username のヒロ承認を含む) | ヒロが Draft project を作成し、URL と実 UI 設定値を返す(§12 手順 3–4) |
-| **HOLD-2** | Impressions 項目・期間表示の実 UI 確認が未実施(実行環境から itch.io へ直接アクセス不可のため) | §7 の実 UI 確認とスクリーンショット添付 |
+| **HOLD-2** | §7 一次資料 4 件の確認と実 UI(Analytics 画面)の状態記録が未実施(実行環境から外部へ直接アクセス不可のため) | ヒロによる一次資料確認+実 UI 状態のスクリーンショット添付(§7。Impressions 実数の表示は要求しない) |
 
-仮説は HYPOTHESIS-1(§1)のみであり、HOLD ID と仮説 ID は分離した(Revision 1 の「H1」重複を解消)。
+仮説は HYPOTHESIS-1(§1)のみであり、HOLD ID と仮説 ID は分離している。
 
 ### 固定宣言と変更契約
 
-- 本文書は、**結果を一切観測する前に固定した**。X 投稿も itch.io project の Public 化もまだ行われていない。Revision 2 も観測開始前・merge 前の改訂である。
-- merge 前に変更してよいのは次の **確定フィールドのみ**: (a) `[ITCH_PROJECT_URL]` の実値化、(b) §5.3 の `[TO BE FIXED]` の実 UI 値化、(c) §7 実 UI 確認の結果記録、(d) X アカウント ID と username 承認の記録、(e) §11 の HOLD 解除状態。これ以外の本文(仮説・指標・窓・禁止事項・判定条件)は、EL の再監査指示がない限り本 PR 内でも変更しない。
+- 本文書は、**結果を一切観測する前に固定した**。X 投稿も itch.io project の Public 化もまだ行われていない。Revision 2 / 3 も観測開始前・merge 前の改訂である。
+- merge 前に変更してよいのは次の **確定フィールドのみ**: (a) `[ITCH_PROJECT_URL]` の実値化、(b) §5.3 の `[TO BE FIXED]` の実 UI 値化、(c) §7 確認の結果記録、(d) X アカウント ID と username 承認の記録、(e) §11 の HOLD 解除状態。これ以外の本文(仮説・計器・窓・許容差・禁止事項・判定条件)は、EL の再監査指示がない限り本 PR 内でも変更しない。
 - **merge 後は本文を一切変更しない**(誤字修正を含む)。訂正が必要な場合は別 PR・別文書(JOURNAL.md 等)で旧記述を残したまま行う。
 - **結果の記録・判定は別 PR で行う**。本文書に結果を追記しない。
 
@@ -251,19 +301,20 @@ X 側の View count は投稿 UI に標準表示される仕様であり、投�
 
 ## 12. ヒロの手順(初心者向け)
 
-この カナリアで作る itch.io project は **SEED 010 の 1 件だけ**。大量の AI 生成 project を作らない。
+この precursor で作る itch.io project は **SEED 010 の 1 件だけ**。大量の AI 生成 project を作らない。
 
 1. **監査依頼**: この draft PR を EL へ渡し、監査を受ける。
 2. **itch.io アカウント作成**: `https://itch.io/register` から作成する(リポジトリ外の人間作業。credentials はヒロが管理し、リポジトリへ書かない。公開 username は自分で承認できる名前にする — §8)。
 3. **Draft project を 1 件だけ作成**: ダッシュボードの「Create new project」で作成する。Kind of project はブラウザで遊べる HTML 形式を選ぶ。まだ Public にしない(Draft のまま)。
-4. **URL・設定値・Analytics 画面を Claude Code へ返す**: project URL、§5.3 の各項目の **実際の UI 表示名と設定値**、および Analytics / ダッシュボードの **Impressions 項目と期間表示が写ったスクリーンショット** を PR コメントで返す。あわせて §7 の公式 docs をブラウザで開き、Impressions・期間表示の記載を確認する。
-5. **同じ PR で確定**: Claude Code が §11 の確定フィールド(URL・設定値・確認結果)だけを本文へ反映する。
+4. **URL・設定値・確認結果を Claude Code へ返す**: project URL、§5.3 の各項目の **実際の UI 表示名と設定値**、§7 の一次資料 4 件の確認結果(確認日時・要点・スクリーンショット)、実 UI の Analytics 画面の状態(Impressions 項目の有無。実数表示は不要)を PR コメントで返す。
+5. **同じ PR で確定**: Claude Code が §11 の確定フィールド(URL・設定値・確認結果・アカウント ID・username 承認)だけを本文へ反映する。
 6. **merge**: EL 監査の完了後、この PR をマージする。
-7. **Draft へ素材を設定**: `seed-010-itch.zip` をアップロードし「このファイルをブラウザで実行する」に相当する設定を有効化、カバーに `seed-010-cover.png` を設定、title / description は §4 の固定文章のとおりにする。アップロード前にファイルの SHA-256 が §3 と一致することを確認する。
-8. **AI disclosure**: 事実に合う項目を選ぶ(この作品のコード・グラフィック・音は AI が生成した。虚偽選択をしない)。実際の項目名と選択値は §5.3 の表に確定済みの値を使う。
+7. **Draft へ素材を設定**: `seed-010-itch.zip` をアップロードし「このファイルをブラウザで実行する」に相当する設定を有効化、カバーに `seed-010-cover.png` を設定、title / description は §4 の固定文章(生成 AI 明記文を含む)のとおりにする。アップロード前にファイルの SHA-256 が §3 と一致することを確認する。
+8. **AI disclosure**: 設定項目で事実に合う項目を選び(§5.3 で確定した値)、description に §4 の明記文が入っていることを確認する。虚偽選択をしない。
 9. **実プレイ確認(Draft 段階で完了させる)**: Draft ページをブラウザで開き、START → プリズムをタップして分裂・ポップが動くことを確認する。このアクセスも時刻・回数を台帳に記録する(§5.4)。公開後の動作確認はしない。
-10. **公開**: itch.io を Public 化し、X へ §4 の固定文章(URL 入り)+ 同一カバー画像を 1 回投稿する。**T_x と T_i の差は 15 分以内**。両時刻(UTC/JST)と投稿 URL を記録する。
-11. **開始記録**: 公開直後の Analytics 画面とページ設定・投稿画面を保存する(証拠記録。一次値の計算には使わない — §6)。
-12. **7 日間は何も変えない**: §5 の禁止事項を守り、手動閲覧を最小化し、閲覧台帳をつける(§5.4)。
-13. **終了記録**: X 窓終了(T_x+168h)後に投稿の View count を、itch 窓終了(T_i+168h)後に Analytics の Impressions を、それぞれ数値+スクリーンショットで取得し、取得時刻を記録する。
-14. **結果は別 PR へ**: 記録一式(数値、スクリーンショット、閲覧台帳、公開時刻)を新しい PR にまとめ、§10 の決定論条件で判定する。本文書は変更しない。
+10. **公開前照合(不一致なら公開しない)**: Draft 状態のまま、次を 1 件ずつ照合する — X アカウント ID の記録 / itch username のヒロ承認 / §5.3 の全設定値 / 素材の SHA-256(ZIP・カバー)/ AI disclosure(設定項目+description の明記文)/ 実プレイ確認の完了。**1 つでも不一致・未完了があれば公開せず HOLD とし、解消してから再照合する。**
+11. **公開**: itch.io を Public 化し、X へ §4 の固定文章(URL 入り)+ 同一カバー画像を 1 回投稿する。**|T_x − T_pub| ≤ 15 分**。T_x / T_pub(UTC/JST)と投稿 URL を記録する。
+12. **開始記録と index 確認**: 公開直後の Analytics 画面・ページ設定・投稿画面を保存する(証拠記録。計器値の計算には使わない)。以後 §5.5 の手順で 1 日 1 回 index を確認し、**T_idx** を記録する(期限 T_pub+72h。超過は VOID)。
+13. **7 日間は何も変えない**: §5 の禁止事項を守り、手動閲覧を最小化し、閲覧台帳をつける(§5.4)。
+14. **終了取得(時刻厳守)**: **T_x+168h から 60 分以内** に X View count を、**T_pub+168h から 60 分以内** に itch Impressions を、それぞれ数値+スクリーンショットで取得し、取得時刻を記録する(§6。早期取得禁止)。
+15. **結果は別 PR へ**: 記録一式(数値、スクリーンショット、閲覧台帳、T_x / T_pub / T_idx、取得時刻)を新しい PR にまとめ、§10 の決定論条件で判定する。本文書は変更しない。
