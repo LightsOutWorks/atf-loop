@@ -3,55 +3,64 @@
   "kind": "champion-baseline",
   "title": "Current production configuration baseline (C0 — Configuration Provenance)",
   "declared_at": "2026-08-05",
-  "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every field is either OBSERVED with repository evidence, or UNKNOWN with a concrete reason and a resolution path. Blank values, guesses and implicit defaults are forbidden by scripts/c0-provenance.mjs.",
+  "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every field is either OBSERVED with repository evidence, or UNKNOWN with a concrete reason and a resolution path. Blank values, guesses and implicit defaults are forbidden by scripts/c0-provenance.mjs, which also enforces a fixed manifest (required groups, fields and material paths), verifies machine-extractable OBSERVED values against the actual factory.yml content, anchors declarations to the declared base commit, and separates production_material (STALE-relevant) from control_plane_snapshot (drift recorded, never STALE).",
   "base": {
     "repository": "LightsOutWorks/atf-loop",
     "default_branch": "main",
     "base_sha": "16b7ad3715fefff4f4909c7a8c480cad0acb6789",
-    "base_sha_policy": "base_sha is informational. A change of the default-branch head alone does NOT make this baseline STALE. The baseline becomes materially STALE only when one of the material_sources below changes content (git blob SHA-1 mismatch against the working tree)."
+    "base_sha_policy": "base_sha is informational and is additionally verified to exist as a commit whose tree contains the declared material blobs. A change of the default-branch head alone does NOT make this baseline STALE. The baseline becomes materially STALE only when a production_material source below changes content; control_plane_snapshot sources (OS.md / CURRENT_STATE.md / ROADMAP.md) may drift through normal updates and their drift is recorded as information only."
   },
   "material_sources": {
     "OS.md": {
+      "classification": "control_plane_snapshot",
       "git_blob_sha1": "a6e207202f78a00029b75f33a82f7005e671d429",
       "sha256": "1de1d9620fab4ceace056b5bdd635ee5276e3a5cf96a721419080f98a7acc0ab",
       "role": "Layer1/Layer2 principles governing what the Factory should optimize"
     },
     "CURRENT_STATE.md": {
+      "classification": "control_plane_snapshot",
       "git_blob_sha1": "a92c9643cea1fcec8cca9d113e55f872b1a4f452",
       "sha256": "f09491178075b07fdcf75154ca2f28000499a69c025261c381806ebd03674b34",
       "role": "Observed snapshot of proven capabilities; source of the C0 gate definition"
     },
     "ROADMAP.md": {
+      "classification": "control_plane_snapshot",
       "git_blob_sha1": "8fd95f3f81a4d593043b6dc1a613f1e68c249107",
       "sha256": "26ac03e64bf3599e0bb16b135d550ca332cb190833ecdc86496a12e8511c655b",
       "role": "Evidence-gated roadmap; defines C0 PASS criteria and the STALE rule"
     },
     ".github/workflows/factory.yml": {
+      "classification": "production_material",
       "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
       "sha256": "b0db5655de6830ed33863326fcdbb7d1ed1259270ff7adbbffe756f1b0c4b322",
       "role": "Production Loop definition; primary evidence for generation, gate, verification and publish configuration"
     },
     "CONSTRAINTS.md": {
+      "classification": "production_material",
       "git_blob_sha1": "b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e",
       "sha256": "02561a4d1add095d34a04f1c3ba33f9a23fcb1cbf1ec8edf1d30959cd7465eae",
       "role": "Top-priority generation constraints and the fixed 6-check verification contract"
     },
     "smoke.mjs": {
+      "classification": "production_material",
       "git_blob_sha1": "2188cf6df8322a0ff88018ead11490480edd630c",
       "sha256": "af9888f0ef49f1f29404c5e877df839b1ea8ee3b82e3abcd6007dab8ace2a063",
       "role": "Static smoke verification (fixed 6 checks on a minimal DOM shim)"
     },
     "scripts/interaction-smoke.mjs": {
+      "classification": "production_material",
       "git_blob_sha1": "833e97d4400293df0f9feb4458784f4bea385c00",
       "sha256": "4a24e1a2a4ee300825048eaa8dfec38da95f8187ae771a4e7b726eb6d623f6f5",
       "role": "Interaction Contract verification with real pointer events (Playwright Chromium)"
     },
     "scripts/gate-prompt.txt": {
+      "classification": "production_material",
       "git_blob_sha1": "ab371335e6752fee93045b519a57a89142876d96",
       "sha256": "28ba969b1acf68dae77b309ab98f681e7eefb4bc1c48ff50f125ed3054b66c63",
       "role": "Fixed prompt of the independent Codex content gate"
     },
     "scripts/build-catalog.mjs": {
+      "classification": "production_material",
       "git_blob_sha1": "f035aec90e2ab7e57b45b36dea78d97eb5ee1296",
       "sha256": "45be71fbd26ba48be5a31cab22245159e1ba83a271d3456bab2ad1a3b93226de",
       "role": "Deterministic catalog builder (works/*/meta.json → root index.html, fail-closed)"
@@ -71,7 +80,11 @@
       },
       "cli_version": {
         "status": "OBSERVED",
-        "value": { "name": "@anthropic-ai/claude-code", "version": "2.1.220", "pinning": "exact version pinned; changes require a PR" },
+        "value": {
+          "name": "@anthropic-ai/claude-code",
+          "version": "2.1.220",
+          "pinning": "exact version pinned; changes require a PR"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -157,7 +170,11 @@
       },
       "turn_budget": {
         "status": "OBSERVED",
-        "value": { "generate_max_turns": 120, "fix_max_turns": 60, "max_fix_rounds": 3 },
+        "value": {
+          "generate_max_turns": 120,
+          "fix_max_turns": 60,
+          "max_fix_rounds": 3
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -177,7 +194,11 @@
       },
       "auth_mechanism": {
         "status": "OBSERVED",
-        "value": "OAuth token via the repository secret declaration CLAUDE_CODE_OAUTH_TOKEN (issued by `claude setup-token`). Only the existence of the declaration is recorded; the value, its hash, prefix and length are never observed or recorded.",
+        "value": {
+          "mechanism": "OAuth token issued by claude setup-token, provided via a repository secret declaration",
+          "secret_declaration": "CLAUDE_CODE_OAUTH_TOKEN",
+          "note": "Only the existence of the declaration is recorded; the value, its hash, prefix and length are never observed or recorded."
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -217,7 +238,11 @@
       },
       "cli_version": {
         "status": "OBSERVED",
-        "value": { "name": "@openai/codex", "version": "0.146.0", "pinning": "exact version pinned; changes require a PR" },
+        "value": {
+          "name": "@openai/codex",
+          "version": "0.146.0",
+          "pinning": "exact version pinned; changes require a PR"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -303,7 +328,11 @@
       },
       "auth_mechanism": {
         "status": "OBSERVED",
-        "value": "Pre-authenticated CLI credential file restored from the repository secret declaration CODEX_AUTH_JSON into ~/.codex/auth.json (chmod 600, deleted in the always() cleanup step). Only the existence of the declaration is recorded; the value, its hash, prefix and length are never observed or recorded.",
+        "value": {
+          "mechanism": "Pre-authenticated CLI credential file restored into ~/.codex/auth.json (chmod 600, deleted in the always() cleanup step)",
+          "secret_declaration": "CODEX_AUTH_JSON",
+          "note": "Only the existence of the declaration is recorded; the value, its hash, prefix and length are never observed or recorded."
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -333,7 +362,10 @@
     "deterministic_verification": {
       "node_version_declared": {
         "status": "OBSERVED",
-        "value": "22 (major version declared via actions/setup-node; the exact patch version is resolved at run time and recorded by the C0 observer for its own runs only)",
+        "value": {
+          "declared": "22",
+          "note": "Major version declared via actions/setup-node; the exact patch version is resolved at run time and recorded by the C0 observer for its own runs only."
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -343,7 +375,10 @@
       },
       "runner_os": {
         "status": "OBSERVED",
-        "value": { "label": "ubuntu-latest", "note": "This is a runner LABEL, not a fixed OS version. The concrete OS, architecture and kernel are runtime facts; the C0 observer records them per C0 run, and they are UNKNOWN for past factory runs." },
+        "value": {
+          "label": "ubuntu-latest",
+          "note": "This is a runner LABEL, not a fixed OS version. The concrete OS, architecture and kernel are runtime facts; the C0 observer records them per C0 run, and they are UNKNOWN for past factory runs."
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -373,7 +408,12 @@
       },
       "browser_engine": {
         "status": "OBSERVED",
-        "value": { "package": "playwright", "version": "1.62.1", "browser": "chromium", "install_location": "outside the repository (RUNNER_TEMP) so integrity_check is not violated" },
+        "value": {
+          "package": "playwright",
+          "version": "1.62.1",
+          "browser": "chromium",
+          "install_location": "outside the repository (RUNNER_TEMP) so integrity_check is not violated"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -415,7 +455,14 @@
     "publish_runtime": {
       "triggers": {
         "status": "OBSERVED",
-        "value": "workflow_dispatch (boolean input dry_run, default false) and schedule cron '0 1 * * 6' (Saturday 10:00 JST); schedule runs are always full runs",
+        "value": {
+          "events": [
+            "workflow_dispatch",
+            "schedule"
+          ],
+          "cron": "0 1 * * 6",
+          "note": "workflow_dispatch has a boolean input dry_run (default false); the cron is Saturday 10:00 JST expressed in UTC; schedule runs are always full runs."
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -425,7 +472,10 @@
       },
       "workflow_permissions": {
         "status": "OBSERVED",
-        "value": "permissions: contents: write (required to push works and catalog to main)",
+        "value": {
+          "contents": "write",
+          "note": "Required to push works and catalog to main."
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -435,7 +485,11 @@
       },
       "concurrency_and_timeout": {
         "status": "OBSERVED",
-        "value": { "concurrency_group": "factory", "cancel_in_progress": false, "job_timeout_minutes": 80 },
+        "value": {
+          "concurrency_group": "factory",
+          "cancel_in_progress": false,
+          "job_timeout_minutes": 80
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",

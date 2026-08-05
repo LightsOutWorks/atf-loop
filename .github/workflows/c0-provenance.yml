@@ -18,10 +18,18 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      # C0 自身の4ファイル
       - '.github/workflows/c0-provenance.yml'
       - 'config/champion-baseline.json'
       - 'scripts/c0-provenance.mjs'
       - 'scripts/c0-provenance.test.mjs'
+      # Production material(これだけが変わるPRでもC0を自動起動し、STALEを検出する)
+      - '.github/workflows/factory.yml'
+      - 'CONSTRAINTS.md'
+      - 'smoke.mjs'
+      - 'scripts/interaction-smoke.mjs'
+      - 'scripts/gate-prompt.txt'
+      - 'scripts/build-catalog.mjs'
 
 permissions:
   contents: read

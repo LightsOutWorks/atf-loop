@@ -6,19 +6,30 @@
 //
 // 動作:
 //   1. config/champion-baseline.json(baseline declaration)を読み、schema検証する。
-//   2. baselineが宣言する material source を working tree から再ハッシュし、
-//      宣言値(git blob SHA-1 / SHA-256)と照合する。
-//   3. 各 capability field の OBSERVED evidence(repository path + hash)を再検証する。
-//   4. 実行環境(OS / arch / kernel / Node / run ID / attempt / SHA / 時刻 / 観測者自身の
+//   2. 固定manifest(必須capability group / 必須field / 必須material path)を強制する。
+//      group・field・materialを1件でも削除した baseline は FAIL。
+//   3. 全宣言path(material + evidence)を検査する: 絶対path・`..`遡行・symlink・
+//      regular file以外・untracked file・realpathでのrepo外脱出をすべて拒否(FAIL)。
+//   4. base_sha が実在するcommitであることを git cat-file で確認し、宣言された
+//      material blob SHA-1 をそのbase treeと照合する(架空SHA・不一致は FAIL)。
+//   5. material source を working tree から再ハッシュし宣言値と照合する。
+//      - production material の変化 → STALE
+//      - control-plane snapshot(OS.md 等)の変化 → 情報として記録するだけ(STALEにしない)
+//   6. 機械抽出可能なOBSERVED値(CLI版数・allowedTools・turn budget・Node版数・
+//      Playwright版数・runner label・permissions・cron・Secret宣言名など)を
+//      factory.yml の実体から抽出して照合する。宣言と実体の矛盾は FAIL。
+//   7. 実行環境(OS / arch / kernel / Node / run ID / attempt / SHA / 時刻 / 観測者自身の
 //      latency)を runtime facts として記録する。観測できないものは UNKNOWN(理由+解消方法)。
-//   5. provenance.json / result.json / verification.log をリポジトリ外の出力先へ書く。
+//   8. provenance.json / result.json / verification.log をリポジトリ外の出力先へ書く。
 //      リポジトリ内部への出力は拒否する(read-only 保証)。
 //
 // 結果状態(fail-closed 優先順位: HOLD > FAIL > VOID > STALE > PASS):
 //   PASS  — baseline整合・全fieldがOBSERVED(証拠付き)またはUNKNOWN(理由付き)
-//   FAIL  — schema違反、証拠不整合、Secretらしい値の混入
-//   VOID  — material source欠落など、観測自体が成立しない
-//   STALE — material sourceの内容が baseline宣言から変化(main SHAの変化だけではSTALEにしない)
+//   FAIL  — schema/manifest違反、証拠不整合、factory.ymlとの値矛盾、path違反、
+//           架空base SHA、Secretらしい値の混入
+//   VOID  — material source欠落・git work treeでない等、観測自体が成立しない
+//   STALE — production material の内容が baseline宣言から変化
+//           (main SHAの変化やsnapshot文書の更新だけではSTALEにしない)
 //   HOLD  — schema版数不一致など、人間判断なしに解消できない曖昧さ
 //
 // Secrets: 値・hash・prefix・長さを一切出力しない。Secret「宣言名」の記録のみ許可。
@@ -38,6 +49,47 @@ export const SHA1_RE = /^[0-9a-f]{40}$/;
 export const SHA256_RE = /^[0-9a-f]{64}$/;
 export const RESULT_STATES = ['PASS', 'FAIL', 'VOID', 'STALE', 'HOLD'];
 
+// ---------- 固定 manifest ----------
+// baseline が名乗る schema atf-configuration-provenance/v1 の必須構成。
+// ここから1件でも欠けた baseline は FAIL(黙って縮小したschemaを受け入れない)。
+
+export const CLASSIFICATIONS = ['production_material', 'control_plane_snapshot'];
+
+export const REQUIRED_MATERIALS = {
+  '.github/workflows/factory.yml': 'production_material',
+  'CONSTRAINTS.md': 'production_material',
+  'smoke.mjs': 'production_material',
+  'scripts/interaction-smoke.mjs': 'production_material',
+  'scripts/gate-prompt.txt': 'production_material',
+  'scripts/build-catalog.mjs': 'production_material',
+  'OS.md': 'control_plane_snapshot',
+  'CURRENT_STATE.md': 'control_plane_snapshot',
+  'ROADMAP.md': 'control_plane_snapshot',
+};
+
+export const REQUIRED_FIELDS = {
+  generation: [
+    'provider_integration', 'cli_version', 'effective_model_id', 'provider_model_revision',
+    'reasoning_configuration', 'provider_routing', 'hidden_system_prompt', 'prompt_cache_state',
+    'prompt_source', 'context_sources', 'output_schema', 'allowed_tools', 'turn_budget',
+    'permissions_and_sandbox', 'auth_mechanism', 'token_usage', 'marginal_cost', 'latency',
+  ],
+  semantic_gate: [
+    'provider_integration', 'cli_version', 'effective_model_id', 'provider_model_revision',
+    'reasoning_configuration', 'provider_routing', 'hidden_system_prompt', 'prompt_cache_state',
+    'prompt_source', 'invocation', 'verdict_contract', 'input_scope', 'auth_mechanism',
+    'token_usage', 'marginal_cost', 'latency',
+  ],
+  deterministic_verification: [
+    'node_version_declared', 'runner_os', 'static_smoke', 'interaction_smoke',
+    'browser_engine', 'catalog_builder', 'constraints_contract', 'integrity_check',
+  ],
+  publish_runtime: [
+    'triggers', 'workflow_permissions', 'concurrency_and_timeout', 'checkout_configuration',
+    'publish_mechanism', 'dry_run_canary', 'artifact_persistence', 'pages_reachability_verification',
+  ],
+};
+
 // ---------- ハッシュ ----------
 
 export function computeGitBlobSha1(buf) {
@@ -56,7 +108,7 @@ export function computeSha256(buf) {
 // 値パターンに加え、「Secretのhash/prefix/長さ」を示唆するkey名も禁止する。
 
 const SECRET_VALUE_PATTERNS = [
-  ['anthropic-key-like', /sk-ant-[A-Za-z0-9_-]{8,}/],
+  ['anthropic-key-like', /sk-ant-[A-Za-z0-9_-]{2,}/],
   ['openai-key-like', /sk-[A-Za-z0-9]{20,}/],
   ['github-token-like', /\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}/],
   ['github-pat-like', /github_pat_[A-Za-z0-9_]{20,}/],
@@ -168,6 +220,9 @@ export function validateBaseline(doc) {
       if (typeof m.role !== 'string' || !m.role.trim()) {
         problems.push(`material_sources[${p}].role is required`);
       }
+      if (!CLASSIFICATIONS.includes(m.classification)) {
+        problems.push(`material_sources[${p}].classification must be one of: ${CLASSIFICATIONS.join(', ')}`);
+      }
     }
   }
   if (!doc.capabilities || typeof doc.capabilities !== 'object' || Object.keys(doc.capabilities).length === 0) {
@@ -186,40 +241,303 @@ export function validateBaseline(doc) {
   return problems;
 }
 
+// ---------- manifest 強制 ----------
+// 必須group・必須field・必須material pathの削除、classificationの誤りは FAIL。
+
+export function enforceManifest(baseline) {
+  const problems = [];
+  const mats = baseline.material_sources || {};
+  for (const [p, cls] of Object.entries(REQUIRED_MATERIALS)) {
+    const m = mats[p];
+    if (!m) {
+      problems.push(`manifest: required material source missing from baseline: ${p}`);
+      continue;
+    }
+    if (m.classification !== cls) {
+      problems.push(`manifest: ${p} must be classified as ${cls}`);
+    }
+  }
+  const caps = baseline.capabilities || {};
+  for (const [group, fields] of Object.entries(REQUIRED_FIELDS)) {
+    const g = caps[group];
+    if (!g || typeof g !== 'object') {
+      problems.push(`manifest: required capability group missing: ${group}`);
+      continue;
+    }
+    for (const fieldName of fields) {
+      if (!g[fieldName]) problems.push(`manifest: required field missing: ${group}.${fieldName}`);
+    }
+  }
+  return problems;
+}
+
+// ---------- path 検査 ----------
+// 宣言された全path(material + evidence)は、repo相対・遡行なし・symlinkでない
+// regular fileで、realpath解決後もrepo内に留まらなければならない。
+
+export function validatePathShape(rel) {
+  if (typeof rel !== 'string' || !rel.trim()) return 'path must be a non-empty string';
+  if (path.isAbsolute(rel) || /^[A-Za-z]:[\\/]/.test(rel)) return 'absolute paths are forbidden';
+  if (rel.includes('\\')) return 'backslashes are forbidden';
+  const segments = rel.split('/');
+  if (segments.some((s) => s === '..')) return 'parent traversal (..) is forbidden';
+  if (segments.some((s) => s === '' || s === '.')) return 'empty or "." path segments are forbidden';
+  return null;
+}
+
+// 戻り値 state: 'ok' | 'missing' | 'symlink' | 'not-regular' | 'escapes'
+export function inspectRepoPath(repoRoot, rel) {
+  const abs = path.join(repoRoot, rel);
+  let st;
+  try {
+    st = fs.lstatSync(abs);
+  } catch {
+    return { state: 'missing' };
+  }
+  if (st.isSymbolicLink()) return { state: 'symlink' };
+  if (!st.isFile()) return { state: 'not-regular' };
+  let rootReal = path.resolve(repoRoot);
+  try {
+    rootReal = fs.realpathSync(rootReal);
+  } catch {
+    // repoRoot が実体解決できないケースは isInsideRepo 側の拒否に委ねる
+  }
+  let real;
+  try {
+    real = fs.realpathSync(abs);
+  } catch {
+    return { state: 'missing' };
+  }
+  const relReal = path.relative(rootReal, real);
+  if (relReal === '' || relReal === '..' || relReal.startsWith('..' + path.sep) || path.isAbsolute(relReal)) {
+    return { state: 'escapes' };
+  }
+  return { state: 'ok' };
+}
+
+// ---------- git 照会(すべて read-only) ----------
+
+export function gitTrackedFiles(repoRoot) {
+  try {
+    const out = execFileSync('git', ['-C', repoRoot, 'ls-files', '-z'], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return { isRepo: true, tracked: new Set(out.split('\0').filter(Boolean)) };
+  } catch {
+    return { isRepo: false, tracked: new Set() };
+  }
+}
+
+export function gitCommitExists(repoRoot, sha) {
+  try {
+    execFileSync('git', ['-C', repoRoot, 'cat-file', '-e', `${sha}^{commit}`], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// base commit の tree に含まれる path → blob SHA-1 の対応表
+export function gitTreeBlobs(repoRoot, sha) {
+  const out = execFileSync('git', ['-C', repoRoot, 'ls-tree', '-r', '-z', sha], {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const map = new Map();
+  for (const entry of out.split('\0')) {
+    if (!entry) continue;
+    const tab = entry.indexOf('\t');
+    if (tab < 0) continue;
+    const [, , blobSha] = entry.slice(0, tab).split(' ');
+    map.set(entry.slice(tab + 1), blobSha);
+  }
+  return map;
+}
+
+// ---------- factory.yml からの機械抽出と照合 ----------
+// baseline の OBSERVED 値のうち機械抽出可能なものは、宣言の書き写しではなく
+// factory.yml の実体から抽出した値と照合する。矛盾(例: provider を OpenAI へ
+// 改変)は FAIL。material が変化している場合は STALE が先に立つため照合しない。
+
+export function extractFactoryFacts(text) {
+  const one = (re) => {
+    const m = re.exec(text);
+    return m ? m[1] : null;
+  };
+  const all = (re) => {
+    const out = [];
+    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+    let m;
+    while ((m = g.exec(text))) out.push(m[1]);
+    return out;
+  };
+  const num = (v) => (v === null ? null : Number(v));
+  return {
+    generation_cli_package: '@anthropic-ai/claude-code',
+    generation_cli_version: one(/@anthropic-ai\/claude-code@([0-9][^\s"']*)/),
+    gate_cli_package: '@openai/codex',
+    gate_cli_version: one(/@openai\/codex@([0-9][^\s"']*)/),
+    allowed_tools_occurrences: all(/--allowedTools "([^"]+)"/),
+    max_turns_occurrences: all(/--max-turns (\d+)/).map(Number),
+    max_fix_rounds: num(one(/MAX_FIX=(\d+)/)),
+    node_version: one(/node-version:\s*'([^']+)'/),
+    playwright_version: one(/playwright@([0-9][^\s"']*)/),
+    runner_label: one(/runs-on:\s*([^\s]+)/),
+    permissions_contents: one(/permissions:\s*\n\s*contents:\s*([a-z]+)/),
+    concurrency_group: one(/concurrency:\s*\n\s*group:\s*([^\s]+)/),
+    job_timeout_minutes: num(one(/timeout-minutes:\s*(\d+)/)),
+    cron: one(/cron:\s*'([^']+)'/),
+    secret_declarations: [...new Set(all(/secrets\.([A-Z0-9_]+)/))],
+    sandbox: one(/--sandbox ([^\s"']+)/),
+    gate_prompt_reference: /scripts\/gate-prompt\.txt/.test(text),
+  };
+}
+
+export function crossCheckAgainstFactory(baseline, factoryText) {
+  const problems = [];
+  const f = extractFactoryFacts(factoryText);
+  const caps = baseline.capabilities || {};
+  const gen = caps.generation || {};
+  const gate = caps.semantic_gate || {};
+  const det = caps.deterministic_verification || {};
+  const pub = caps.publish_runtime || {};
+  // 宣言側の値はエラー文へ載せない(Secretらしい値の混入経路を作らない)。抽出値のみ示す。
+  const bad = (ref, expected) =>
+    problems.push(`cross-check: ${ref} contradicts factory.yml (expected from factory.yml: ${JSON.stringify(expected)}; declared value withheld)`);
+  const need = (label, fact) => {
+    const missing = fact === null || fact === undefined || (Array.isArray(fact) && fact.length === 0);
+    if (missing) problems.push(`cross-check: ${label} is not machine-extractable from factory.yml`);
+    return !missing;
+  };
+
+  if (need('generation CLI pin', f.generation_cli_version)) {
+    if (gen.cli_version?.value?.name !== f.generation_cli_package) bad('generation.cli_version.name', f.generation_cli_package);
+    if (gen.cli_version?.value?.version !== f.generation_cli_version) bad('generation.cli_version.version', f.generation_cli_version);
+    if (typeof gen.provider_integration?.value !== 'string' || !gen.provider_integration.value.includes(f.generation_cli_package)) {
+      bad('generation.provider_integration', `a value referencing ${f.generation_cli_package}`);
+    }
+  }
+  if (need('gate CLI pin', f.gate_cli_version)) {
+    if (gate.cli_version?.value?.name !== f.gate_cli_package) bad('semantic_gate.cli_version.name', f.gate_cli_package);
+    if (gate.cli_version?.value?.version !== f.gate_cli_version) bad('semantic_gate.cli_version.version', f.gate_cli_version);
+    if (typeof gate.provider_integration?.value !== 'string' || !gate.provider_integration.value.includes(f.gate_cli_package)) {
+      bad('semantic_gate.provider_integration', `a value referencing ${f.gate_cli_package}`);
+    }
+  }
+  if (need('--allowedTools', f.allowed_tools_occurrences)) {
+    for (const occ of f.allowed_tools_occurrences) {
+      if (gen.allowed_tools?.value !== occ) bad('generation.allowed_tools', occ);
+    }
+  }
+  if (need('--max-turns', f.max_turns_occurrences)) {
+    if (f.max_turns_occurrences.length !== 2) {
+      problems.push(`cross-check: expected exactly 2 --max-turns declarations in factory.yml, found ${f.max_turns_occurrences.length}`);
+    } else {
+      if (gen.turn_budget?.value?.generate_max_turns !== f.max_turns_occurrences[0]) bad('generation.turn_budget.generate_max_turns', f.max_turns_occurrences[0]);
+      if (gen.turn_budget?.value?.fix_max_turns !== f.max_turns_occurrences[1]) bad('generation.turn_budget.fix_max_turns', f.max_turns_occurrences[1]);
+    }
+  }
+  if (need('MAX_FIX', f.max_fix_rounds) && gen.turn_budget?.value?.max_fix_rounds !== f.max_fix_rounds) {
+    bad('generation.turn_budget.max_fix_rounds', f.max_fix_rounds);
+  }
+  if (need('node-version', f.node_version) && det.node_version_declared?.value?.declared !== f.node_version) {
+    bad('deterministic_verification.node_version_declared.declared', f.node_version);
+  }
+  if (need('playwright pin', f.playwright_version)) {
+    if (det.browser_engine?.value?.package !== 'playwright') bad('deterministic_verification.browser_engine.package', 'playwright');
+    if (det.browser_engine?.value?.version !== f.playwright_version) bad('deterministic_verification.browser_engine.version', f.playwright_version);
+  }
+  if (need('runs-on', f.runner_label) && det.runner_os?.value?.label !== f.runner_label) {
+    bad('deterministic_verification.runner_os.label', f.runner_label);
+  }
+  if (need('permissions.contents', f.permissions_contents) && pub.workflow_permissions?.value?.contents !== f.permissions_contents) {
+    bad('publish_runtime.workflow_permissions.contents', f.permissions_contents);
+  }
+  if (need('concurrency.group', f.concurrency_group) && pub.concurrency_and_timeout?.value?.concurrency_group !== f.concurrency_group) {
+    bad('publish_runtime.concurrency_and_timeout.concurrency_group', f.concurrency_group);
+  }
+  if (need('job timeout-minutes', f.job_timeout_minutes) && pub.concurrency_and_timeout?.value?.job_timeout_minutes !== f.job_timeout_minutes) {
+    bad('publish_runtime.concurrency_and_timeout.job_timeout_minutes', f.job_timeout_minutes);
+  }
+  if (need('schedule cron', f.cron) && pub.triggers?.value?.cron !== f.cron) {
+    bad('publish_runtime.triggers.cron', f.cron);
+  }
+  if (need('secret declarations', f.secret_declarations)) {
+    const genSecret = gen.auth_mechanism?.value?.secret_declaration;
+    const gateSecret = gate.auth_mechanism?.value?.secret_declaration;
+    if (typeof genSecret !== 'string' || !f.secret_declarations.includes(genSecret)) {
+      bad('generation.auth_mechanism.secret_declaration', `one of the secret names actually declared in factory.yml`);
+    }
+    if (typeof gateSecret !== 'string' || !f.secret_declarations.includes(gateSecret)) {
+      bad('semantic_gate.auth_mechanism.secret_declaration', `one of the secret names actually declared in factory.yml`);
+    }
+  }
+  if (need('--sandbox', f.sandbox)) {
+    if (typeof gate.invocation?.value !== 'string' || !gate.invocation.value.includes(`--sandbox ${f.sandbox}`)) {
+      bad('semantic_gate.invocation', `a value referencing --sandbox ${f.sandbox}`);
+    }
+  }
+  if (!f.gate_prompt_reference) {
+    problems.push('cross-check: factory.yml does not reference scripts/gate-prompt.txt');
+  } else if (gate.prompt_source?.evidence?.path !== 'scripts/gate-prompt.txt') {
+    bad('semantic_gate.prompt_source.evidence.path', 'scripts/gate-prompt.txt');
+  }
+  return problems;
+}
+
 // ---------- working tree との照合 ----------
 
 export function verifyMaterialSources(baseline, repoRoot) {
   const verified = [];
-  const mismatched = [];
+  const productionMismatched = [];
+  const snapshotDrift = [];
   const missing = [];
+  const rejected = [];
   const observed = {};
   for (const [rel, decl] of Object.entries(baseline.material_sources || {})) {
-    const abs = path.join(repoRoot, rel);
-    if (!fs.existsSync(abs)) {
+    // 不正なpath(遡行・絶対・symlink・repo外脱出)は読み取り自体を拒否する。
+    // ここで読んでhashを記録すると、repo外ファイル内容の確認oracleになってしまう。
+    if (validatePathShape(rel)) {
+      rejected.push(rel);
+      observed[rel] = null;
+      continue;
+    }
+    const st = inspectRepoPath(repoRoot, rel).state;
+    if (st === 'missing') {
       missing.push(rel);
       observed[rel] = null;
       continue;
     }
-    const buf = fs.readFileSync(abs);
+    if (st !== 'ok') {
+      rejected.push(rel);
+      observed[rel] = null;
+      continue;
+    }
+    const buf = fs.readFileSync(path.join(repoRoot, rel));
     const got = { git_blob_sha1: computeGitBlobSha1(buf), sha256: computeSha256(buf) };
     observed[rel] = got;
     if (got.git_blob_sha1 === decl.git_blob_sha1 && got.sha256 === decl.sha256) {
       verified.push(rel);
+    } else if (decl.classification === 'control_plane_snapshot') {
+      // control-plane文書の通常更新はbaselineをSTALEにしない。情報として記録する。
+      snapshotDrift.push({ path: rel, declared: { git_blob_sha1: decl.git_blob_sha1 }, observed: got });
     } else {
-      mismatched.push({ path: rel, declared: { git_blob_sha1: decl.git_blob_sha1, sha256: decl.sha256 }, observed: got });
+      productionMismatched.push({ path: rel, declared: { git_blob_sha1: decl.git_blob_sha1, sha256: decl.sha256 }, observed: got });
     }
   }
-  return { verified, mismatched, missing, observed };
+  return { verified, productionMismatched, snapshotDrift, missing, rejected, observed };
 }
 
 // 各OBSERVED fieldのrepository evidenceを再検証する。
 // - evidence hash が baseline 自身の material_sources 宣言と矛盾 → baseline内部不整合 = FAIL
-// - evidence hash は宣言と一致するが working tree が変化 → 構成変化 = STALE
-// - material source でない path の不一致 → 証拠整合の破壊 = FAIL
+// - evidence hash は宣言と一致するが working tree が変化 → production は STALE / snapshot は情報記録
+// - material source でない path の不一致・欠落 → 証拠整合の破壊 = FAIL
 // - material source の欠落は verifyMaterialSources が VOID として扱うため、ここでは重複報告しない
 export function verifyEvidence(baseline, repoRoot) {
   const materials = baseline.material_sources || {};
   const materialMismatches = [];
+  const snapshotDrift = [];
   const brokenEvidence = [];
   for (const [cap, fields] of Object.entries(baseline.capabilities || {})) {
     for (const [fieldName, entry] of Object.entries(fields || {})) {
@@ -236,19 +554,24 @@ export function verifyEvidence(baseline, repoRoot) {
         });
         continue;
       }
-      const abs = path.join(repoRoot, ev.path);
-      if (!fs.existsSync(abs)) {
+      // 不正なpathは読まない(run() が path 検査で FAIL を記録する。内容確認oracle化を防ぐ)。
+      if (validatePathShape(ev.path)) continue;
+      const st = inspectRepoPath(repoRoot, ev.path).state;
+      if (st === 'missing') {
         if (!decl) brokenEvidence.push({ field: ref, path: ev.path, problem: 'evidence file missing from working tree' });
         continue;
       }
-      const got = computeGitBlobSha1(fs.readFileSync(abs));
+      if (st !== 'ok') continue;
+      const got = computeGitBlobSha1(fs.readFileSync(path.join(repoRoot, ev.path)));
       if (got !== ev.git_blob_sha1) {
         const rec = { field: ref, path: ev.path, declared: ev.git_blob_sha1, observed: got };
-        (decl ? materialMismatches : brokenEvidence).push(rec);
+        if (!decl) brokenEvidence.push(rec);
+        else if (decl.classification === 'control_plane_snapshot') snapshotDrift.push(rec);
+        else materialMismatches.push(rec);
       }
     }
   }
-  return { materialMismatches, brokenEvidence };
+  return { materialMismatches, snapshotDrift, brokenEvidence };
 }
 
 // ---------- runtime facts ----------
@@ -299,7 +622,7 @@ export function observeHeadSha(env, repoRoot) {
     return observedRuntimeField(env.GITHUB_SHA, 'env:GITHUB_SHA', 'GitHub Actions checkout context');
   }
   try {
-    const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+    const sha = execFileSync('git', ['-C', repoRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
     if (SHA1_RE.test(sha)) {
       return observedRuntimeField(sha, 'git rev-parse HEAD (read-only)', 'local git metadata of the observed working tree');
     }
@@ -412,8 +735,9 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
     }
   }
 
-  let materials = { verified: [], mismatched: [], missing: [], observed: {} };
-  let evidence = { materialMismatches: [], brokenEvidence: [] };
+  let materials = { verified: [], productionMismatched: [], snapshotDrift: [], missing: [], rejected: [], observed: {} };
+  let evidence = { materialMismatches: [], snapshotDrift: [], brokenEvidence: [] };
+  let crossCheckPerformed = false;
 
   if (baseline) {
     if (baseline.schema !== SCHEMA_VERSION) {
@@ -426,25 +750,98 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
       if (schemaProblems.length) {
         failReasons.push(...schemaProblems.map((s) => `baseline schema violation: ${s}`));
       } else {
+        // manifest 強制(group / field / material の削除・誤分類は FAIL)
+        const manifestProblems = enforceManifest(baseline);
+        failReasons.push(...manifestProblems);
+
+        // 全宣言 path の検査(material + evidence)
+        const declaredPaths = new Set(Object.keys(baseline.material_sources));
+        for (const fields of Object.values(baseline.capabilities)) {
+          for (const entry of Object.values(fields)) {
+            if (entry?.status === 'OBSERVED' && entry.evidence?.kind === 'repository' && typeof entry.evidence.path === 'string') {
+              declaredPaths.add(entry.evidence.path);
+            }
+          }
+        }
+        const usablePaths = new Set();
+        for (const rel of [...declaredPaths].sort()) {
+          const shapeProblem = validatePathShape(rel);
+          if (shapeProblem) {
+            failReasons.push(`declared path rejected: ${rel} — ${shapeProblem}`);
+            continue;
+          }
+          const st = inspectRepoPath(repoRoot, rel).state;
+          if (st === 'symlink') failReasons.push(`declared path rejected: ${rel} — symlinks are forbidden`);
+          else if (st === 'not-regular') failReasons.push(`declared path rejected: ${rel} — only regular files are allowed`);
+          else if (st === 'escapes') failReasons.push(`declared path rejected: ${rel} — realpath resolves outside the repository`);
+          else usablePaths.add(rel); // 'ok' と 'missing'(missing は VOID/FAIL を後段が分類)
+        }
+
+        // git 照会: tracked 強制と base commit / base tree 照合
+        const git = gitTrackedFiles(repoRoot);
+        if (!git.isRepo) {
+          voidReasons.push('observed tree is not a git work tree — tracked-file and base-commit verification cannot be established');
+        } else {
+          for (const rel of [...usablePaths].sort()) {
+            if (inspectRepoPath(repoRoot, rel).state === 'ok' && !git.tracked.has(rel)) {
+              failReasons.push(`declared path rejected: ${rel} — untracked files are forbidden as provenance sources`);
+            }
+          }
+          const baseSha = baseline.base.base_sha;
+          if (!gitCommitExists(repoRoot, baseSha)) {
+            failReasons.push(`base.base_sha ${baseSha} does not exist as a commit in this repository (fictitious base)`);
+          } else {
+            const baseTree = gitTreeBlobs(repoRoot, baseSha);
+            for (const [rel, decl] of Object.entries(baseline.material_sources)) {
+              if (validatePathShape(rel)) continue; // 既にFAIL済み
+              const atBase = baseTree.get(rel);
+              if (!atBase) {
+                failReasons.push(`material source ${rel} is absent from the declared base commit ${baseSha}`);
+              } else if (atBase !== decl.git_blob_sha1) {
+                failReasons.push(
+                  `material source ${rel}: declared git_blob_sha1 does not match the blob recorded in the declared base commit ${baseSha} (declaration is not anchored to its own base)`
+                );
+              }
+            }
+          }
+        }
+
+        // working tree 照合(production → STALE / snapshot → 情報記録 / 欠落 → VOID)
         materials = verifyMaterialSources(baseline, repoRoot);
         evidence = verifyEvidence(baseline, repoRoot);
         for (const rel of materials.missing) {
           voidReasons.push(`material source missing from working tree: ${rel} — observation cannot be established (VOID, not FAIL)`);
         }
-        for (const mm of materials.mismatched) {
+        for (const mm of materials.productionMismatched) {
           staleReasons.push(
-            `material source changed: ${mm.path} (declared blob ${mm.declared.git_blob_sha1}, observed ${mm.observed.git_blob_sha1}) — baseline assertions referencing it are materially STALE`
+            `production material changed: ${mm.path} (declared blob ${mm.declared.git_blob_sha1}, observed ${mm.observed.git_blob_sha1}) — baseline assertions referencing it are materially STALE`
           );
         }
+        for (const d of materials.snapshotDrift) {
+          log(`control-plane snapshot drift (not STALE): ${d.path} observed blob ${d.observed.git_blob_sha1}`);
+        }
         for (const mm of evidence.materialMismatches) {
-          staleReasons.push(`evidence for ${mm.field} points at changed material source ${mm.path}`);
+          staleReasons.push(`evidence for ${mm.field} points at changed production material ${mm.path}`);
         }
         for (const be of evidence.brokenEvidence) {
           failReasons.push(
             `evidence integrity broken for ${be.field}: ${be.path} ${be.problem ?? `declared ${be.declared}, observed ${be.observed}`}`
           );
         }
-        log(`material sources verified: ${materials.verified.length}, changed: ${materials.mismatched.length}, missing: ${materials.missing.length}`);
+
+        // factory.yml が宣言どおり不変のときだけ、宣言値を実体と照合する
+        // (material が変化しているなら STALE が正しい結果であり、値照合は行わない)
+        const FACTORY = '.github/workflows/factory.yml';
+        if (materials.verified.includes(FACTORY)) {
+          const factoryText = fs.readFileSync(path.join(repoRoot, FACTORY), 'utf8');
+          failReasons.push(...crossCheckAgainstFactory(baseline, factoryText));
+          crossCheckPerformed = true;
+        }
+
+        log(
+          `material sources — verified: ${materials.verified.length}, production changed: ${materials.productionMismatched.length}, snapshot drift: ${materials.snapshotDrift.length}, missing: ${materials.missing.length}`
+        );
+        log(`cross-check against factory.yml: ${crossCheckPerformed ? 'performed' : 'skipped (factory.yml not verified unchanged)'}`);
       }
     }
   }
@@ -470,12 +867,14 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
       : { path: path.relative(repoRoot, baselinePath), error: 'baseline unreadable' },
     base: {
       declared_base_sha: baseline?.base?.base_sha ?? null,
-      policy: 'A default-branch head change alone does not invalidate this observation; only material-source content changes do (STALE).',
+      policy:
+        'Only production-material content changes make this baseline STALE. Control-plane snapshot drift (OS.md / CURRENT_STATE.md / ROADMAP.md) is recorded as information, and a default-branch head change alone never invalidates the observation.',
     },
     material_sources: Object.fromEntries(
       Object.entries(baseline?.material_sources ?? {}).map(([rel, decl]) => [
         rel,
         {
+          classification: decl.classification,
           declared: { git_blob_sha1: decl.git_blob_sha1, sha256: decl.sha256 },
           observed: materials.observed[rel] ?? null,
           match: !!(
@@ -486,6 +885,12 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
         },
       ])
     ),
+    snapshot_drift: [...materials.snapshotDrift, ...evidence.snapshotDrift].map((d) => ({
+      path: d.path,
+      observed_git_blob_sha1: d.observed?.git_blob_sha1 ?? d.observed,
+      note: 'control-plane snapshot drift; recorded for information, does not invalidate the baseline',
+    })),
+    cross_check_performed: crossCheckPerformed,
     capabilities: baseline?.capabilities ?? null,
     runtime,
   };
