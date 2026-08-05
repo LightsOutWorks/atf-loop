@@ -1,0 +1,86 @@
+# evolution-control-plane-canary.yml — F3「Runtime Reads Control Plane」の read-only カナリア。
+#
+# 何をするか:
+#   決定論テスト → scripts/control-plane-canary.mjs を実行し、origin/main の 3 正本
+#   (OS.md / CURRENT_STATE.md / ROADMAP.md)と factory.yml の blob SHA を証拠として記録、
+#   実行可能な次 gate を正確に 1 件だけ「提案」する。結果 artifact は成功・失敗に
+#   かかわらず Runner の一時領域($RUNNER_TEMP)から保存する。
+#
+# 何をしないか(Production Loop 非干渉・成功偽装の防止):
+#   - repository への書き込み・branch/PR/comment 作成・merge・push は一切しない
+#   - Secrets を参照しない。外部モデル・外部 API を呼ばない
+#   - .github/workflows/factory.yml には触れない(canary は blob SHA を読むだけ)
+#
+# 自己承認の防止:
+#   pull_request で 3 正本が変更された時に起動するが、canary スクリプトは判定に
+#   PR 側 checkout(改変版)を使わず、常に origin/main の git object を読む。
+#   実装者が同じ PR で制御規則を書き換えて自己承認することはできない。
+#
+# pull_request_target は使用禁止(書き込み権限とSecretsを PR コードへ渡さないため)。
+
+name: evolution-control-plane-canary
+
+on:
+  pull_request:
+    paths:
+      - 'OS.md'
+      - 'CURRENT_STATE.md'
+      - 'ROADMAP.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: テスト → control-plane canary(read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 決定論テスト(node:test・外部依存なし)
+        run: node --test scripts/control-plane-canary.test.mjs
+
+      - name: control-plane canary 実行(origin/main を読む・提案のみ)
+        run: |
+          set -euo pipefail
+          # artifact は repository 内ではなく Runner の一時領域に作る
+          ARTIFACT_DIR="$RUNNER_TEMP/control-plane-canary"
+          mkdir -p "$ARTIFACT_DIR"
+          echo "ARTIFACT_DIR=$ARTIFACT_DIR" >> "$GITHUB_ENV"
+          node scripts/control-plane-canary.mjs --artifact "$ARTIFACT_DIR/artifact.json"
+
+      - name: 結果を job summary へ記録
+        if: always()
+        run: |
+          set -euo pipefail
+          SUMMARY_SRC="${ARTIFACT_DIR:-$RUNNER_TEMP/control-plane-canary}/artifact.json"
+          {
+            echo "## 🕊️ control-plane canary (F3)"
+            echo ""
+            if [ -f "$SUMMARY_SRC" ]; then
+              echo '```json'
+              cat "$SUMMARY_SRC"
+              echo '```'
+            else
+              echo "artifact が生成されていない(テスト段階での停止など)。job ログを参照。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: artifact 保存(成功・失敗にかかわらず)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-plane-canary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/control-plane-canary
+          if-no-files-found: warn
