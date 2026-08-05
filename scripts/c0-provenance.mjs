@@ -393,8 +393,102 @@ export function resolveRepoIdentity(env, repoRoot) {
   }
   return null;
 }
-
 // ---------- factory.yml からの決定論抽出 ----------
+// canonical value = 証拠から決定論的に「完全に」抽出した値。verifier は宣言値と
+// canonical の deep exact compare だけを行う(token存在確認は fail-open のため廃止)。
+
+// heredoc 本文の抽出: opener 行の直後から、最初の delimiter 単独行の直前まで。
+export function extractHeredoc(text, opener, delimiter) {
+  const start = text.indexOf(opener);
+  if (start < 0) return null;
+  const bodyStart = text.indexOf('\n', start);
+  if (bodyStart < 0) return null;
+  const term = new RegExp(`\\n[ \\t]*${delimiter}[ \\t]*\\n`, 'g');
+  term.lastIndex = bodyStart;
+  const m = term.exec(text);
+  if (!m) return null;
+  return text.slice(bodyStart + 1, m.index + 1);
+}
+
+// codex exec 呼び出しの canonical 形: 継続行を連結し、`--` トークン列
+// (直後の裸リテラルは値として結合)を抽出する。変数・リダイレクトは含めない。
+function extractCodexInvocation(text) {
+  // コメントや step 名の中の "codex exec" ではなく、実際の呼び出し行
+  // (トリムした行が codex exec で始まる非コメント行)を起点にする。
+  const lines = text.split('\n');
+  const startLine = lines.findIndex((l) => {
+    const t = l.trim();
+    return t.startsWith('codex exec') && !t.startsWith('#');
+  });
+  if (startLine < 0) return null;
+  let joined = '';
+  for (let i = startLine; i < lines.length; i++) {
+    const line = lines[i].replace(/\s+$/, '');
+    if (line.endsWith('\\')) {
+      joined += line.slice(0, -1) + ' ';
+    } else {
+      joined += line;
+      break;
+    }
+  }
+  const tokens = joined.split(/\s+/).filter(Boolean);
+  const flags = [];
+  for (let i = 2; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (!t.startsWith('--')) continue;
+    const next = tokens[i + 1];
+    if (next && !next.startsWith('-') && /^[A-Za-z0-9._-]+$/.test(next)) {
+      flags.push(`${t} ${next}`);
+      i++;
+    } else {
+      flags.push(t);
+    }
+  }
+  return { command: 'codex exec', flags };
+}
+
+// on: ブロックの canonical 形: トリガーevent名(2スペース段)と
+// workflow_dispatch inputs のキー名(6スペース段)をファイル順で完全列挙する。
+function extractOnBlock(text) {
+  const lines = text.split('\n');
+  const onIdx = lines.findIndex((l) => l.replace(/\s+$/, '') === 'on:');
+  if (onIdx < 0) return null;
+  const events = [];
+  const inputs = [];
+  let inInputs = false;
+  for (let i = onIdx + 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l.trim()) continue;
+    if (!/^\s/.test(l)) break;
+    const ev = /^  ([A-Za-z_]+):/.exec(l);
+    if (ev) {
+      events.push(ev[1]);
+      inInputs = false;
+      continue;
+    }
+    if (/^    inputs:\s*$/.test(l)) {
+      inInputs = true;
+      continue;
+    }
+    if (inInputs) {
+      const im = /^ {6}([A-Za-z0-9_]+):/.exec(l);
+      if (im) inputs.push(im[1]);
+    }
+  }
+  return { events, inputs };
+}
+
+// upload-artifact を uses する step chunk から if / path を完全抽出する。
+function extractUploadStep(text) {
+  const chunks = text.split(/\n(?= {6}- name: )/);
+  const chunk = chunks.find((c) => /uses:\s*actions\/upload-artifact@/.test(c));
+  if (!chunk) return null;
+  const action = /uses:\s*(\S+)/.exec(chunk)?.[1] ?? null;
+  const condition = /\n\s*if:\s*(.+)/.exec(chunk)?.[1]?.trim() ?? null;
+  const pathExpr = /\n\s*path:\s*(.+)/.exec(chunk)?.[1]?.trim() ?? null;
+  if (!action || !condition || !pathExpr) return null;
+  return { action, condition, path_expression: pathExpr };
+}
 
 export function extractFactoryFacts(text) {
   const one = (re) => {
@@ -420,455 +514,288 @@ export function extractFactoryFacts(text) {
     max_fix_rounds: num(one(/MAX_FIX=(\d+)/)),
     node_version: one(/node-version:\s*'([^']+)'/),
     playwright_version: one(/playwright@([0-9][^\s"']*)/),
+    browser: one(/--with-deps ([a-z]+)/),
     runner_label: one(/runs-on:\s*([^\s]+)/),
     permissions_contents: one(/permissions:\s*\n\s*contents:\s*([a-z]+)/),
     concurrency_group: one(/concurrency:\s*\n\s*group:\s*([^\s]+)/),
-    cancel_in_progress: (v => (v === null ? null : v === 'true'))(one(/cancel-in-progress:\s*(true|false)/)),
+    cancel_in_progress: ((v) => (v === null ? null : v === 'true'))(one(/cancel-in-progress:\s*(true|false)/)),
     timeouts: all(/timeout-minutes:\s*(\d+)/).map(Number),
     cron: one(/cron:\s*'([^']+)'/),
     fetch_depth: num(one(/fetch-depth:\s*(\d+)/)),
+    persist_credentials_expression: ((v) => (v === null ? null : v.trim()))(one(/persist-credentials:\s*(.+)/)),
     action_refs: [...new Set(all(/uses:\s*(\S+)/))].sort(),
     push_attempts: pushLoop === null ? null : pushLoop.trim().split(/\s+/).length,
-    sandbox: one(/--sandbox ([^\s"']+)/),
+    push_target: one(/git push origin ([^\s;]+)/),
+    verdict_pass_token: one(/\[ "\$FIRST_LINE" = "([^"]+)" \]/),
+    gate_prompt_path: one(/GATE_PROMPT=\$\(cat ([^)]+)\)/),
+    input_scope_copy: (() => {
+      const m = /iconv -f UTF-8 -t UTF-8 "\$WORK_DIR\/([^"]+)" > "\$GATE_DIR\/([^"]+)"/.exec(text);
+      return m && m[1] === m[2] ? m[1] : null;
+    })(),
+    dry_run_guard_value: one(/if \[ "\$DRY_RUN" = "([^"]+)" \]/),
+    smoke_entry: one(/node (smoke\.mjs)/),
+    interaction_entry: one(/node (scripts\/interaction-smoke\.mjs)/),
+    catalog_entry: one(/node (scripts\/build-catalog\.mjs)/),
+    output_files: [...new Set(all(/__WORK_DIR__\/([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)/))].sort(),
+    generate_prompt: extractHeredoc(text, "PROMPT=$(cat <<'EOF'", 'EOF'),
+    fix_prompt: extractHeredoc(text, "FIX_TMPL=$(cat <<'EOF'", 'EOF'),
+    lib_source: extractHeredoc(text, "<<'LIB'", 'LIB'),
+    codex_invocation: extractCodexInvocation(text),
+    on_block: extractOnBlock(text),
+    upload_step: extractUploadStep(text),
   };
 }
 
-// Secret宣言のstep scope抽出: claude -p を実行するstepと codex exec を実行するstepの
-// env 参照だけを、それぞれ generation / gate の Secret集合とする。
+// Secret宣言のstep scope抽出。
+// - invoking step の判定はコメント行(#始まり)を無視する
+// - Secret名は step の env: ブロック内の「NAME: ${{ secrets.X }}」という
+//   正確なmappingだけから取る。run本文・コメント中の secrets.NAME 文字列は無視する。
 export function extractScopedSecrets(text) {
   const chunks = text.split(/\n(?= {6}- name: )/);
-  const secretsIn = (chunk) => new Set([...chunk.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]));
+  const envMappedSecrets = (chunk) => {
+    const out = new Set();
+    let envIndent = -1;
+    for (const line of chunk.split('\n')) {
+      const em = /^(\s*)env:\s*$/.exec(line);
+      if (em) {
+        envIndent = em[1].length;
+        continue;
+      }
+      if (envIndent >= 0) {
+        if (!line.trim()) continue;
+        const indent = /^\s*/.exec(line)[0].length;
+        if (indent <= envIndent) {
+          envIndent = -1;
+          continue;
+        }
+        const mm = /^\s*[A-Z0-9_]+:\s*\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}\s*$/.exec(line);
+        if (mm) out.add(mm[1]);
+      }
+    }
+    return out;
+  };
+  const invokes = (chunk, needle) =>
+    chunk.split('\n').some((l) => {
+      const t = l.trim();
+      return !t.startsWith('#') && t.includes(needle);
+    });
   const generation = new Set();
   const gate = new Set();
   for (const chunk of chunks) {
-    if (/\bclaude -p\b/.test(chunk)) for (const s of secretsIn(chunk)) generation.add(s);
-    if (/\bcodex exec\b/.test(chunk)) for (const s of secretsIn(chunk)) gate.add(s);
+    if (invokes(chunk, 'claude -p')) for (const s of envMappedSecrets(chunk)) generation.add(s);
+    if (invokes(chunk, 'codex exec')) for (const s of envMappedSecrets(chunk)) gate.add(s);
   }
   return { generation, gate };
 }
 
 // ---------- OBSERVED verifier registry ----------
-// 全OBSERVED fieldはここに登録された検証器を持たなければならない(fix 2)。
-// 検証器は「宣言値が証拠内容を正しく表すこと」を、抽出factとのexact compareか
-// source内verbatim tokenの照合で確かめる。宣言値はエラー文に出さない(token名のみ)。
-
-const VENDOR_BY_PACKAGE = {
-  '@anthropic-ai/claude-code': 'Anthropic',
-  '@openai/codex': 'OpenAI',
-};
+// 全OBSERVED fieldは canonical 抽出器を持つ。verifier は
+//   canonical = reg.canonical(ctx)
+//   stableStringify(declared) === stableStringify(canonical)
+// の deep exact compare だけを行う。部分集合・余分なnested key・source内の
+// 別tokenへの置換は、canonical と一致しない限りすべてFAILになる。
+// canonical を安全に定義できない field はOBSERVEDにせず、UNKNOWNとして宣言する
+// (generation.context_sources / generation.permissions_and_sandbox がその例)。
 
 const FACTORY_PATH = '.github/workflows/factory.yml';
 
-function needFact(probs, label, fact) {
-  const missing = fact === null || fact === undefined || (Array.isArray(fact) && fact.length === 0);
-  if (missing) probs.push(`${label} is not machine-extractable from ${FACTORY_PATH}`);
-  return !missing;
-}
-
-function needToken(probs, source, sourceName, token, label) {
-  if (typeof source !== 'string') {
-    probs.push(`${label}: source ${sourceName} is unavailable for verification`);
-    return false;
+export function stableStringify(v) {
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  if (v && typeof v === 'object') {
+    return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
   }
-  if (typeof token !== 'string' || !token.trim()) {
-    probs.push(`${label} must be a non-empty verbatim token`);
-    return false;
-  }
-  if (!source.includes(token)) {
-    probs.push(`${label}: declared token not found verbatim in ${sourceName}`);
-    return false;
-  }
-  return true;
-}
-
-function needEq(probs, label, declared, extracted) {
-  if (JSON.stringify(declared) !== JSON.stringify(extracted)) {
-    probs.push(`${label} contradicts the extracted source value (expected: ${JSON.stringify(extracted)}; declared value withheld)`);
-    return false;
-  }
-  return true;
-}
-
-function nonEmptyStringArray(probs, label, arr) {
-  if (!Array.isArray(arr) || arr.length === 0 || arr.some((x) => typeof x !== 'string' || !x.trim())) {
-    probs.push(`${label} must be a non-empty array of strings`);
-    return false;
-  }
-  return true;
-}
-
-function verifyCliIntegration(which) {
-  return (v, ctx) => {
-    const probs = [];
-    const pkg = which === 'generation' ? ctx.facts.generation_cli_package : ctx.facts.gate_cli_package;
-    const ver = which === 'generation' ? ctx.facts.generation_cli_version : ctx.facts.gate_cli_version;
-    if (!needFact(probs, `${which} CLI pin`, ver)) return probs;
-    needEq(probs, `${which}.provider_integration.npm_package`, v?.npm_package, pkg);
-    needEq(probs, `${which}.provider_integration.vendor`, v?.vendor, VENDOR_BY_PACKAGE[pkg]);
-    return probs;
-  };
-}
-
-function verifyCliVersion(which) {
-  return (v, ctx) => {
-    const probs = [];
-    const pkg = which === 'generation' ? ctx.facts.generation_cli_package : ctx.facts.gate_cli_package;
-    const ver = which === 'generation' ? ctx.facts.generation_cli_version : ctx.facts.gate_cli_version;
-    if (!needFact(probs, `${which} CLI pin`, ver)) return probs;
-    needEq(probs, `${which}.cli_version.name`, v?.name, pkg);
-    needEq(probs, `${which}.cli_version.version`, v?.version, ver);
-    return probs;
-  };
-}
-
-function verifyScopedSecret(which) {
-  return (v, ctx) => {
-    const probs = [];
-    const scoped = ctx.scoped[which === 'generation' ? 'generation' : 'gate'];
-    if (scoped.size === 0) {
-      probs.push(`${which} secret scope is not machine-extractable from ${FACTORY_PATH} (no secrets referenced by the invoking step)`);
-      return probs;
-    }
-    if (typeof v?.secret_declaration !== 'string' || !scoped.has(v.secret_declaration)) {
-      probs.push(
-        `${which}.auth_mechanism.secret_declaration is not among the secrets referenced by the ${which === 'generation' ? 'claude -p' : 'codex exec'} step(s) (scoped set: ${[...scoped].sort().join(', ')})`
-      );
-    }
-    return probs;
-  };
+  return JSON.stringify(v);
 }
 
 export const OBSERVED_VERIFIERS = {
-  'generation.provider_integration': { evidence: FACTORY_PATH, verify: verifyCliIntegration('generation') },
-  'generation.cli_version': { evidence: FACTORY_PATH, verify: verifyCliVersion('generation') },
+  'generation.provider_integration': {
+    evidence: FACTORY_PATH,
+    canonical: (ctx) =>
+      ctx.facts.generation_cli_version ? { vendor: 'Anthropic', npm_package: ctx.facts.generation_cli_package } : null,
+  },
+  'generation.cli_version': {
+    evidence: FACTORY_PATH,
+    canonical: (ctx) =>
+      ctx.facts.generation_cli_version ? { name: ctx.facts.generation_cli_package, version: ctx.facts.generation_cli_version } : null,
+  },
   'generation.prompt_source': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      needEq(probs, 'generation.prompt_source.container', v?.container, FACTORY_PATH);
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.heredoc_marker, 'generation.prompt_source.heredoc_marker');
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.funnel_marker, 'generation.prompt_source.funnel_marker');
-      return probs;
-    },
-  },
-  'generation.context_sources': {
-    evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (!nonEmptyStringArray(probs, 'generation.context_sources.declared_reads', v?.declared_reads)) return probs;
-      for (const t of v.declared_reads) needToken(probs, ctx.factory, FACTORY_PATH, t, `generation.context_sources.declared_reads[${t}]`);
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.generate_prompt && ctx.facts.fix_prompt
+        ? {
+            container: FACTORY_PATH,
+            generate_prompt_sha256: computeSha256(ctx.facts.generate_prompt),
+            fix_prompt_sha256: computeSha256(ctx.facts.fix_prompt),
+          }
+        : null,
   },
   'generation.output_schema': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (nonEmptyStringArray(probs, 'generation.output_schema.files', v?.files)) {
-        for (const f of v.files) needToken(probs, ctx.factory, FACTORY_PATH, `__WORK_DIR__/${f}`, `generation.output_schema.files[${f}]`);
-      }
-      if (nonEmptyStringArray(probs, 'generation.output_schema.funnel_keys', v?.funnel_keys)) {
-        for (const k of v.funnel_keys) needToken(probs, ctx.factory, FACTORY_PATH, `"${k}"`, `generation.output_schema.funnel_keys[${k}]`);
-      }
-      if (nonEmptyStringArray(probs, 'generation.output_schema.meta_keys', v?.meta_keys)) {
-        for (const k of v.meta_keys) needToken(probs, ctx.factory, FACTORY_PATH, `"${k}"`, `generation.output_schema.meta_keys[${k}]`);
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.output_files.length ? { files: ctx.facts.output_files } : null),
   },
   'generation.allowed_tools': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (!needFact(probs, '--allowedTools', ctx.facts.allowed_tools_occurrences)) return probs;
-      for (const occ of ctx.facts.allowed_tools_occurrences) {
-        if (v !== occ) {
-          probs.push(`generation.allowed_tools contradicts an --allowedTools declaration in ${FACTORY_PATH} (declared value withheld)`);
-          break;
-        }
-      }
-      return probs;
+    canonical: (ctx) => {
+      const occ = ctx.facts.allowed_tools_occurrences;
+      if (!occ.length) return null;
+      return occ.every((o) => o === occ[0]) ? occ[0] : null;
     },
   },
   'generation.turn_budget': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
+    canonical: (ctx) => {
       const mt = ctx.facts.max_turns_occurrences;
-      if (!needFact(probs, '--max-turns', mt)) return probs;
-      if (mt.length !== 2) {
-        probs.push(`expected exactly 2 --max-turns declarations in ${FACTORY_PATH}, found ${mt.length}`);
-        return probs;
-      }
-      needEq(probs, 'generation.turn_budget.generate_max_turns', v?.generate_max_turns, mt[0]);
-      needEq(probs, 'generation.turn_budget.fix_max_turns', v?.fix_max_turns, mt[1]);
-      if (needFact(probs, 'MAX_FIX', ctx.facts.max_fix_rounds)) {
-        needEq(probs, 'generation.turn_budget.max_fix_rounds', v?.max_fix_rounds, ctx.facts.max_fix_rounds);
-      }
-      return probs;
+      if (mt.length !== 2 || ctx.facts.max_fix_rounds === null) return null;
+      return { generate_max_turns: mt[0], fix_max_turns: mt[1], max_fix_rounds: ctx.facts.max_fix_rounds };
     },
   },
-  'generation.permissions_and_sandbox': {
+  'generation.auth_mechanism': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (!needToken(probs, ctx.factory, FACTORY_PATH, v?.policing_function ? `${v.policing_function}() {` : v?.policing_function, 'generation.permissions_and_sandbox.policing_function definition')) return probs;
-      if (ctx.factory.split(v.policing_function).length - 1 < 2) {
-        probs.push('generation.permissions_and_sandbox.policing_function is defined but never invoked');
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.scoped.generation.size ? { secret_declarations: [...ctx.scoped.generation].sort() } : null,
   },
-  'generation.auth_mechanism': { evidence: FACTORY_PATH, verify: verifyScopedSecret('generation') },
-  'semantic_gate.provider_integration': { evidence: FACTORY_PATH, verify: verifyCliIntegration('gate') },
-  'semantic_gate.cli_version': { evidence: FACTORY_PATH, verify: verifyCliVersion('gate') },
+  'semantic_gate.provider_integration': {
+    evidence: FACTORY_PATH,
+    canonical: (ctx) => (ctx.facts.gate_cli_version ? { vendor: 'OpenAI', npm_package: ctx.facts.gate_cli_package } : null),
+  },
+  'semantic_gate.cli_version': {
+    evidence: FACTORY_PATH,
+    canonical: (ctx) =>
+      ctx.facts.gate_cli_version ? { name: ctx.facts.gate_cli_package, version: ctx.facts.gate_cli_version } : null,
+  },
   'semantic_gate.prompt_source': {
     evidence: 'scripts/gate-prompt.txt',
-    verify: (v, ctx) => {
-      const probs = [];
-      needEq(probs, 'semantic_gate.prompt_source.path', v?.path, 'scripts/gate-prompt.txt');
-      if (needToken(probs, ctx.factory, FACTORY_PATH, v?.load_marker, 'semantic_gate.prompt_source.load_marker')) {
-        if (typeof v?.path === 'string' && !v.load_marker.includes(v.path)) {
-          probs.push('semantic_gate.prompt_source.load_marker does not reference the declared path');
-        }
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.gate_prompt_path ? { path: ctx.facts.gate_prompt_path } : null),
   },
   'semantic_gate.invocation': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.command, 'semantic_gate.invocation.command');
-      if (nonEmptyStringArray(probs, 'semantic_gate.invocation.flags', v?.flags)) {
-        for (const f of v.flags) needToken(probs, ctx.factory, FACTORY_PATH, f, `semantic_gate.invocation.flags[${f}]`);
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.codex_invocation?.flags?.length ? ctx.facts.codex_invocation : null),
   },
   'semantic_gate.verdict_contract': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (needToken(probs, ctx.factory, FACTORY_PATH, v?.comparison_marker, 'semantic_gate.verdict_contract.comparison_marker')) {
-        if (typeof v?.pass_token !== 'string' || !v.comparison_marker.includes(`"${v.pass_token}"`)) {
-          probs.push('semantic_gate.verdict_contract.pass_token is not the token compared by comparison_marker');
-        }
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.verdict_pass_token ? { pass_token: ctx.facts.verdict_pass_token } : null),
   },
   'semantic_gate.input_scope': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.utf8_marker, 'semantic_gate.input_scope.utf8_marker');
-      if (needToken(probs, ctx.factory, FACTORY_PATH, v?.copy_marker, 'semantic_gate.input_scope.copy_marker')) {
-        if (typeof v?.copied_file !== 'string' || !v.copy_marker.includes(v.copied_file)) {
-          probs.push('semantic_gate.input_scope.copied_file is not referenced by copy_marker');
-        }
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.input_scope_copy ? { copied_file: ctx.facts.input_scope_copy } : null),
   },
-  'semantic_gate.auth_mechanism': { evidence: FACTORY_PATH, verify: verifyScopedSecret('gate') },
+  'semantic_gate.auth_mechanism': {
+    evidence: FACTORY_PATH,
+    canonical: (ctx) => (ctx.scoped.gate.size ? { secret_declarations: [...ctx.scoped.gate].sort() } : null),
+  },
   'deterministic_verification.node_version_declared': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (needFact(probs, 'node-version', ctx.facts.node_version)) {
-        needEq(probs, 'deterministic_verification.node_version_declared.declared', v?.declared, ctx.facts.node_version);
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.node_version ? { declared: ctx.facts.node_version } : null),
   },
   'deterministic_verification.runner_os': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (needFact(probs, 'runs-on', ctx.facts.runner_label)) {
-        needEq(probs, 'deterministic_verification.runner_os.label', v?.label, ctx.facts.runner_label);
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.runner_label ? { label: ctx.facts.runner_label } : null),
   },
   'deterministic_verification.static_smoke': {
     evidence: 'smoke.mjs',
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.entrypoint, 'deterministic_verification.static_smoke.entrypoint');
-      needToken(probs, ctx.sources['smoke.mjs'], 'smoke.mjs', v?.pass_marker, 'deterministic_verification.static_smoke.pass_marker');
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.smoke_entry && typeof ctx.sources['smoke.mjs'] === 'string'
+        ? { entrypoint: `node ${ctx.facts.smoke_entry}`, implementation_sha256: computeSha256(ctx.sources['smoke.mjs']) }
+        : null,
   },
   'deterministic_verification.interaction_smoke': {
     evidence: 'scripts/interaction-smoke.mjs',
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.entrypoint, 'deterministic_verification.interaction_smoke.entrypoint');
-      if (nonEmptyStringArray(probs, 'deterministic_verification.interaction_smoke.contract_inputs', v?.contract_inputs)) {
-        for (const i of v.contract_inputs) {
-          needToken(probs, ctx.sources['scripts/interaction-smoke.mjs'], 'scripts/interaction-smoke.mjs', `'${i}'`, `deterministic_verification.interaction_smoke.contract_inputs[${i}]`);
-        }
-      }
-      return probs;
+    canonical: (ctx) => {
+      const src = ctx.sources['scripts/interaction-smoke.mjs'];
+      if (!ctx.facts.interaction_entry || typeof src !== 'string') return null;
+      const m = /VALID_INPUTS\s*=\s*\[([^\]]*)\]/.exec(src);
+      if (!m) return null;
+      const inputs = [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1]);
+      if (!inputs.length) return null;
+      return { entrypoint: `node ${ctx.facts.interaction_entry}`, contract_inputs: inputs };
     },
   },
   'deterministic_verification.browser_engine': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (needFact(probs, 'playwright pin', ctx.facts.playwright_version)) {
-        needEq(probs, 'deterministic_verification.browser_engine.package', v?.package, 'playwright');
-        needEq(probs, 'deterministic_verification.browser_engine.version', v?.version, ctx.facts.playwright_version);
-      }
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.browser ? `--with-deps ${v.browser}` : v?.browser, 'deterministic_verification.browser_engine.browser');
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.playwright_version && ctx.facts.browser
+        ? { package: 'playwright', version: ctx.facts.playwright_version, browser: ctx.facts.browser }
+        : null,
   },
   'deterministic_verification.catalog_builder': {
     evidence: 'scripts/build-catalog.mjs',
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.entrypoint, 'deterministic_verification.catalog_builder.entrypoint');
-      needToken(probs, ctx.sources['scripts/build-catalog.mjs'], 'scripts/build-catalog.mjs', v?.fail_closed_marker, 'deterministic_verification.catalog_builder.fail_closed_marker');
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.catalog_entry && typeof ctx.sources['scripts/build-catalog.mjs'] === 'string'
+        ? { entrypoint: `node ${ctx.facts.catalog_entry}`, implementation_sha256: computeSha256(ctx.sources['scripts/build-catalog.mjs']) }
+        : null,
   },
   'deterministic_verification.constraints_contract': {
     evidence: 'CONSTRAINTS.md',
-    verify: (v, ctx) => {
-      const probs = [];
-      if (nonEmptyStringArray(probs, 'deterministic_verification.constraints_contract.markers', v?.markers)) {
-        for (const m of v.markers) needToken(probs, ctx.sources['CONSTRAINTS.md'], 'CONSTRAINTS.md', m, 'deterministic_verification.constraints_contract.markers[]');
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      typeof ctx.sources['CONSTRAINTS.md'] === 'string' ? { contract_sha256: computeSha256(ctx.sources['CONSTRAINTS.md']) } : null,
   },
   'deterministic_verification.integrity_check': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (!needToken(probs, ctx.factory, FACTORY_PATH, v?.policing_function ? `${v.policing_function}() {` : v?.policing_function, 'deterministic_verification.integrity_check.policing_function definition')) return probs;
-      if (ctx.factory.split(v.policing_function).length - 1 < 2) {
-        probs.push('deterministic_verification.integrity_check.policing_function is defined but never invoked');
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.lib_source && ctx.facts.lib_source.includes('integrity_check() {')
+        ? { policing_function: 'integrity_check', lib_sha256: computeSha256(ctx.facts.lib_source) }
+        : null,
   },
   'publish_runtime.triggers': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (nonEmptyStringArray(probs, 'publish_runtime.triggers.events', v?.events)) {
-        for (const e of v.events) needToken(probs, ctx.factory, FACTORY_PATH, `${e}:`, `publish_runtime.triggers.events[${e}]`);
-      }
-      if (needFact(probs, 'schedule cron', ctx.facts.cron)) {
-        needEq(probs, 'publish_runtime.triggers.cron', v?.cron, ctx.facts.cron);
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.on_block?.events?.length && ctx.facts.cron ? { events: ctx.facts.on_block.events, cron: ctx.facts.cron } : null,
   },
   'publish_runtime.workflow_permissions': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (needFact(probs, 'permissions.contents', ctx.facts.permissions_contents)) {
-        needEq(probs, 'publish_runtime.workflow_permissions.contents', v?.contents, ctx.facts.permissions_contents);
-      }
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.permissions_contents ? { contents: ctx.facts.permissions_contents } : null),
   },
   'publish_runtime.concurrency_and_timeout': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (needFact(probs, 'concurrency.group', ctx.facts.concurrency_group)) {
-        needEq(probs, 'publish_runtime.concurrency_and_timeout.concurrency_group', v?.concurrency_group, ctx.facts.concurrency_group);
-      }
-      if (ctx.facts.cancel_in_progress !== null) {
-        needEq(probs, 'publish_runtime.concurrency_and_timeout.cancel_in_progress', v?.cancel_in_progress, ctx.facts.cancel_in_progress);
-      }
-      if (needFact(probs, 'timeout-minutes', ctx.facts.timeouts)) {
-        needEq(probs, 'publish_runtime.concurrency_and_timeout.job_timeout_minutes', v?.job_timeout_minutes, ctx.facts.timeouts[0]);
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.concurrency_group && ctx.facts.cancel_in_progress !== null && ctx.facts.timeouts.length
+        ? {
+            concurrency_group: ctx.facts.concurrency_group,
+            cancel_in_progress: ctx.facts.cancel_in_progress,
+            job_timeout_minutes: ctx.facts.timeouts[0],
+          }
+        : null,
   },
   'publish_runtime.checkout_configuration': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (typeof v?.action !== 'string' || !v.action.startsWith('actions/checkout@') || !ctx.facts.action_refs.includes(v.action)) {
-        probs.push('publish_runtime.checkout_configuration.action is not a checkout ref actually used by factory.yml');
-      }
-      if (needFact(probs, 'fetch-depth', ctx.facts.fetch_depth)) {
-        needEq(probs, 'publish_runtime.checkout_configuration.fetch_depth', v?.fetch_depth, ctx.facts.fetch_depth);
-      }
-      needToken(
-        probs, ctx.factory, FACTORY_PATH,
-        typeof v?.persist_credentials_expression === 'string' ? `persist-credentials: ${v.persist_credentials_expression}` : v?.persist_credentials_expression,
-        'publish_runtime.checkout_configuration.persist_credentials_expression'
-      );
-      return probs;
+    canonical: (ctx) => {
+      const refs = ctx.facts.action_refs.filter((r) => r.startsWith('actions/checkout@'));
+      if (refs.length !== 1 || ctx.facts.fetch_depth === null || !ctx.facts.persist_credentials_expression) return null;
+      return { action: refs[0], fetch_depth: ctx.facts.fetch_depth, persist_credentials_expression: ctx.facts.persist_credentials_expression };
     },
   },
   'publish_runtime.declared_action_refs': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (!nonEmptyStringArray(probs, 'publish_runtime.declared_action_refs.refs', v?.refs)) return probs;
-      needEq(probs, 'publish_runtime.declared_action_refs.refs', [...v.refs].sort(), ctx.facts.action_refs);
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.action_refs.length ? { refs: ctx.facts.action_refs } : null),
   },
   'publish_runtime.step_timeouts': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (!needFact(probs, 'timeout-minutes', ctx.facts.timeouts)) return probs;
-      needEq(probs, 'publish_runtime.step_timeouts.job', v?.job, ctx.facts.timeouts[0]);
-      needEq(probs, 'publish_runtime.step_timeouts.steps', v?.steps, ctx.facts.timeouts.slice(1));
-      return probs;
-    },
+    canonical: (ctx) => (ctx.facts.timeouts.length ? { job: ctx.facts.timeouts[0], steps: ctx.facts.timeouts.slice(1) } : null),
   },
   'publish_runtime.publish_mechanism': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.push_command, 'publish_runtime.publish_mechanism.push_command');
-      if (needFact(probs, 'push retry loop', ctx.facts.push_attempts)) {
-        needEq(probs, 'publish_runtime.publish_mechanism.max_attempts', v?.max_attempts, ctx.facts.push_attempts);
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.push_target && ctx.facts.push_attempts
+        ? { push_command: `git push origin ${ctx.facts.push_target}`, max_attempts: ctx.facts.push_attempts }
+        : null,
   },
   'publish_runtime.dry_run_canary': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      needToken(probs, ctx.factory, FACTORY_PATH, typeof v?.input_name === 'string' ? `${v.input_name}:` : v?.input_name, 'publish_runtime.dry_run_canary.input_name');
-      if (needToken(probs, ctx.factory, FACTORY_PATH, v?.guard_marker, 'publish_runtime.dry_run_canary.guard_marker')) {
-        if (!v.guard_marker.includes('"$DRY_RUN"')) {
-          probs.push('publish_runtime.dry_run_canary.guard_marker does not test the DRY_RUN variable');
-        }
-      }
-      return probs;
-    },
+    canonical: (ctx) =>
+      ctx.facts.on_block?.inputs?.length && ctx.facts.dry_run_guard_value
+        ? { input_names: ctx.facts.on_block.inputs, guard_value: ctx.facts.dry_run_guard_value }
+        : null,
   },
   'publish_runtime.artifact_persistence': {
     evidence: FACTORY_PATH,
-    verify: (v, ctx) => {
-      const probs = [];
-      if (typeof v?.action !== 'string' || !v.action.startsWith('actions/upload-artifact@') || !ctx.facts.action_refs.includes(v.action)) {
-        probs.push('publish_runtime.artifact_persistence.action is not an upload-artifact ref actually used by factory.yml');
-      }
-      needToken(probs, ctx.factory, FACTORY_PATH, typeof v?.condition === 'string' ? `if: ${v.condition}` : v?.condition, 'publish_runtime.artifact_persistence.condition');
-      needToken(probs, ctx.factory, FACTORY_PATH, v?.path_expression, 'publish_runtime.artifact_persistence.path_expression');
-      return probs;
-    },
+    canonical: (ctx) => ctx.facts.upload_step,
   },
 };
+
+// 宣言時に使う canonical 値の一括計算(baseline は canonical そのものを宣言する)。
+export function canonicalObservedValues(ctx) {
+  return Object.fromEntries(Object.entries(OBSERVED_VERIFIERS).map(([k, r]) => [k, r.canonical(ctx)]));
+}
 
 // 全OBSERVED fieldを registry で検証する。
 // 戻り値: {problems, observedTotal, verifiedOk, missingVerifier}
@@ -892,17 +819,27 @@ export function verifyObservedFields(baseline, ctx) {
         problems.push(`evidence for ${key} must be repository evidence at ${reg.evidence}`);
         continue;
       }
-      const fieldProblems = reg.verify(entry.value, ctx);
-      if (fieldProblems.length) {
-        problems.push(...fieldProblems.map((p) => `verifier[${key}]: ${p}`));
-      } else {
-        verifiedOk++;
+      let canonical;
+      try {
+        canonical = reg.canonical(ctx);
+      } catch {
+        canonical = null;
       }
+      if (canonical === null || canonical === undefined) {
+        problems.push(`verifier[${key}]: canonical value is not machine-extractable from the evidence source`);
+        continue;
+      }
+      if (stableStringify(entry.value) !== stableStringify(canonical)) {
+        problems.push(
+          `verifier[${key}]: declared value does not deep-equal the canonical value extracted from the evidence source (canonical: ${JSON.stringify(canonical)}; declared value withheld)`
+        );
+        continue;
+      }
+      verifiedOk++;
     }
   }
   return { problems, observedTotal, verifiedOk, missingVerifier };
 }
-
 // ---------- working tree との照合 ----------
 
 export function verifyMaterialSources(baseline, repoRoot) {

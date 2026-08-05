@@ -3,7 +3,7 @@
   "kind": "champion-baseline",
   "title": "Current production configuration baseline (C0 — Configuration Provenance)",
   "declared_at": "2026-08-05",
-  "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every field is either OBSERVED with repository evidence, or UNKNOWN with a concrete reason and a resolution path. scripts/c0-provenance.mjs enforces the exact v1 schema (undefined groups/fields/materials are FAIL; additions require a schema version bump), verifies every OBSERVED value against its evidence source through an explicit verifier registry (extracted-fact exact compare or verbatim-token presence only), scopes secret declarations to the steps that actually invoke each CLI, binds the declaration to this repository and to a base commit that must be an ancestor of the inspected HEAD, and separates production_material (STALE-relevant) from control_plane_snapshot (drift recorded, never STALE).",
+  "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every OBSERVED value IS the canonical value deterministically extracted from its evidence source at declaration time; scripts/c0-provenance.mjs re-extracts the canonical value at observation time and requires a deep exact match (no token-presence checks, so subsets, additions and substitutions all FAIL). Fields whose canonical value cannot be safely extracted are UNKNOWN with reason and resolution — keeping the OBSERVED count high is explicitly not a goal. The observer also enforces the exact v1 schema, step-scoped secret declarations, repository/history binding and production/snapshot separation.",
   "base": {
     "repository": "LightsOutWorks/atf-loop",
     "default_branch": "main",
@@ -70,7 +70,10 @@
     "generation": {
       "provider_integration": {
         "status": "OBSERVED",
-        "value": { "vendor": "Anthropic", "npm_package": "@anthropic-ai/claude-code" },
+        "value": {
+          "vendor": "Anthropic",
+          "npm_package": "@anthropic-ai/claude-code"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -80,7 +83,10 @@
       },
       "cli_version": {
         "status": "OBSERVED",
-        "value": { "name": "@anthropic-ai/claude-code", "version": "2.1.220" },
+        "value": {
+          "name": "@anthropic-ai/claude-code",
+          "version": "2.1.220"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -128,38 +134,37 @@
         "status": "OBSERVED",
         "value": {
           "container": ".github/workflows/factory.yml",
-          "heredoc_marker": "PROMPT=$(cat <<'EOF'",
-          "funnel_marker": "ATF IDEA FUNNEL v1"
+          "generate_prompt_sha256": "fa2529012a0152e1969c8d31b2e0178e6a9b7302d4e06a06c4ec7e80a8f461b3",
+          "fix_prompt_sha256": "dcb7ef1a29bf3b25c10e23e8f90b9c554f0d7d6fdb1672bb8b649bf175fd3e9c"
         },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "PROMPT heredoc in the 生成 step; the fix-round prompt is the FIX_TMPL heredoc in the スモーク検証 step"
+          "derived_from": "SHA-256 of the PROMPT and FIX_TMPL heredoc bodies extracted verbatim from factory.yml (complete prompt text pinning)"
         }
       },
       "context_sources": {
-        "status": "OBSERVED",
-        "value": { "declared_reads": ["CONSTRAINTS.md", "smoke.mjs", "works/"] },
-        "evidence": {
-          "kind": "repository",
-          "path": ".github/workflows/factory.yml",
-          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "PROMPT heredoc 準備/タスク sections instruct reading these sources before generating"
-        }
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "The prompt's context-assembly instructions are natural-language prose; a complete canonical machine extraction is not stable, and a partial token list would be a fail-open claim. The full instruction text is already pinned by generation.prompt_source.generate_prompt_sha256.",
+        "resolution": "Derive the actually-read context from a structured CLI transcript in an instrumented run, or restructure the prompt to declare a machine-readable context manifest."
       },
       "output_schema": {
         "status": "OBSERVED",
         "value": {
-          "files": ["index.html", "devlog.md", "funnel.json", "meta.json"],
-          "funnel_keys": ["seed", "candidates", "finalists", "selected", "reason"],
-          "meta_keys": ["seed", "title", "description", "primary_input", "success_condition"]
+          "files": [
+            "devlog.md",
+            "funnel.json",
+            "index.html",
+            "meta.json"
+          ]
         },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "PROMPT heredoc task items 2–5: __WORK_DIR__ output files and the fixed funnel.json / meta.json key sets"
+          "derived_from": "Complete sorted set of __WORK_DIR__/<file> references extracted from factory.yml; the full output contract text is pinned by prompt_source hashes"
         }
       },
       "allowed_tools": {
@@ -174,7 +179,11 @@
       },
       "turn_budget": {
         "status": "OBSERVED",
-        "value": { "generate_max_turns": 120, "fix_max_turns": 60, "max_fix_rounds": 3 },
+        "value": {
+          "generate_max_turns": 120,
+          "fix_max_turns": 60,
+          "max_fix_rounds": 3
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -183,23 +192,23 @@
         }
       },
       "permissions_and_sandbox": {
-        "status": "OBSERVED",
-        "value": { "policing_function": "integrity_check" },
-        "evidence": {
-          "kind": "repository",
-          "path": ".github/workflows/factory.yml",
-          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "integrity_check function in lib.sh polices all writes outside the target works/seed-NNN directory, fail-closed"
-        }
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "The generation CLI's effective permission/sandbox semantics cannot be completely extracted from workflow text as a canonical value; a token-level claim would be fail-open. The write-policing implementation is pinned by deterministic_verification.integrity_check.lib_sha256.",
+        "resolution": "Adopt a structured sandbox/permission declaration in the workflow, or capture the CLI's effective permission report in an instrumented run."
       },
       "auth_mechanism": {
         "status": "OBSERVED",
-        "value": { "secret_declaration": "CLAUDE_CODE_OAUTH_TOKEN" },
+        "value": {
+          "secret_declarations": [
+            "CLAUDE_CODE_OAUTH_TOKEN"
+          ]
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "env reference secrets.CLAUDE_CODE_OAUTH_TOKEN scoped to the steps that invoke claude -p; only the existence of the declaration is recorded — the value, its hash, prefix and length are never observed"
+          "derived_from": "Complete set of env mappings NAME: ${{ secrets.X }} in the step(s) that invoke claude -p; run-body and comment strings are ignored. Only declaration names are recorded — values, hashes, prefixes and lengths never are"
         }
       },
       "token_usage": {
@@ -224,7 +233,10 @@
     "semantic_gate": {
       "provider_integration": {
         "status": "OBSERVED",
-        "value": { "vendor": "OpenAI", "npm_package": "@openai/codex" },
+        "value": {
+          "vendor": "OpenAI",
+          "npm_package": "@openai/codex"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -234,7 +246,10 @@
       },
       "cli_version": {
         "status": "OBSERVED",
-        "value": { "name": "@openai/codex", "version": "0.146.0" },
+        "value": {
+          "name": "@openai/codex",
+          "version": "0.146.0"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -280,59 +295,70 @@
       },
       "prompt_source": {
         "status": "OBSERVED",
-        "value": { "path": "scripts/gate-prompt.txt", "load_marker": "cat scripts/gate-prompt.txt" },
+        "value": {
+          "path": "scripts/gate-prompt.txt"
+        },
         "evidence": {
           "kind": "repository",
           "path": "scripts/gate-prompt.txt",
           "git_blob_sha1": "ab371335e6752fee93045b519a57a89142876d96",
-          "derived_from": "Fixed gate prompt file, loaded by the 公開内容ゲート step via GATE_PROMPT=$(cat scripts/gate-prompt.txt)"
+          "derived_from": "Path extracted from GATE_PROMPT=$(cat <path>) in factory.yml; content pinned by this material's hashes"
         }
       },
       "invocation": {
         "status": "OBSERVED",
         "value": {
           "command": "codex exec",
-          "flags": ["--cd", "--sandbox read-only", "--skip-git-repo-check", "--output-last-message"]
+          "flags": [
+            "--cd",
+            "--sandbox read-only",
+            "--skip-git-repo-check",
+            "--output-last-message"
+          ]
         },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "公開内容ゲート step: codex exec argument list, executed exactly once"
+          "derived_from": "codex exec invocation joined across continuation lines; canonical form is the ordered -- flag tokens with attached literal values"
         }
       },
       "verdict_contract": {
         "status": "OBSERVED",
-        "value": { "pass_token": "PUBLISH", "comparison_marker": "[ \"$FIRST_LINE\" = \"PUBLISH\" ]" },
+        "value": {
+          "pass_token": "PUBLISH"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "FIRST_LINE comparison in the 公開内容ゲート step; anything other than an exact first-line PUBLISH stops the run fail-closed"
+          "derived_from": "Pass token extracted from the [ \"$FIRST_LINE\" = \"<token>\" ] comparison in the 公開内容ゲート step"
         }
       },
       "input_scope": {
         "status": "OBSERVED",
         "value": {
-          "copied_file": "index.html",
-          "utf8_marker": "iconv -f UTF-8 -t UTF-8",
-          "copy_marker": "\"$WORK_DIR/index.html\" > \"$GATE_DIR/index.html\""
+          "copied_file": "index.html"
         },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "GATE_DIR copy step: only the UTF-8-validated candidate index.html is exposed to the gate"
+          "derived_from": "File name extracted from the iconv UTF-8 copy into GATE_DIR (source and destination names must match)"
         }
       },
       "auth_mechanism": {
         "status": "OBSERVED",
-        "value": { "secret_declaration": "CODEX_AUTH_JSON" },
+        "value": {
+          "secret_declarations": [
+            "CODEX_AUTH_JSON"
+          ]
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "env reference secrets.CODEX_AUTH_JSON scoped to the step that invokes codex exec; only the existence of the declaration is recorded — the value, its hash, prefix and length are never observed"
+          "derived_from": "Complete set of env mappings NAME: ${{ secrets.X }} in the step that invokes codex exec; run-body and comment strings are ignored. Only declaration names are recorded — values, hashes, prefixes and lengths never are"
         }
       },
       "token_usage": {
@@ -357,7 +383,9 @@
     "deterministic_verification": {
       "node_version_declared": {
         "status": "OBSERVED",
-        "value": { "declared": "22" },
+        "value": {
+          "declared": "22"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -367,7 +395,9 @@
       },
       "runner_os": {
         "status": "OBSERVED",
-        "value": { "label": "ubuntu-latest" },
+        "value": {
+          "label": "ubuntu-latest"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -377,27 +407,41 @@
       },
       "static_smoke": {
         "status": "OBSERVED",
-        "value": { "entrypoint": "node smoke.mjs", "pass_marker": "PASS (6/6)" },
+        "value": {
+          "entrypoint": "node smoke.mjs",
+          "implementation_sha256": "af9888f0ef49f1f29404c5e877df839b1ea8ee3b82e3abcd6007dab8ace2a063"
+        },
         "evidence": {
           "kind": "repository",
           "path": "smoke.mjs",
           "git_blob_sha1": "2188cf6df8322a0ff88018ead11490480edd630c",
-          "derived_from": "smoke.mjs implementation (fixed 6 checks; success prints PASS (6/6)); invoked as node smoke.mjs in factory.yml"
+          "derived_from": "Invocation extracted from factory.yml; implementation pinned by SHA-256 of smoke.mjs"
         }
       },
       "interaction_smoke": {
         "status": "OBSERVED",
-        "value": { "entrypoint": "node scripts/interaction-smoke.mjs", "contract_inputs": ["tap", "hold", "drag"] },
+        "value": {
+          "entrypoint": "node scripts/interaction-smoke.mjs",
+          "contract_inputs": [
+            "tap",
+            "hold",
+            "drag"
+          ]
+        },
         "evidence": {
           "kind": "repository",
           "path": "scripts/interaction-smoke.mjs",
           "git_blob_sha1": "833e97d4400293df0f9feb4458784f4bea385c00",
-          "derived_from": "scripts/interaction-smoke.mjs implementation (VALID_INPUTS contract driven by real Playwright pointer events); invoked in factory.yml"
+          "derived_from": "Invocation extracted from factory.yml; contract inputs extracted from the VALID_INPUTS array in scripts/interaction-smoke.mjs"
         }
       },
       "browser_engine": {
         "status": "OBSERVED",
-        "value": { "package": "playwright", "version": "1.62.1", "browser": "chromium" },
+        "value": {
+          "package": "playwright",
+          "version": "1.62.1",
+          "browser": "chromium"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -407,32 +451,40 @@
       },
       "catalog_builder": {
         "status": "OBSERVED",
-        "value": { "entrypoint": "node scripts/build-catalog.mjs", "fail_closed_marker": "process.exit(1)" },
+        "value": {
+          "entrypoint": "node scripts/build-catalog.mjs",
+          "implementation_sha256": "45be71fbd26ba48be5a31cab22245159e1ba83a271d3456bab2ad1a3b93226de"
+        },
         "evidence": {
           "kind": "repository",
           "path": "scripts/build-catalog.mjs",
           "git_blob_sha1": "f035aec90e2ab7e57b45b36dea78d97eb5ee1296",
-          "derived_from": "scripts/build-catalog.mjs implementation (fail-closed exit 1 without writing on invalid meta.json); invoked in factory.yml"
+          "derived_from": "Invocation extracted from factory.yml; implementation pinned by SHA-256 of scripts/build-catalog.mjs"
         }
       },
       "constraints_contract": {
         "status": "OBSERVED",
-        "value": { "markers": ["最優先ルール", "検証項目は次の 6 つに固定"] },
+        "value": {
+          "contract_sha256": "02561a4d1add095d34a04f1c3ba33f9a23fcb1cbf1ec8edf1d30959cd7465eae"
+        },
         "evidence": {
           "kind": "repository",
           "path": "CONSTRAINTS.md",
           "git_blob_sha1": "b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e",
-          "derived_from": "CONSTRAINTS.md: top-priority rule declaration and the fixed 6-check machine verification contract"
+          "derived_from": "SHA-256 of the complete CONSTRAINTS.md content (the contract is the file itself)"
         }
       },
       "integrity_check": {
         "status": "OBSERVED",
-        "value": { "policing_function": "integrity_check" },
+        "value": {
+          "policing_function": "integrity_check",
+          "lib_sha256": "71ac6a52d5d03e4909864a7d397d9c61b6ac7eca1738d2177f163a324f696e77"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "integrity_check function in lib.sh (準備 step) and its call sites; stops the run fail-closed on tracked-file edits or out-of-scope new files"
+          "derived_from": "SHA-256 of the lib.sh heredoc body extracted from factory.yml, which must define integrity_check()"
         }
       },
       "effective_node_version": {
@@ -457,17 +509,25 @@
     "publish_runtime": {
       "triggers": {
         "status": "OBSERVED",
-        "value": { "events": ["workflow_dispatch", "schedule"], "cron": "0 1 * * 6" },
+        "value": {
+          "events": [
+            "workflow_dispatch",
+            "schedule"
+          ],
+          "cron": "0 1 * * 6"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "on: block of factory.yml (Saturday 10:00 JST expressed in UTC; schedule runs are always full runs)"
+          "derived_from": "Complete list of on: block event keys plus the schedule cron, extracted in file order"
         }
       },
       "workflow_permissions": {
         "status": "OBSERVED",
-        "value": { "contents": "write" },
+        "value": {
+          "contents": "write"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -477,7 +537,11 @@
       },
       "concurrency_and_timeout": {
         "status": "OBSERVED",
-        "value": { "concurrency_group": "factory", "cancel_in_progress": false, "job_timeout_minutes": 80 },
+        "value": {
+          "concurrency_group": "factory",
+          "cancel_in_progress": false,
+          "job_timeout_minutes": 80
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -501,7 +565,13 @@
       },
       "declared_action_refs": {
         "status": "OBSERVED",
-        "value": { "refs": ["actions/checkout@v4", "actions/setup-node@v4", "actions/upload-artifact@v4"] },
+        "value": {
+          "refs": [
+            "actions/checkout@v4",
+            "actions/setup-node@v4",
+            "actions/upload-artifact@v4"
+          ]
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -511,7 +581,16 @@
       },
       "step_timeouts": {
         "status": "OBSERVED",
-        "value": { "job": 80, "steps": [10, 25, 35, 10, 5] },
+        "value": {
+          "job": 80,
+          "steps": [
+            10,
+            25,
+            35,
+            10,
+            5
+          ]
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -521,7 +600,10 @@
       },
       "publish_mechanism": {
         "status": "OBSERVED",
-        "value": { "push_command": "git push origin HEAD:main", "max_attempts": 4 },
+        "value": {
+          "push_command": "git push origin HEAD:main",
+          "max_attempts": 4
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
@@ -531,12 +613,17 @@
       },
       "dry_run_canary": {
         "status": "OBSERVED",
-        "value": { "input_name": "dry_run", "guard_marker": "if [ \"$DRY_RUN\" = \"true\" ]" },
+        "value": {
+          "input_names": [
+            "dry_run"
+          ],
+          "guard_value": "true"
+        },
         "evidence": {
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "workflow_dispatch input dry_run and the 公開 step guard that skips only the push to main"
+          "derived_from": "Complete list of workflow_dispatch input names plus the value compared against $DRY_RUN in the publish guard"
         }
       },
       "artifact_persistence": {
@@ -550,7 +637,7 @@
           "kind": "repository",
           "path": ".github/workflows/factory.yml",
           "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
-          "derived_from": "実行ログを artifact として保存 step: uploads RUNNER_TEMP/factory-log on success and failure"
+          "derived_from": "if / path extracted from the step chunk that uses actions/upload-artifact"
         }
       },
       "resolved_action_commits": {
