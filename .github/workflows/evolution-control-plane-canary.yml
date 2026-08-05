@@ -1,10 +1,17 @@
-# evolution-control-plane-canary.yml — F3「Runtime Reads Control Plane」の read-only カナリア。
+# evolution-control-plane-canary.yml — F3 precursor の read-only カナリア。
 #
 # 何をするか:
-#   決定論テスト → scripts/control-plane-canary.mjs を実行し、origin/main の 3 正本
-#   (OS.md / CURRENT_STATE.md / ROADMAP.md)と factory.yml の blob SHA を証拠として記録、
-#   実行可能な次 gate を正確に 1 件だけ「提案」する。結果 artifact は成功・失敗に
-#   かかわらず Runner の一時領域($RUNNER_TEMP)から保存する。
+#   決定論テスト → scripts/control-plane-canary.mjs を実行し、origin/main の 3 正本と
+#   factory.yml の blob SHA、および CURRENT_STATE.md / ROADMAP.md 内の versioned JSON block
+#   の digest を証拠として記録する。block の構造検証(schema / 重複 / 未知 field / 参照 /
+#   status / 依存 cycle / cross-doc 整合)を通し、dependency-ready な gate 集合を確定する。
+#   結果 artifact は成功・失敗にかかわらず Runner の一時領域($RUNNER_TEMP)から保存する。
+#
+# 何を主張しないか:
+#   - PASS を出さない。OS 基準による意味的順位付けと権限判断は別 step であり未実装。
+#     したがって F3 は PRECURSOR に留まる
+#   - gate を「実行可能」「選択可能」とは主張しない
+#   - 自由文の意味監査はしない。判断入力は JSON block だけ
 #
 # 何をしないか(Production Loop 非干渉・成功偽装の防止):
 #   - repository への書き込み・branch/PR/comment 作成・merge・push は一切しない
@@ -12,14 +19,18 @@
 #   - .github/workflows/factory.yml には触れない(canary は blob SHA を読むだけ)
 #
 # 自己承認の防止(保護範囲を明記):
-#   pull_request で 3 正本が変更された時に起動するが、canary スクリプトは判定に
-#   PR 側 checkout(改変版)を使わず、常に origin/main の git object を読む。
-#   よって同じ PR で「制御文書(3 正本)」を書き換えても canary の判断には使われない。
+#   pull_request で 3 正本が変更された時に起動するが、canary は判定に PR 側 checkout
+#   (改変版)を使わず、常に origin/main の git object を読む。よって同じ PR で制御文書を
+#   書き換えても canary の判断には使われない。
 #   限界: workflow 本体と scripts/ は pull_request の merge ref から実行されるため、
-#   canary 実装自体を書き換える PR はこの仕組みでは防げない(pull_request CI の
-#   構造的限界)。canary 実装の変更は従来どおり human review / merge の対象とする。
+#   canary 実装自体を書き換える PR はこの仕組みでは防げない(pull_request CI の構造的限界)。
+#   canary 実装の変更は従来どおり human review / merge の対象とする。
 #
-# pull_request_target は使用禁止(書き込み権限とSecretsを PR コードへ渡さないため)。
+# 終了コード: PRECURSOR=0 / FAIL=1 / VOID=2 / STALE=3 / HOLD=4。
+#   機械可読 block が default branch に無い間は HOLD(=失敗)になる。これは仕様であり、
+#   block を正本へ載せる変更は別の human merge を要する。
+#
+# pull_request_target は使用禁止(書き込み権限と Secrets を PR コードへ渡さないため)。
 
 name: evolution-control-plane-canary
 
@@ -54,7 +65,7 @@ jobs:
       - name: 決定論テスト(node:test・外部依存なし)
         run: node --test scripts/control-plane-canary.test.mjs
 
-      - name: control-plane canary 実行(origin/main を読む・提案のみ)
+      - name: control-plane canary 実行(origin/main の JSON block を読む・提案しない)
         run: |
           set -euo pipefail
           # artifact は repository 内ではなく Runner の一時領域に作る
@@ -67,13 +78,13 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          SUMMARY_SRC="${ARTIFACT_DIR:-$RUNNER_TEMP/control-plane-canary}/artifact.json"
+          SRC="${ARTIFACT_DIR:-$RUNNER_TEMP/control-plane-canary}/artifact.json"
           {
-            echo "## 🕊️ control-plane canary (F3)"
+            echo "## 🕊️ control-plane canary (F3 precursor)"
             echo ""
-            if [ -f "$SUMMARY_SRC" ]; then
+            if [ -f "$SRC" ]; then
               echo '```json'
-              cat "$SUMMARY_SRC"
+              cat "$SRC"
               echo '```'
             else
               echo "artifact が生成されていない(テスト段階での停止など)。job ログを参照。"

@@ -1,33 +1,26 @@
 #!/usr/bin/env node
-// control-plane-canary.mjs — F3「Runtime Reads Control Plane」の read-only カナリア。
+// control-plane-canary.mjs — F3 precursor canary(read-only)。
 //
-// 目的:
-//   実行時に origin/<default branch>(通常 main)から 3 正本
-//   (OS.md / CURRENT_STATE.md / ROADMAP.md)を読み、blob SHA を証拠として記録し、
-//   prerequisite 済みで矛盾のない「実行可能な次 gate」を正確に 1 件だけ提案する。
+// 制御平面の機械項目は CURRENT_STATE.md / ROADMAP.md 内の versioned JSON block を正本とする。
+// reader はその block だけを判断入力にする。周辺の人間向け自由文、および block の書式例を
+// 示す code block は読まない。したがって本 reader が検出する「矛盾」は
+// schema・参照・status・dependency の構造矛盾だけであり、自由文との意味矛盾を検出するとは
+// 主張しない。
 //
-// このカナリアは提案だけを行う。コード変更・branch 作成・PR 作成・merge・
-// Production 実行は一切行わない(それらは後続 gate F4/F5 の能力)。
+// 本 reader は PASS を出さない。gate を「実行可能」「選択可能」とも主張しない。
+// 出力する dependency_ready_gate_ids は「宣言された依存が満たされている未完了 gate」の
+// 集合にすぎず、権限(identity / credentials)、Goal First、HOLD 理由の判断は含まない。
+// OS 基準による意味的順位付けは別 step であり、未実装・未検証のため F3 は PRECURSOR に留まる。
 //
-// fail-closed 規約(成功偽装の禁止):
-//   - PASS  : 3 正本を読み、機械的矛盾なく提案を正確に 1 件導出できた
-//   - FAIL  : 機械的矛盾(文書欠落・同一 field の多重定義・存在しない gate・
-//             prerequisite 未達・evidence pin 不一致・提案が 0 件または 2 件以上)
-//   - VOID  : repository / origin が読めず評価そのものが不能
-//   - STALE : run 開始後に判断が依存する箇所が materially に変化した
-//             (main SHA が動いただけでは STALE にしない)
-//   - HOLD  : 意味判断が必要で決定論的に解決できない(散文 prerequisite、
-//             未解釈 routing 文に現れる主候補、否定・矛盾を含む曖昧な PASS 記述、
-//             materiality 判定不能 等)
+// 結果状態(fail-closed):
+//   PRECURSOR … block を読み、構造検証を通し、dependency-ready 集合を確定できた
+//   FAIL      … 構造矛盾(schema 不正 / status 欠落・不正 / 未知 gate 参照 / 自己参照 /
+//                依存 cycle / gate 集合の cross-doc 不整合 / block 重複)
+//   HOLD      … 機械可読 block または正本が default branch に無い、鮮度を再確認できない
+//   STALE     … run 中に block が変化した、または base_sha が検査 head の祖先でない
+//   VOID      … repository / origin を読めず評価不能
 //
-// 意味理解の偽装をしない: この実装が検出するのは機械的矛盾だけである。
-// 正規表現で解決できない意味判断が必要になった時点で HOLD へ倒す。
-//
-// 制御文書は常に git object(origin/<default branch> の commit)から読む。
-// worktree のファイルは読まない。PR 上で実行しても PR 側の改変版は判断に使わせない。
-//
-// artifact は repository 外(既定: OS の一時領域、CI では $RUNNER_TEMP 配下)へ
-// JSON で書く。成功・失敗にかかわらず必ず書く。
+// prerequisite 未達は FAIL ではない。dependency-ready 集合から除外するだけである。
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -36,748 +29,334 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const SCHEMA_VERSION = 'atf.control-plane-canary/1.1.0';
+export const SCHEMA_VERSION = 'atf.control-plane-canary/2.0.0';
 export const CONTROL_DOCS = ['OS.md', 'CURRENT_STATE.md', 'ROADMAP.md'];
 export const FACTORY_WORKFLOW = '.github/workflows/factory.yml';
-export const WATCHED_FILES = [...CONTROL_DOCS, FACTORY_WORKFLOW];
 
-export const EXIT_CODES = { PASS: 0, FAIL: 1, VOID: 2, STALE: 3, HOLD: 4 };
+export const STATE_BLOCK = {
+  file: 'CURRENT_STATE.md',
+  marker: 'atf-control-state-v1',
+  schema: 'atf.control-state/1',
+};
+export const ROADMAP_BLOCK = {
+  file: 'ROADMAP.md',
+  marker: 'atf-control-roadmap-v1',
+  schema: 'atf.control-roadmap/1',
+};
 
-// gate ID の表記(W0 / W0A / F3 / C0 / X1 …)。ダッシュは — – - の 3 種を許容する。
-const GATE_ID_SRC = '[A-Z]\\d+[A-Z]?';
-const DASH_SRC = '[—–-]';
+export const GATE_STATUSES = ['NOT_STARTED', 'IN_PROGRESS', 'PASS', 'FAIL', 'VOID', 'STALE', 'HOLD'];
+export const EXIT_CODES = { PRECURSOR: 0, FAIL: 1, VOID: 2, STALE: 3, HOLD: 4 };
 
-// PASS 証拠の判定に使う否定語(deny-list・heuristic)。
-// 明示宣言(下記の厳密文法)と否定語入り共起行が同居する gate は矛盾として扱う。
-const NEGATION_TOKENS = [
-  'していない', 'してない', 'ではない', 'ではありません', 'せず', '未',
-  'not yet', 'has not', "hasn't", 'NOT PASS',
-];
+const SHA_RE = /^[0-9a-f]{40}$/;
 
-// ---------- 汎用 ----------
+// ---------- block 抽出 ----------
 
-export function blobSha(content) {
-  const buf = Buffer.from(content, 'utf8');
-  return createHash('sha1')
-    .update(`blob ${buf.length}\0`)
-    .update(buf)
-    .digest('hex');
-}
-
-function normalizeBody(text) {
-  return text
-    .split('\n')
-    .map((l) => l.replace(/\s+$/, ''))
-    .join('\n')
-    .trim();
-}
-
-// ---------- Markdown 解析(決定論・heading ベース) ----------
-
-export function parseHeadings(text) {
-  const lines = text.split('\n');
-  const headings = [];
-  let inFence = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^\s*```/.test(line)) {
-      inFence = !inFence;
+// info string が「json <marker>」の fenced block だけを収集する。
+// 外側をより長い fence で包んだ書式例は、その外側 block の本文として扱われ収集されない。
+export function extractJsonBlocks(text, marker) {
+  const want = `json ${marker}`;
+  const lines = String(text ?? '').split('\n');
+  const blocks = [];
+  let open = null;
+  for (const line of lines) {
+    const m = /^\s*(`{3,})\s*(.*?)\s*$/.exec(line);
+    if (!m) {
+      if (open) open.body.push(line);
       continue;
     }
-    if (inFence) continue;
-    const m = /^(#{1,6})\s+(.*?)\s*$/.exec(line);
-    if (m) headings.push({ index: i, level: m[1].length, text: m[2] });
-  }
-  return { lines, headings };
-}
-
-// predicate に一致する heading と、その配下 body(次の同レベル以下 heading まで)を返す。
-export function extractSections(text, predicate) {
-  const { lines, headings } = parseHeadings(text);
-  return headings
-    .filter((h) => predicate(h))
-    .map((h) => {
-      const next = headings.find((h2) => h2.index > h.index && h2.level <= h.level);
-      const end = next ? next.index : lines.length;
-      return {
-        heading: h.text,
-        level: h.level,
-        line: h.index + 1,
-        body: lines.slice(h.index + 1, end).join('\n'),
-      };
-    });
-}
-
-function gateIdsIn(text) {
-  return [...text.matchAll(new RegExp(`(?<![A-Za-z0-9])(${GATE_ID_SRC})(?![A-Za-z0-9])`, 'g'))].map(
-    (m) => m[1],
-  );
-}
-
-// ---------- ROADMAP.md ----------
-
-// 「#### F0 — タイトル」形式の gate 定義を列挙する。多重定義は機械的矛盾。
-export function parseRoadmapGates(roadmapText) {
-  const re = new RegExp(`^(${GATE_ID_SRC})\\s*${DASH_SRC}\\s*(.+)$`);
-  const sections = extractSections(roadmapText, (h) => re.test(h.text));
-  const gates = new Map();
-  const duplicates = [];
-  for (const s of sections) {
-    const m = re.exec(s.heading);
-    const id = m[1];
-    const title = m[2].trim();
-    if (gates.has(id)) duplicates.push(id);
-    else gates.set(id, { id, title, body: s.body, line: s.line });
-  }
-  return { gates, duplicates };
-}
-
-// gate 定義配下の明示的な「Prerequisite:」ブロックを解析する。
-// 「Prerequisite:」単独行 + リスト、太字、「Prerequisite: <本文>」の inline 形式を許容する。
-const PREREQ_HEADER_RE = /^(?:\*\*)?Prerequisites?(?:\*\*)?\s*[::]?\s*(.*)$/i;
-
-// 同一 gate に複数の Prerequisite ブロックがあっても全件を返す(最初のブロックだけを
-// 読んで後続の未達条件を無視しない)。加えて、header にもリスト項目にも属さないのに
-// prerequisite に言及する行(解析不能な言及)を unconsumedMentionLines として返す。
-export function parsePrereqBlocks(gateBody) {
-  const lines = gateBody.split('\n');
-  const blocks = [];
-  const consumed = new Set();
-  for (let i = 0; i < lines.length; i++) {
-    const t = lines[i].trim();
-    if (!PREREQ_HEADER_RE.test(t)) continue;
-    consumed.add(i);
-    const items = [];
-    const inline = PREREQ_HEADER_RE.exec(t)[1].trim();
-    if (inline !== '') items.push(inline);
-    for (let j = i + 1; j < lines.length; j++) {
-      const u = lines[j].trim();
-      if (u === '') continue;
-      if (/^[-*]\s+/.test(u)) {
-        items.push(u.replace(/^[-*]\s+/, ''));
-        consumed.add(j);
-      } else break;
-    }
-    blocks.push({ header: t, items });
-  }
-  const unconsumedMentionLines = lines
-    .map((l, i) => ({ line: l.trim(), i }))
-    .filter(({ line, i }) => !consumed.has(i) && /\bPrerequisites?\b/i.test(line))
-    .map(({ line }) => line);
-  return { blocks, unconsumedMentionLines };
-}
-
-// 後方互換 wrapper: 全ブロックの項目を平坦化して返す(ブロックが無ければ null)。
-export function parseExplicitPrereqs(gateBody) {
-  const { blocks } = parsePrereqBlocks(gateBody);
-  if (blocks.length === 0) return null;
-  return blocks.flatMap((b) => b.items);
-}
-
-// 「独立lane / 独立canary として候補」と明記された文か(candidacy 指定として解釈済み扱い)
-function isIndependentDesignation(text) {
-  return /独立\s*(lane|レーン|canary|カナリア)/i.test(text) && /候補/.test(text);
-}
-
-// 依存順序 section(Dependency-Safe Routing)から「A → B → C」の矢印連鎖を
-// 機械的に読む。「W2 / W3 → W4」のような並記は保守的に「両方とも前提」とみなす。
-//
-// 矢印の無い散文(例:「F4はF3の後」)は意味解釈しない。代わりに、gate ID を含むのに
-// 連鎖としても candidacy 指定としても解釈できなかった文を「未解釈 routing 文」として
-// 全件収集する。そこに現れる gate は前提を決定論的に検証できないため、主候補なら
-// HOLD、候補なら eligible から除外する(fail-closed。散文を無視して PASS しない)。
-export function parseDependencyChains(roadmapText) {
-  const sections = extractSections(roadmapText, (h) => /Dependency-Safe Routing|依存順序/i.test(h.text));
-  const chains = [];
-  const skippedArrowSentences = [];
-  const proseSentences = []; // { sentence, ids } — 未解釈 routing 文
-  for (const sec of sections) {
-    for (const rawLine of sec.body.split('\n')) {
-      for (const rawSentence of rawLine.split('。')) {
-        const sentence = rawSentence.trim();
-        if (sentence === '') continue;
-        const ids = [...new Set(gateIdsIn(sentence))];
-        if (sentence.includes('→')) {
-          const positions = sentence.split('→').map((seg) => gateIdsIn(seg));
-          if (positions.some((p) => p.length === 0)) {
-            // gate ID を含まない区間が混ざる連鎖は位置が揃わないため使わない(fail-safe)。
-            skippedArrowSentences.push(sentence);
-            if (ids.length > 0) proseSentences.push({ sentence, ids });
-            continue;
-          }
-          chains.push(positions);
-          continue;
-        }
-        if (ids.length === 0) continue;
-        if (isIndependentDesignation(sentence)) continue; // candidacy 指定として解釈済み
-        proseSentences.push({ sentence, ids });
-      }
+    if (open === null) {
+      open = { fence: m[1], info: m[2], body: [] };
+    } else if (m[1].length >= open.fence.length && m[2] === '') {
+      if (open.info === want) blocks.push(open.body.join('\n'));
+      open = null;
+    } else {
+      open.body.push(line);
     }
   }
-  return { chains, sectionCount: sections.length, skippedArrowSentences, proseSentences };
+  return blocks;
 }
 
-// 矢印連鎖から「gate → その直前段の gate 群(=前提)」を引く。
-export function chainPrereqsOf(chains, gateId) {
-  const prereqs = new Set();
-  for (const chain of chains) {
-    for (let i = 1; i < chain.length; i++) {
-      if (chain[i].includes(gateId)) for (const p of chain[i - 1]) prereqs.add(p);
+export function digestOf(text) {
+  return `sha256:${createHash('sha256').update(Buffer.from(String(text), 'utf8')).digest('hex')}`;
+}
+
+// ---------- strict schema 検証 ----------
+
+function typeOf(v) {
+  if (Array.isArray(v)) return 'array';
+  if (v === null) return 'null';
+  return typeof v;
+}
+
+// 宣言した field だけを許す(未知 field は FAIL)。欠落・型不一致も FAIL。
+function checkFields(obj, spec, where, problems) {
+  for (const [key, want] of Object.entries(spec)) {
+    if (!Object.hasOwn(obj, key)) {
+      problems.push(`${where}: 必須 field "${key}" が無い`);
+      continue;
     }
+    const got = typeOf(obj[key]);
+    if (got !== want) problems.push(`${where}: field "${key}" の型が ${want} でない(${got})`);
   }
-  return [...prereqs];
+  for (const key of Object.keys(obj)) {
+    if (!Object.hasOwn(spec, key)) problems.push(`${where}: 未知の field "${key}"(strict schema)`);
+  }
 }
 
-// ---------- CURRENT_STATE.md ----------
-
-// Smallest Next Gate section から主候補(太字宣言 **W0 — …**)と
-// 独立 lane 候補(「独立」を含む行の gate ID)を読む。
-export function parseSmallestNextGate(currentStateText) {
-  const sections = extractSections(currentStateText, (h) => /smallest next gate/i.test(h.text));
-  const declRe = new RegExp(`^\\*\\*(${GATE_ID_SRC})\\s*${DASH_SRC}\\s*(.+?)\\*\\*$`);
-  const parsed = sections.map((sec) => {
-    const declarations = [];
-    const independentLines = [];
-    let singleGateRuleQuote = null;
-    for (const rawLine of sec.body.split('\n')) {
-      const line = rawLine.trim();
-      const m = declRe.exec(line);
-      if (m) declarations.push({ id: m[1], title: m[2].replace(/[。.]+$/, '').trim() });
-      // 「独立lane / 独立canary として候補」と明記された行だけを拾う(「独立した〜」等の散文は対象外)
-      if (isIndependentDesignation(line)) independentLines.push(line);
-      if (/1\s*件/.test(line) || /1件/.test(line)) singleGateRuleQuote = line;
-    }
-    return { section: sec, declarations, independentLines, singleGateRuleQuote };
+function checkStringArray(value, where, problems) {
+  if (typeOf(value) !== 'array') return;
+  value.forEach((v, i) => {
+    if (typeof v !== 'string' || v.trim() === '') problems.push(`${where}[${i}] が非空文字列でない`);
   });
-  return { sections: parsed, sectionCount: sections.length };
 }
 
-// PASS 証拠として認める厳密文法: gate result/status の明示宣言だけ。
-//   <gate ID> + 接続子(は / : / ： / = / — / – / - / | / 空白)+ PASS +
-//   直後が行末または区切り記号(。 . 、 , ) ） 」 』 ] | *)のもの。
-//   例: 「OS正本化F0はPASS。」「W0: PASS」「| F0 | PASS |」
-// 「W0 PASS条件は計測中」のような同一行の単なる文字列共起は証拠にしない。
-const STRICT_PASS_RE = new RegExp(
-  `(?<![A-Za-z0-9])(${GATE_ID_SRC})\\s*(?:は|:|：|=|—|–|-|\\|)?\\s*(?:\\*\\*)?PASS(?:\\*\\*)?(?=\\s*(?:$|[。.、,)）」』\\]|*]))`,
-  'g',
-);
+export function parseControlBlock(docText, def) {
+  const raw = extractJsonBlocks(docText, def.marker);
+  if (raw.length === 0) return { def, present: false, problems: [], data: null, digest: null };
+  if (raw.length > 1) {
+    return {
+      def,
+      present: true,
+      problems: [`${def.file}: marker "${def.marker}" の block が ${raw.length} 件(1 件でなければならない)`],
+      data: null,
+      digest: null,
+    };
+  }
+  const text = raw[0];
+  const digest = digestOf(text);
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    return { def, present: true, problems: [`${def.file}: block が JSON として不正(${e.message})`], data: null, digest };
+  }
+  if (typeOf(data) !== 'object') {
+    return { def, present: true, problems: [`${def.file}: block の最上位が object でない(${typeOf(data)})`], data: null, digest };
+  }
+  return { def, present: true, problems: [], data, digest };
+}
 
-// gate ごとの PASS 記録を 3 区分で列挙する。
-//   explicitLines … 厳密文法に一致する明示宣言(否定語を含む行は除く)= 唯一の PASS 証拠
-//   negatedLines  … gate ID と PASS が共起し否定語を含む行(証拠にならない。明示宣言と同居すれば矛盾)
-//   proseLines    … その他の共起行(証拠にならない。監査用に記録のみ)
-export function parsePassMarkers(currentStateText) {
-  const markers = new Map();
-  const get = (id) => {
-    if (!markers.has(id)) markers.set(id, { explicitLines: [], negatedLines: [], proseLines: [] });
-    return markers.get(id);
-  };
-  for (const rawLine of currentStateText.split('\n')) {
-    if (!/(?<![A-Za-z])PASS(?![A-Za-z])/.test(rawLine)) continue;
-    const line = rawLine.trim();
-    const negated = NEGATION_TOKENS.some((t) => rawLine.includes(t));
-    const explicitIds = new Set([...rawLine.matchAll(STRICT_PASS_RE)].map((m) => m[1]));
-    for (const id of new Set(gateIdsIn(rawLine))) {
-      const m = get(id);
-      if (negated) m.negatedLines.push(line);
-      else if (explicitIds.has(id)) m.explicitLines.push(line);
-      else m.proseLines.push(line);
+// ---------- 各 block の構造検証 ----------
+
+function validateStateBlock(data, problems) {
+  const where = STATE_BLOCK.file;
+  checkFields(data, { schema: 'string', base_sha: 'string', gates: 'array' }, where, problems);
+  if (data.schema !== undefined && data.schema !== STATE_BLOCK.schema) {
+    problems.push(`${where}: schema が "${STATE_BLOCK.schema}" でない("${data.schema}")`);
+  }
+  if (typeof data.base_sha === 'string' && !SHA_RE.test(data.base_sha)) {
+    problems.push(`${where}: base_sha が 40 桁の commit SHA 形式でない("${data.base_sha}")`);
+  }
+  const gates = new Map();
+  if (typeOf(data.gates) !== 'array') return gates;
+  data.gates.forEach((g, i) => {
+    const at = `${where}.gates[${i}]`;
+    if (typeOf(g) !== 'object') {
+      problems.push(`${at}: object でない(${typeOf(g)})`);
+      return;
     }
-  }
-  return markers;
+    checkFields(g, { id: 'string', status: 'string', evidence: 'array' }, at, problems);
+    checkStringArray(g.evidence, `${at}.evidence`, problems);
+    if (typeof g.status === 'string' && !GATE_STATUSES.includes(g.status)) {
+      problems.push(`${at}: status "${g.status}" が許可値(${GATE_STATUSES.join(' / ')})でない`);
+    }
+    if (typeof g.id !== 'string' || g.id.trim() === '') return;
+    if (gates.has(g.id)) problems.push(`${where}: gate ID "${g.id}" が重複している`);
+    else gates.set(g.id, { status: g.status, evidence: g.evidence });
+  });
+  return gates;
 }
 
-// Evidence Index 等の「blob `…`」pin を OS.md / factory.yml について読む。
-// 同一ファイルへ異なる pin が 2 つ以上あれば多重定義として矛盾扱い。
-export function parseEvidencePins(currentStateText) {
-  const pins = { 'OS.md': new Set(), [FACTORY_WORKFLOW]: new Set() };
-  for (const line of currentStateText.split('\n')) {
-    const m = /blob[:\s]*`([0-9a-f]{40})`/.exec(line);
-    if (!m) continue;
-    if (/OS\.md/.test(line)) pins['OS.md'].add(m[1]);
-    else if (line.includes('factory.yml')) pins[FACTORY_WORKFLOW].add(m[1]);
+function validateRoadmapBlock(data, problems) {
+  const where = ROADMAP_BLOCK.file;
+  checkFields(data, { schema: 'string', gates: 'array' }, where, problems);
+  if (data.schema !== undefined && data.schema !== ROADMAP_BLOCK.schema) {
+    problems.push(`${where}: schema が "${ROADMAP_BLOCK.schema}" でない("${data.schema}")`);
   }
-  return {
-    'OS.md': [...pins['OS.md']],
-    [FACTORY_WORKFLOW]: [...pins[FACTORY_WORKFLOW]],
+  const gates = new Map();
+  if (typeOf(data.gates) !== 'array') return gates;
+  data.gates.forEach((g, i) => {
+    const at = `${where}.gates[${i}]`;
+    if (typeOf(g) !== 'object') {
+      problems.push(`${at}: object でない(${typeOf(g)})`);
+      return;
+    }
+    checkFields(g, { id: 'string', lane: 'string', prerequisites: 'array' }, at, problems);
+    checkStringArray(g.prerequisites, `${at}.prerequisites`, problems);
+    if (typeof g.lane === 'string' && g.lane.trim() === '') problems.push(`${at}: lane が空`);
+    if (typeof g.id !== 'string' || g.id.trim() === '') return;
+    if (gates.has(g.id)) problems.push(`${where}: gate ID "${g.id}" が重複している`);
+    else gates.set(g.id, { lane: g.lane, prerequisites: typeOf(g.prerequisites) === 'array' ? g.prerequisites : [] });
+  });
+  return gates;
+}
+
+// 依存グラフの cycle を 1 件返す(無ければ null)。self-cycle も検出する。
+export function findCycle(edges) {
+  const state = new Map(); // 0=未訪問 1=探索中 2=完了
+  const stack = [];
+  let found = null;
+  const visit = (id) => {
+    if (found) return;
+    if (state.get(id) === 2) return;
+    if (state.get(id) === 1) {
+      found = [...stack.slice(stack.indexOf(id)), id];
+      return;
+    }
+    state.set(id, 1);
+    stack.push(id);
+    for (const next of edges.get(id) ?? []) {
+      if (edges.has(next)) visit(next);
+      if (found) return;
+    }
+    stack.pop();
+    state.set(id, 2);
   };
-}
-
-// ---------- OS.md ----------
-
-// 選定根拠と停止条件の anchor になる section。存在と一意性を必須とする。
-const OS_REQUIRED_ANCHORS = [
-  { key: 'goalFirst', pattern: /goal first/i, label: 'Goal First' },
-  { key: 'evidenceDriven', pattern: /evidence driven/i, label: 'Evidence Driven' },
-  { key: 'reviewAlgorithm', pattern: /review algorithm/i, label: 'Review Algorithm' },
-];
-
-export function parseOsAnchors(osText) {
-  const anchors = {};
-  const counts = {};
-  for (const { key, pattern } of OS_REQUIRED_ANCHORS) {
-    const sections = extractSections(osText, (h) => pattern.test(h.text));
-    counts[key] = sections.length;
-    anchors[key] = sections[0] ?? null;
+  for (const id of edges.keys()) {
+    visit(id);
+    if (found) break;
   }
-  // Operating Rule(§18)は停止条件の引用元。任意(無くても FAIL にしない)。
-  const op = extractSections(osText, (h) => /operating rule/i.test(h.text));
-  anchors.operatingRule = op[0] ?? null;
-  counts.operatingRule = op.length;
-  return { anchors, counts };
+  return found;
 }
 
 // ---------- 統合解析(純関数) ----------
 
-function firstMeaningfulLine(sectionOrNull) {
-  if (!sectionOrNull) return null;
-  return sectionOrNull.body.split('\n').map((l) => l.trim()).find((l) => l !== '') ?? null;
-}
+export function analyzeControlPlane(docs) {
+  const problems = []; // 構造矛盾 → FAIL
+  const holds = []; // 制御平面が未設置・読めない → HOLD
+  const result = {
+    problems,
+    holds,
+    blocks: {},
+    baseShaDeclared: null,
+    gates: [],
+    dependencyReadyGateIds: [],
+  };
 
-// docs: { 'OS.md': string|null, … }  actualBlobs: { 'OS.md': sha|null, …, FACTORY_WORKFLOW: sha|null }
-export function analyzeControlPlane(docs, actualBlobs = null) {
-  const problems = []; // 機械的矛盾 → FAIL
-  const holds = []; // 意味判断が必要で解決不能 → HOLD
-  const unknowns = [];
-  const notes = [];
+  for (const file of CONTROL_DOCS) {
+    if (typeof docs?.[file] !== 'string' || docs[file].trim() === '') holds.push(`正本 ${file} を読めない`);
+  }
 
-  const missing = CONTROL_DOCS.filter((d) => typeof docs?.[d] !== 'string' || docs[d].trim() === '');
-  if (missing.length > 0) {
-    problems.push(`正本が欠落: ${missing.join(', ')}`);
+  const state = parseControlBlock(docs?.[STATE_BLOCK.file], STATE_BLOCK);
+  const roadmap = parseControlBlock(docs?.[ROADMAP_BLOCK.file], ROADMAP_BLOCK);
+  for (const b of [state, roadmap]) {
+    result.blocks[b.def.file] = { marker: b.def.marker, present: b.present, digest: b.digest };
+    if (!b.present) holds.push(`${b.def.file}: 機械可読 block(marker "${b.def.marker}")が無い`);
+    problems.push(...b.problems);
+  }
+  if (holds.length > 0 || problems.length > 0 || !state.data || !roadmap.data) return result;
+
+  const stateGates = validateStateBlock(state.data, problems);
+  const roadmapGates = validateRoadmapBlock(roadmap.data, problems);
+  result.baseShaDeclared = typeof state.data.base_sha === 'string' ? state.data.base_sha : null;
+  if (problems.length > 0) return result;
+
+  // cross-doc: gate ID 集合の完全一致(両方向の差分を FAIL)
+  const onlyState = [...stateGates.keys()].filter((id) => !roadmapGates.has(id));
+  const onlyRoadmap = [...roadmapGates.keys()].filter((id) => !stateGates.has(id));
+  for (const id of onlyRoadmap) problems.push(`cross-doc 不整合: gate "${id}" が ${ROADMAP_BLOCK.file} にあるが ${STATE_BLOCK.file} に status が無い`);
+  for (const id of onlyState) problems.push(`cross-doc 不整合: gate "${id}" が ${STATE_BLOCK.file} にあるが ${ROADMAP_BLOCK.file} に定義が無い`);
+
+  // prerequisite の参照検証(未知 gate 参照 / 自己参照)
+  for (const [id, g] of roadmapGates) {
+    for (const p of g.prerequisites) {
+      if (p === id) problems.push(`gate "${id}": prerequisite が自己参照している`);
+      else if (!roadmapGates.has(p)) problems.push(`gate "${id}": 未知の gate "${p}" を prerequisite に参照している`);
+    }
+  }
+  if (problems.length > 0) return result;
+
+  const cycle = findCycle(new Map([...roadmapGates].map(([id, g]) => [id, g.prerequisites])));
+  if (cycle) {
+    problems.push(`依存 cycle を検出: ${cycle.join(' → ')}`);
+    return result;
+  }
+
+  // dependency-ready: status が PASS でなく、全 prerequisite の status が PASS の gate。
+  // prerequisite 未達は FAIL ではなく、この集合からの除外にすぎない。
+  const gates = [...roadmapGates].map(([id, g]) => {
+    const status = stateGates.get(id).status;
+    const unmet = g.prerequisites.filter((p) => stateGates.get(p).status !== 'PASS');
     return {
-      problems, holds, unknowns, notes,
-      requiredSections: null, primary: null, independentLaneCandidates: [],
-      gatesDefined: [], passMarkers: [], prerequisites: {}, eligible: [],
-      uninterpretedRoutingSentences: [],
-      evidencePins: null, rationale: [], stopConditions: [], signatureParts: null,
+      id,
+      lane: g.lane,
+      status,
+      prerequisites: g.prerequisites,
+      unmet_prerequisites: unmet,
+      dependency_ready: status !== 'PASS' && unmet.length === 0,
     };
-  }
-
-  const osText = docs['OS.md'];
-  const stateText = docs['CURRENT_STATE.md'];
-  const roadmapText = docs['ROADMAP.md'];
-
-  // --- 必須 section の存在・一意性 ---
-  const { anchors: osAnchors, counts: osCounts } = parseOsAnchors(osText);
-  const sng = parseSmallestNextGate(stateText);
-  const { gates, duplicates: dupGates } = parseRoadmapGates(roadmapText);
-  const deps = parseDependencyChains(roadmapText);
-
-  const requiredSections = {
-    'OS.md': Object.fromEntries(
-      OS_REQUIRED_ANCHORS.map(({ key, label }) => [label, { count: osCounts[key], ok: osCounts[key] === 1 }]),
-    ),
-    'CURRENT_STATE.md': {
-      'Smallest Next Gate': { count: sng.sectionCount, ok: sng.sectionCount === 1 },
-    },
-    'ROADMAP.md': {
-      'gate definitions (#### <ID> — …)': { count: gates.size, ok: gates.size >= 1 && dupGates.length === 0 },
-      'Dependency-Safe Routing / 依存順序': { count: deps.sectionCount, ok: deps.sectionCount === 1 },
-    },
-  };
-  for (const { key, label } of OS_REQUIRED_ANCHORS) {
-    if (osCounts[key] === 0) problems.push(`OS.md に必須 section「${label}」が無い`);
-    if (osCounts[key] > 1) problems.push(`OS.md の section「${label}」が多重定義(${osCounts[key]} 箇所)`);
-  }
-  if (sng.sectionCount === 0) problems.push('CURRENT_STATE.md に「Smallest Next Gate」section が無い');
-  if (sng.sectionCount > 1) problems.push(`CURRENT_STATE.md の「Smallest Next Gate」section が多重定義(${sng.sectionCount} 箇所)`);
-  if (gates.size === 0) problems.push('ROADMAP.md に gate 定義(#### <ID> — …)が 1 件も無い');
-  if (dupGates.length > 0) problems.push(`ROADMAP.md の gate 定義が多重: ${[...new Set(dupGates)].join(', ')}`);
-  if (deps.sectionCount === 0) problems.push('ROADMAP.md に依存順序(Dependency-Safe Routing)section が無い');
-  if (deps.sectionCount > 1) problems.push(`ROADMAP.md の依存順序 section が多重定義(${deps.sectionCount} 箇所)`);
-  if (deps.skippedArrowSentences.length > 0) {
-    notes.push(`依存順序内で位置が揃わず解釈しなかった矢印文: ${deps.skippedArrowSentences.join(' / ')}`);
-  }
-
-  // --- 主候補(Smallest Next Gate) ---
-  let primary = null;
-  const sngSection = sng.sections[0] ?? null;
-  if (sng.sectionCount === 1) {
-    const decls = sngSection.declarations;
-    if (decls.length === 0) problems.push('Smallest Next Gate section に gate 宣言(**<ID> — …**)が無い(提案 0 件)');
-    else if (decls.length > 1) problems.push(`Smallest Next Gate の gate 宣言が多重定義: ${decls.map((d) => d.id).join(', ')}(提案は正確に 1 件でなければならない)`);
-    else primary = decls[0];
-  }
-
-  // --- 独立 lane 候補(機械抽出。heuristic のため不整合は soft に扱う) ---
-  const independentSet = new Set();
-  if (sngSection) for (const line of sngSection.independentLines) for (const id of gateIdsIn(line)) independentSet.add(id);
-  // ROADMAP 依存順序側の「独立 … 候補」行も同様に読む。
-  const depSec = extractSections(roadmapText, (h) => /Dependency-Safe Routing|依存順序/i.test(h.text))[0];
-  if (depSec) {
-    for (const rawLine of depSec.body.split('\n')) {
-      if (isIndependentDesignation(rawLine)) {
-        for (const id of gateIdsIn(rawLine)) independentSet.add(id);
-      }
-    }
-  }
-  if (primary) independentSet.delete(primary.id);
-  const independentLaneCandidates = [...independentSet];
-
-  // --- PASS 記録・evidence pin ---
-  const passMarkers = parsePassMarkers(stateText);
-  const pinSets = parseEvidencePins(stateText);
-  const evidencePins = {};
-  for (const [file, values] of Object.entries(pinSets)) {
-    if (values.length > 1) problems.push(`CURRENT_STATE.md の evidence pin が多重定義: ${file}(${values.join(', ')})`);
-    evidencePins[file] = values.length === 1 ? values[0] : null;
-    if (values.length === 0) unknowns.push(`CURRENT_STATE.md に ${file} の blob pin が見つからない(照合せず継続)`);
-  }
-  if (actualBlobs) {
-    for (const file of ['OS.md', FACTORY_WORKFLOW]) {
-      const pin = evidencePins[file];
-      const actual = actualBlobs[file] ?? null;
-      if (pin && actual && pin !== actual) {
-        problems.push(`evidence pin 不一致: ${file} の pin ${pin} ≠ 実 blob ${actual}(CURRENT_STATE.md が main に対して古い)`);
-      }
-      if (pin && !actual) unknowns.push(`${file} の実 blob を確認できず pin を照合できない`);
-    }
-  }
-
-  // --- prerequisite 照合(主候補 + 独立候補) ---
-  // PASS 記録の状態:
-  //   satisfied … 厳密文法の明示宣言があり、否定語入り共起行が無い(唯一の充足根拠)
-  //   ambiguous … 明示宣言と否定語入り共起行が同居(矛盾。意味判断が必要 → HOLD)
-  //   absent    … 明示宣言なし(否定文・単なる文字列共起は証拠にしない → 未達)
-  const markerStateOf = (gid) => {
-    const m = passMarkers.get(gid);
-    if (!m || m.explicitLines.length === 0) return 'absent';
-    if (m.negatedLines.length > 0) return 'ambiguous';
-    return 'satisfied';
-  };
-  const markerLinesOf = (gid) => {
-    const m = passMarkers.get(gid);
-    return m ? [...m.explicitLines, ...m.negatedLines] : [];
-  };
-
-  const prerequisites = {};
-  const evalGate = (id) => {
-    const entry = {
-      definedInRoadmap: gates.has(id),
-      chain: chainPrereqsOf(deps.chains, id),
-      explicit: null,
-      unmetChain: [],
-      ambiguousChain: [],
-      unverifiableExplicit: [],
-      unmetExplicit: [],
-      ambiguousExplicit: [],
-      proseRoutingMentions: deps.proseSentences.filter((p) => p.ids.includes(id)).map((p) => p.sentence),
-      unparsedPrereqMention: false,
-      alreadyPassMarked: false,
-      selfMarkerAmbiguous: false,
-      eligible: false,
-    };
-    if (gates.has(id)) {
-      const body = gates.get(id).body;
-      // 複数の Prerequisite ブロックを全件解析する(最初のブロックだけで打ち切らない)
-      const { blocks, unconsumedMentionLines } = parsePrereqBlocks(body);
-      const ex = blocks.length > 0 ? blocks.flatMap((b) => b.items) : null;
-      entry.explicit = ex;
-      entry.prereqBlockCount = blocks.length;
-      if (ex) {
-        for (const item of ex) {
-          const ids = gateIdsIn(item);
-          if (ids.length === 0) entry.unverifiableExplicit.push(item);
-          else for (const pid of ids) {
-            const st = markerStateOf(pid);
-            if (st === 'satisfied') continue;
-            if (st === 'ambiguous') entry.ambiguousExplicit.push(`${pid}(${item})`);
-            else entry.unmetExplicit.push(`${pid}(${item})`);
-          }
-        }
-      }
-      // 項目ゼロのブロック、またはブロック外での prerequisite 言及は解析不能 → 検証不能扱い
-      if (blocks.some((b) => b.items.length === 0) || unconsumedMentionLines.length > 0) {
-        entry.unparsedPrereqMention = true;
-      }
-    }
-    for (const pid of entry.chain) {
-      const st = markerStateOf(pid);
-      if (st === 'satisfied') continue;
-      if (st === 'ambiguous') entry.ambiguousChain.push(pid);
-      else entry.unmetChain.push(pid);
-    }
-    const selfState = markerStateOf(id);
-    entry.alreadyPassMarked = selfState === 'satisfied';
-    entry.selfMarkerAmbiguous = selfState === 'ambiguous';
-    entry.eligible =
-      entry.definedInRoadmap &&
-      !entry.alreadyPassMarked &&
-      !entry.selfMarkerAmbiguous &&
-      entry.unmetChain.length === 0 &&
-      entry.ambiguousChain.length === 0 &&
-      entry.unmetExplicit.length === 0 &&
-      entry.ambiguousExplicit.length === 0 &&
-      entry.unverifiableExplicit.length === 0 &&
-      !entry.unparsedPrereqMention &&
-      entry.proseRoutingMentions.length === 0;
-    prerequisites[id] = entry;
-    return entry;
-  };
-
-  if (primary) {
-    const e = evalGate(primary.id);
-    if (!e.definedInRoadmap) problems.push(`存在しない gate: 主候補 ${primary.id} が ROADMAP.md に定義されていない`);
-    else {
-      if (e.alreadyPassMarked) {
-        problems.push(`矛盾: 主候補 ${primary.id} は CURRENT_STATE.md 上で既に PASS と記録されている(該当行: ${markerLinesOf(primary.id).join(' / ')})`);
-      }
-      if (e.unmetChain.length > 0) problems.push(`prerequisite 未達: 主候補 ${primary.id} の前提 ${e.unmetChain.join(', ')} に PASS 記録が無い`);
-      if (e.unmetExplicit.length > 0) problems.push(`prerequisite 未達: 主候補 ${primary.id} の明示前提 ${e.unmetExplicit.join(', ')} に PASS 記録が無い`);
-      if (e.selfMarkerAmbiguous) {
-        holds.push(`主候補 ${primary.id} の PASS 記録が矛盾または曖昧(該当行: ${markerLinesOf(primary.id).join(' / ')})`);
-      }
-      if (e.ambiguousChain.length > 0) holds.push(`前提 ${e.ambiguousChain.join(', ')} の PASS 記述が否定語を含むか矛盾しており曖昧(意味判断が必要)`);
-      if (e.ambiguousExplicit.length > 0) holds.push(`明示前提 ${e.ambiguousExplicit.join(', ')} の PASS 記述が曖昧(意味判断が必要)`);
-      if (e.unverifiableExplicit.length > 0) holds.push(`主候補 ${primary.id} の明示 prerequisite が散文で機械検証不能: ${e.unverifiableExplicit.join(' / ')}`);
-      if (e.unparsedPrereqMention) holds.push(`主候補 ${primary.id} の ROADMAP 本文が prerequisite に言及するが機械解析できない(fail-closed)`);
-      if (e.proseRoutingMentions.length > 0) {
-        holds.push(`主候補 ${primary.id} が依存順序 section の未解釈 routing 文(散文)に現れ、前提を決定論的に検証できない: ${e.proseRoutingMentions.join(' / ')}`);
-      }
-    }
-  }
-  for (const id of independentLaneCandidates) {
-    const e = evalGate(id);
-    if (!e.definedInRoadmap) unknowns.push(`独立 lane 候補 ${id} が ROADMAP.md に未定義(候補から除外。抽出は heuristic のため FAIL にはしない)`);
-  }
-
-  const eligible = Object.entries(prerequisites)
-    .filter(([, e]) => e.eligible)
-    .map(([id]) => id)
-    .sort();
-
-  // --- 選定根拠(OS: Goal First / Evidence Driven / 停止条件)。引用は実文書から取る ---
-  const rationale = [];
-  if (sngSection?.singleGateRuleQuote) {
-    rationale.push({ principle: '1 run 1 gate 選択規則', source: 'CURRENT_STATE.md § Smallest Next Gate', quote: sngSection.singleGateRuleQuote });
-  }
-  const authorityLine = depSec?.body.split('\n').map((l) => l.trim()).find((l) => l.includes('CURRENT_STATE.md') && (l.includes('だけ') || l.includes('only')));
-  if (authorityLine) {
-    rationale.push({ principle: '次 gate の正本は CURRENT_STATE.md', source: 'ROADMAP.md § Dependency-Safe Routing', quote: authorityLine });
-  }
-  for (const [key, label, source] of [
-    ['goalFirst', 'Goal First', 'OS.md § Goal First'],
-    ['evidenceDriven', 'Evidence Driven Governance', 'OS.md § Evidence Driven'],
-    ['reviewAlgorithm', 'Review Algorithm (IOS §15)', 'OS.md § Review Algorithm'],
-  ]) {
-    const q = firstMeaningfulLine(osAnchors[key]);
-    if (q) rationale.push({ principle: label, source, quote: q });
-  }
-
-  const stopConditions = [
-    'FAIL: 機械的矛盾(文書欠落 / 同一 field の多重定義 / 存在しない gate / prerequisite 未達 / evidence pin 不一致 / 提案が 0 件または 2 件以上)',
-    'HOLD: 意味判断が必要で決定論的に解決できない(散文 prerequisite / 未解釈 routing 文に現れる主候補 / 否定・矛盾を含む曖昧な PASS 記述 / materiality 判定不能)',
-    'STALE: run 開始後の diff が対象 assertion・Smallest Next Gate・prerequisite・PASS 条件・依存 evidence を変えた',
-    'VOID: repository または origin/<default branch> を読めず評価不能',
-  ];
-  const opQuote = firstMeaningfulLine(osAnchors.operatingRule);
-  if (opQuote) stopConditions.push(`OS Operating Rule: ${opQuote}`);
-
-  // 恒常的な既知の限界(意味理解の偽装をしない旨の明示)
-  unknowns.push('矢印連鎖の無い散文の routing 文は意味解釈しない。gate ID を含む未解釈 routing 文に現れる gate は前提を検証できないため、主候補なら HOLD、候補なら eligible から除外する(fail-closed)');
-  unknowns.push('PASS 証拠は「<gate ID> は/:/=/| PASS」形式の明示宣言だけを認める厳密文法。文法外の正当な status 表記(例: PASSした)は証拠と認められず未達側へ倒れる(fail-closed)');
-  unknowns.push('独立 lane 候補の列挙は「独立lane/独立canary」明記行からの正規表現抽出(heuristic)であり、意味理解ではない');
-  unknowns.push('依存順序の「A / B」並記は保守的に「両方とも前提」と解釈する');
-  unknowns.push('提案 gate の実行に人間専権(identity / credentials 等)が必要かは機械判定できない。本カナリアは提案のみで実行しない');
-
-  // --- materiality 署名: 判断が依存する部分だけを取り出す ---
-  const primaryGateDef = primary && gates.has(primary.id) ? gates.get(primary.id) : null;
-  const signatureParts = {
-    primary: primary?.id ?? null,
-    smallestNextGateSection: sngSection ? normalizeBody(sngSection.section.body) : null,
-    primaryRoadmapSection: primaryGateDef ? normalizeBody(primaryGateDef.body) : null,
-    dependencyChains: deps.chains,
-    // 未解釈 routing 文(散文の依存)も判断が依存する要素。run 中の書き換えは materially stale
-    uninterpretedRoutingSentences: deps.proseSentences,
-    primaryPrereqs: primary ? prerequisites[primary.id] ?? null : null,
-    // 候補資格も判断が依存する要素: eligible・独立 lane 候補・全 gate の除外理由
-    // (prerequisites entry)を含め、run 中に候補資格が変われば materially stale にする
-    eligible: [...eligible],
-    independentLaneCandidates: [...independentLaneCandidates].sort(),
-    prerequisitesByGate: Object.keys(prerequisites)
-      .sort()
-      .map((id) => [id, prerequisites[id]]),
-    passMarkers: [...passMarkers.entries()]
-      .map(([id, m]) => ({
-        id,
-        explicit: m.explicitLines.length > 0,
-        negated: m.negatedLines.length > 0,
-        prose: m.proseLines.length > 0,
-      }))
-      .sort((a, b) => a.id.localeCompare(b.id)),
-    evidencePins,
-    osAnchors: Object.fromEntries(
-      ['goalFirst', 'evidenceDriven', 'reviewAlgorithm', 'operatingRule'].map((k) => [
-        k,
-        osAnchors[k] ? normalizeBody(osAnchors[k].body) : null,
-      ]),
-    ),
-    factoryBlob: actualBlobs?.[FACTORY_WORKFLOW] ?? null,
-  };
-
-  return {
-    problems, holds, unknowns, notes,
-    requiredSections,
-    primary,
-    independentLaneCandidates,
-    gatesDefined: [...gates.keys()],
-    passMarkers: signatureParts.passMarkers,
-    prerequisites,
-    eligible,
-    uninterpretedRoutingSentences: deps.proseSentences,
-    evidencePins,
-    rationale,
-    stopConditions,
-    signatureParts,
-  };
+  });
+  result.gates = gates;
+  result.dependencyReadyGateIds = gates.filter((g) => g.dependency_ready).map((g) => g.id);
+  return result;
 }
 
-export function materialSignature(analysis) {
-  return JSON.stringify(analysis.signatureParts);
-}
-
-// 解析結果から result を決める。提案は「主候補が eligible な場合のその 1 件」だけ。
-// 主候補が使えない時に独立候補へ勝手に乗り換えることはしない(順位付けは意味判断)。
+// 構造検証の結果だけから result state を決める(PASS は生成しない)。
 export function decide(analysis) {
-  const proposals = [];
-  if (
-    analysis.primary &&
-    analysis.problems.length === 0 &&
-    analysis.holds.length === 0 &&
-    analysis.prerequisites[analysis.primary.id]?.eligible
-  ) {
-    proposals.push(analysis.primary);
-  }
-
-  let result;
-  let failureReason = null;
-  if (analysis.problems.length > 0) {
-    result = 'FAIL';
-    failureReason = analysis.problems.join(' / ');
-  } else if (analysis.holds.length > 0) {
-    result = 'HOLD';
-    failureReason = analysis.holds.join(' / ');
-  } else if (proposals.length !== 1) {
-    // 提案 0 件・2 件以上は fail-closed(2 件以上は解析段階で problems 化されるが最終ガードを置く)
-    result = 'FAIL';
-    failureReason = `提案が正確に 1 件でない(${proposals.length} 件)`;
-  } else {
-    result = 'PASS';
-  }
-
-  return {
-    result,
-    failureReason,
-    proposal: result === 'PASS' ? { gate: proposals[0].id, title: proposals[0].title, source: 'CURRENT_STATE.md § Smallest Next Gate' } : null,
-    proposalCount: result === 'PASS' ? 1 : proposals.length,
-  };
-}
-
-// 開始 snapshot と最終 fetch 後の再解析を比較し、materially stale かを決める。
-// endAnalysis が解析不能(problems で signature が意味を成さない)なら判定不能 → stale 扱い。
-export function compareForStaleness(startAnalysis, endAnalysis) {
-  if (!startAnalysis?.signatureParts || !endAnalysis?.signatureParts) {
-    return { materiallyStale: true, reason: '開始時または変更後の文書を解析できず materiality を判定できない(fail-closed で STALE)' };
-  }
-  const a = startAnalysis.signatureParts;
-  const b = endAnalysis.signatureParts;
-  const diffKeys = Object.keys(a).filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
-  if (diffKeys.length === 0) return { materiallyStale: false, reason: null, diffKeys: [] };
-  return {
-    materiallyStale: true,
-    reason: `判断が依存する要素が変化: ${diffKeys.join(', ')}`,
-    diffKeys,
-  };
+  if (analysis.problems.length > 0) return { result: 'FAIL', failureReason: analysis.problems.join(' / ') };
+  if (analysis.holds.length > 0) return { result: 'HOLD', failureReason: analysis.holds.join(' / ') };
+  return { result: 'PRECURSOR', failureReason: null };
 }
 
 // ---------- git 層 ----------
 
-function git(repoDir, args) {
-  return execFileSync('git', args, {
-    cwd: repoDir,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    maxBuffer: 64 * 1024 * 1024,
-  });
-}
-
 function tryGit(repoDir, args) {
   try {
-    return { ok: true, out: git(repoDir, args) };
+    const out = execFileSync('git', args, {
+      cwd: repoDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return { ok: true, out };
   } catch (e) {
     return { ok: false, error: String(e.stderr || e.message || e).trim() };
   }
 }
 
 export function detectDefaultBranch(repoDir, envv) {
-  if (envv?.CONTROL_PLANE_CANARY_BRANCH) {
-    return { branch: envv.CONTROL_PLANE_CANARY_BRANCH, how: 'env CONTROL_PLANE_CANARY_BRANCH' };
+  if (envv?.CONTROL_PLANE_CANARY_BRANCH) return { branch: envv.CONTROL_PLANE_CANARY_BRANCH, how: 'env CONTROL_PLANE_CANARY_BRANCH' };
+  const ls = tryGit(repoDir, ['ls-remote', '--symref', 'origin', 'HEAD']);
+  if (ls.ok) {
+    const m = /^ref:\s+refs\/heads\/(\S+)\s+HEAD/m.exec(ls.out);
+    if (m) return { branch: m[1], how: 'git ls-remote --symref origin HEAD' };
   }
   const sym = tryGit(repoDir, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']);
   if (sym.ok) {
     const m = /refs\/remotes\/origin\/(.+)/.exec(sym.out.trim());
     if (m) return { branch: m[1], how: 'refs/remotes/origin/HEAD' };
   }
-  const ls = tryGit(repoDir, ['ls-remote', '--symref', 'origin', 'HEAD']);
-  if (ls.ok) {
-    const m = /^ref:\s+refs\/heads\/(\S+)\s+HEAD/m.exec(ls.out);
-    if (m) return { branch: m[1], how: 'git ls-remote --symref origin HEAD' };
+  if (tryGit(repoDir, ['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/main']).ok) {
+    return { branch: 'main', how: 'fallback: refs/remotes/origin/main' };
   }
-  const main = tryGit(repoDir, ['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/main']);
-  if (main.ok) return { branch: 'main', how: 'fallback: refs/remotes/origin/main が存在' };
   return null;
 }
 
-// git show の失敗を「path が存在しない(= 文書欠落として FAIL 系)」と
-// 「それ以外の読み取り不能(= 評価不能 VOID 系)」に分類する。
-const MISSING_PATH_RE = /(does not exist|exists on disk, but not in|invalid object name|bad revision|is in commit .* but not)/i;
-
-function readBlobAt(repoDir, commitSha, filePath) {
-  const content = tryGit(repoDir, ['show', `${commitSha}:${filePath}`]);
-  const sha = tryGit(repoDir, ['rev-parse', '--verify', '--quiet', `${commitSha}:${filePath}`]);
-  return {
-    content: content.ok ? content.out : null,
-    sha: sha.ok ? sha.out.trim() : null,
-    hardError: !content.ok && content.error !== '' && !MISSING_PATH_RE.test(content.error) ? content.error : null,
-  };
-}
+// path 欠落と、それ以外の読み取り不能(評価不能)を分ける。
+const MISSING_PATH_RE = /(does not exist|exists on disk, but not in|invalid object name|bad revision)/i;
 
 function snapshotAt(repoDir, commitSha) {
   const docs = {};
   const blobs = {};
   const hardErrors = [];
-  for (const f of CONTROL_DOCS) {
-    const r = readBlobAt(repoDir, commitSha, f);
-    docs[f] = r.content;
-    blobs[f] = r.sha;
-    if (r.hardError) hardErrors.push(`${f}: ${r.hardError}`);
+  for (const file of [...CONTROL_DOCS, FACTORY_WORKFLOW]) {
+    const content = tryGit(repoDir, ['show', `${commitSha}:${file}`]);
+    const sha = tryGit(repoDir, ['rev-parse', '--verify', '--quiet', `${commitSha}:${file}`]);
+    if (CONTROL_DOCS.includes(file)) docs[file] = content.ok ? content.out : null;
+    blobs[file] = sha.ok ? sha.out.trim() : null;
+    if (!content.ok && !MISSING_PATH_RE.test(content.error)) hardErrors.push(`${file}: ${content.error}`);
   }
-  const fy = readBlobAt(repoDir, commitSha, FACTORY_WORKFLOW);
-  blobs[FACTORY_WORKFLOW] = fy.sha;
-  if (fy.hardError) hardErrors.push(`${FACTORY_WORKFLOW}: ${fy.hardError}`);
   return { docs, blobs, hardErrors };
 }
 
 // ---------- artifact ----------
 
 function defaultArtifactPath(envv) {
-  const base = envv?.RUNNER_TEMP || os.tmpdir();
-  return path.join(base, 'control-plane-canary', 'artifact.json');
-}
-
-function writeArtifact(artifactPath, artifact) {
-  fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
-  fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2) + '\n');
+  return path.join(envv?.RUNNER_TEMP || os.tmpdir(), 'control-plane-canary', 'artifact.json');
 }
 
 // ---------- 本体 ----------
 
-// options:
-//   repoDir            … 対象 repo(既定: process.cwd())
-//   artifactPath       … artifact JSON の出力先(repo 内は拒否し一時領域へ退避)
-//   env                … 環境変数(既定: process.env)
-//   fetch              … false で fetch を省略(既定 true)
-//   afterStartSnapshot … テスト用 hook。開始 snapshot 取得後・最終 fetch 前に await される
 export async function runCanary(options = {}) {
   const repoDir = path.resolve(options.repoDir ?? process.cwd());
   const envv = options.env ?? process.env;
@@ -789,11 +368,21 @@ export async function runCanary(options = {}) {
     failureReason: null,
     generatedAtUtc: null,
     meaning:
-      'PASS は「制御文書を origin/<default branch> から読み、機械的矛盾なく次 gate を正確に 1 件提案できた」というカナリア結果だけを意味する。提案 gate 自体の PASS や自動実装能力を意味しない。',
+      'PRECURSOR は「制御平面の JSON block を origin/<default branch> から読み、構造検証を通し、dependency-ready 集合を確定できた」ことだけを意味する。',
+    proves: [
+      'runtime が default branch から 3 正本を読み、blob SHA と block digest を証拠として記録すること',
+      'schema / 重複 / 未知 field / 参照 / status / 依存 cycle / cross-doc 整合の構造検証を fail-closed で行うこと',
+      '宣言された依存が満たされている未完了 gate の集合を決定論的に確定すること',
+    ],
+    doesNotProve: [
+      'OS 基準(Goal First / IOS §15)による意味的順位付け — 別 step。未実装・未検証',
+      'gate が実行可能・選択可能であること(権限 / identity / credentials / cost の判断を含まない)',
+      '自由文と機械項目の意味的整合 — reader は自由文を判断入力にしない',
+      'F3 の PASS — 本 reader は PASS を出さない',
+    ],
     run: {
       workflowRunId: envv.GITHUB_RUN_ID ?? null,
       runAttempt: envv.GITHUB_RUN_ATTEMPT ?? null,
-      workflow: envv.GITHUB_WORKFLOW ?? null,
       eventName: envv.GITHUB_EVENT_NAME ?? null,
       repository: envv.GITHUB_REPOSITORY ?? null,
       nodeVersion: process.version,
@@ -802,193 +391,150 @@ export async function runCanary(options = {}) {
       remote: 'origin',
       defaultBranch: null,
       defaultBranchDetection: null,
-      mainShaAtStart: null,
-      mainShaAtFinalFetch: null,
+      inspectedHeadShaAtStart: null,
+      inspectedHeadShaAtFinalFetch: null,
       fetchAtStart: 'skipped',
       fetchAtEnd: 'skipped',
     },
-    blobs: { 'OS.md': null, 'CURRENT_STATE.md': null, 'ROADMAP.md': null, [FACTORY_WORKFLOW]: null },
-    staleness: {
-      materiallyStale: null,
-      checkedHeadSha: null,
-      changedPaths: null,
-      changedWatchedFiles: null,
-      reason: null,
-    },
-    requiredSections: null,
-    evidencePins: null,
-    gates: null,
-    proposal: null,
-    proposalCount: 0,
-    selectionRationale: [],
-    stopConditions: [],
-    unknowns: [],
+    blobs: {},
+    blocks: {},
+    baseSha: { declared: null, exists: null, isAncestorOfInspectedHead: null },
+    gates: [],
+    dependency_ready_gate_ids: [],
+    staleness: { materiallyStale: null, checkedHeadSha: null, changedBlocks: null, reason: null },
+    unknowns: [
+      '本 reader は JSON block だけを判断入力にする。周辺自由文の意味監査は行わず、自由文との意味矛盾を検出するとは主張しない',
+      'dependency_ready_gate_ids は宣言された依存関係だけに基づく。実行可能性・選択可能性・権限・費用は判断していない',
+      'gate status は CURRENT_STATE block の自己申告であり、本 reader はその根拠 evidence の妥当性を検証しない',
+    ],
+    stopConditions: [
+      'FAIL: 構造矛盾(schema 不正 / 未知 field / status 欠落・不正 / gate ID 重複 / 未知 gate 参照 / 自己参照 / 依存 cycle / cross-doc の gate 集合不一致 / block 重複)',
+      'HOLD: 機械可読 block または正本が default branch に無い、あるいは鮮度を再確認できない',
+      'STALE: run 中に block が変化した、または base_sha が検査 head の祖先でない / 実在しない',
+      'VOID: repository または origin/<default branch> を読めず評価不能',
+      'PASS は本 reader が生成しない(意味的順位付け step の成果物)',
+    ],
     notes: [],
   };
 
-  // artifact は repository 内へ書かない(Runner の一時領域が既定)。
   let artifactPath = path.resolve(options.artifactPath ?? envv.CANARY_ARTIFACT_PATH ?? defaultArtifactPath(envv));
   if (artifactPath === repoDir || artifactPath.startsWith(repoDir + path.sep)) {
-    const fallback = defaultArtifactPath(envv);
-    artifact.notes.push(`指定 artifact path が repository 内のため拒否し ${fallback} へ退避`);
-    artifactPath = fallback;
+    artifactPath = defaultArtifactPath(envv);
+    artifact.notes.push(`指定 artifact path が repository 内のため拒否し ${artifactPath} へ退避`);
   }
 
   try {
-    const isRepo = tryGit(repoDir, ['rev-parse', '--git-dir']);
-    if (!isRepo.ok) {
-      artifact.result = 'VOID';
-      artifact.failureReason = `git repository を読めない: ${isRepo.error}`;
+    if (!tryGit(repoDir, ['rev-parse', '--git-dir']).ok) {
+      artifact.failureReason = 'git repository を読めない';
       return finish();
     }
-
     const det = detectDefaultBranch(repoDir, envv);
     if (!det) {
-      artifact.result = 'VOID';
-      artifact.failureReason = 'default branch を特定できない(origin/HEAD・ls-remote・origin/main のいずれも不可)';
+      artifact.failureReason = 'default branch を特定できない';
       return finish();
     }
-    const branch = det.branch;
-    artifact.git.defaultBranch = branch;
+    artifact.git.defaultBranch = det.branch;
     artifact.git.defaultBranchDetection = det.how;
 
     if (doFetch) {
-      const f = tryGit(repoDir, ['fetch', '--quiet', 'origin', branch]);
+      const f = tryGit(repoDir, ['fetch', '--quiet', 'origin', det.branch]);
       artifact.git.fetchAtStart = f.ok ? 'ok' : 'failed';
-      if (!f.ok) artifact.unknowns.push(`開始時 fetch 失敗(既存の origin/${branch} 参照で継続): ${f.error}`);
+      if (!f.ok) artifact.unknowns.push(`開始時 fetch 失敗(既存参照で継続): ${f.error}`);
     }
-    const start = tryGit(repoDir, ['rev-parse', '--verify', `refs/remotes/origin/${branch}`]);
+    const start = tryGit(repoDir, ['rev-parse', '--verify', `refs/remotes/origin/${det.branch}`]);
     if (!start.ok) {
-      artifact.result = 'VOID';
-      artifact.failureReason = `origin/${branch} を解決できない: ${start.error}`;
+      artifact.failureReason = `origin/${det.branch} を解決できない: ${start.error}`;
       return finish();
     }
     const startSha = start.out.trim();
-    artifact.git.mainShaAtStart = startSha;
+    artifact.git.inspectedHeadShaAtStart = startSha;
 
-    // --- 開始 snapshot(worktree ではなく git object から読む) ---
+    // worktree ではなく git object から読む(PR 側の改変版を判断に使わない)
     const snap = snapshotAt(repoDir, startSha);
     artifact.blobs = { ...snap.blobs };
     if (snap.hardErrors.length > 0) {
-      // path 欠落ではない読み取り不能は「欠落 FAIL」に偽装せず評価不能として止める
-      artifact.result = 'VOID';
       artifact.failureReason = `git object を読み取れない(評価不能): ${snap.hardErrors.join(' / ')}`;
       return finish();
     }
-    const startAnalysis = analyzeControlPlane(snap.docs, snap.blobs);
-    const startDecision = decide(startAnalysis);
 
-    artifact.requiredSections = startAnalysis.requiredSections;
-    artifact.evidencePins = startAnalysis.evidencePins;
-    artifact.gates = {
-      definedInRoadmap: startAnalysis.gatesDefined,
-      primaryFromCurrentState: startAnalysis.primary,
-      independentLaneCandidates: startAnalysis.independentLaneCandidates,
-      passMarkers: startAnalysis.passMarkers,
-      prerequisites: startAnalysis.prerequisites,
-      eligible: startAnalysis.eligible,
-      uninterpretedRoutingSentences: startAnalysis.uninterpretedRoutingSentences,
-    };
-    artifact.proposal = startDecision.proposal;
-    artifact.proposalCount = startDecision.proposalCount;
-    artifact.selectionRationale = startAnalysis.rationale;
-    artifact.stopConditions = startAnalysis.stopConditions;
-    artifact.unknowns.push(...startAnalysis.unknowns);
-    artifact.notes.push(...startAnalysis.notes);
-    artifact.result = startDecision.result;
-    artifact.failureReason = startDecision.failureReason;
-    if (snap.blobs[FACTORY_WORKFLOW] == null) {
-      artifact.unknowns.push(`${FACTORY_WORKFLOW} が origin/${branch} に存在しない(blob 記録なし)`);
+    const analysis = analyzeControlPlane(snap.docs);
+    const decision = decide(analysis);
+    artifact.blocks = analysis.blocks;
+    artifact.gates = analysis.gates;
+    artifact.dependency_ready_gate_ids = analysis.dependencyReadyGateIds;
+    artifact.baseSha.declared = analysis.baseShaDeclared;
+    artifact.result = decision.result;
+    artifact.failureReason = decision.failureReason;
+
+    // base_sha: 実在 commit かつ検査対象 head の祖先であること(完全一致は求めない)
+    if (artifact.result === 'PRECURSOR' && analysis.baseShaDeclared) {
+      const declared = analysis.baseShaDeclared;
+      const exists = tryGit(repoDir, ['cat-file', '-t', declared]);
+      artifact.baseSha.exists = exists.ok && exists.out.trim() === 'commit';
+      if (!artifact.baseSha.exists) {
+        artifact.baseSha.isAncestorOfInspectedHead = false;
+        artifact.result = 'STALE';
+        artifact.failureReason = `base_sha ${declared} が実在の commit でない`;
+      } else {
+        const anc = tryGit(repoDir, ['merge-base', '--is-ancestor', declared, startSha]);
+        artifact.baseSha.isAncestorOfInspectedHead = anc.ok;
+        if (!anc.ok) {
+          artifact.result = 'STALE';
+          artifact.failureReason = `base_sha ${declared} が検査対象 head ${startSha} の祖先でない`;
+        }
+      }
     }
 
-    if (options.afterStartSnapshot) {
-      await options.afterStartSnapshot({ repoDir, branch, startSha });
-    }
+    if (options.afterStartSnapshot) await options.afterStartSnapshot({ repoDir, branch: det.branch, startSha });
 
-    // --- 最終 fetch と staleness 判定 ---
+    // --- 最終 fetch と staleness(block の変化だけを見る) ---
     let endSha = startSha;
     if (doFetch) {
-      const f2 = tryGit(repoDir, ['fetch', '--quiet', 'origin', branch]);
+      const f2 = tryGit(repoDir, ['fetch', '--quiet', 'origin', det.branch]);
       artifact.git.fetchAtEnd = f2.ok ? 'ok' : 'failed';
-      if (!f2.ok) {
-        // 鮮度を再確認できないまま PASS を出さない(fail-closed)。
-        artifact.unknowns.push(`最終 fetch 失敗: ${f2.error}`);
-        if (artifact.result === 'PASS') {
-          artifact.result = 'HOLD';
-          artifact.failureReason = '最終 fetch に失敗し、run 中の main 変化(staleness)を再確認できない';
-        }
-        artifact.git.mainShaAtFinalFetch = null;
-        return finish();
-      }
-      const end = tryGit(repoDir, ['rev-parse', '--verify', `refs/remotes/origin/${branch}`]);
+      const end = f2.ok ? tryGit(repoDir, ['rev-parse', '--verify', `refs/remotes/origin/${det.branch}`]) : { ok: false, error: f2.error };
       if (!end.ok) {
-        // fetch は通ったのに参照を解決できない。startSha へ黙って倒さない(fail-closed)。
-        artifact.unknowns.push(`最終 fetch 後の origin/${branch} 解決に失敗: ${end.error}`);
-        if (artifact.result === 'PASS') {
+        artifact.unknowns.push(`最終 fetch / 参照解決に失敗: ${end.error}`);
+        if (artifact.result === 'PRECURSOR') {
           artifact.result = 'HOLD';
-          artifact.failureReason = '最終 fetch 後に origin/<default branch> を解決できず、staleness を再確認できない';
+          artifact.failureReason = 'run 中の default branch の変化を再確認できない';
         }
-        artifact.git.mainShaAtFinalFetch = null;
         return finish();
       }
       endSha = end.out.trim();
-    } else {
-      artifact.git.fetchAtEnd = 'skipped';
     }
-    artifact.git.mainShaAtFinalFetch = endSha;
+    artifact.git.inspectedHeadShaAtFinalFetch = endSha;
+    artifact.staleness.checkedHeadSha = endSha;
 
     if (endSha === startSha) {
-      artifact.staleness = {
-        materiallyStale: false,
-        checkedHeadSha: startSha,
-        changedPaths: [],
-        changedWatchedFiles: [],
-        reason: 'run 中に origin/<default branch> は変化していない',
-      };
-      return finish();
-    }
-
-    // main SHA の変化だけでは STALE にしない。監視対象 4 ファイルの blob 変化と
-    // materiality 署名(判断が依存する要素)の変化だけを見る。
-    const diff = tryGit(repoDir, ['diff', '--name-only', `${startSha}..${endSha}`]);
-    const changedPaths = diff.ok ? diff.out.split('\n').filter(Boolean) : null;
-    const endSnap = snapshotAt(repoDir, endSha);
-    const changedWatched = WATCHED_FILES.filter((f) => snap.blobs[f] !== endSnap.blobs[f]);
-    artifact.staleness.changedPaths = changedPaths && changedPaths.length > 200
-      ? [...changedPaths.slice(0, 200), `… 他 ${changedPaths.length - 200} 件`]
-      : changedPaths;
-    artifact.staleness.changedWatchedFiles = changedWatched;
-
-    if (changedWatched.length === 0) {
       artifact.staleness.materiallyStale = false;
-      artifact.staleness.checkedHeadSha = endSha;
-      artifact.staleness.reason = `head は ${startSha} → ${endSha} へ動いたが、監視対象(3 正本 + factory.yml)の blob は不変。検査済み head を記録して継続`;
+      artifact.staleness.changedBlocks = [];
+      artifact.staleness.reason = 'run 中に default branch は変化していない';
       return finish();
     }
 
-    const endAnalysis = analyzeControlPlane(endSnap.docs, endSnap.blobs);
-    const endParseFailed = endAnalysis.problems.length > 0 && startAnalysis.problems.length === 0;
-    const cmp = endParseFailed
-      ? { materiallyStale: true, reason: `変更後の文書に機械的矛盾があり materiality を判定できない: ${endAnalysis.problems.join(' / ')}` }
-      : compareForStaleness(startAnalysis, endAnalysis);
-    artifact.staleness.materiallyStale = cmp.materiallyStale;
-    artifact.staleness.checkedHeadSha = endSha;
-    if (cmp.materiallyStale) {
-      artifact.staleness.reason = `materially stale: ${cmp.reason}(変更 blob: ${changedWatched.join(', ')})`;
-      if (artifact.result === 'PASS') {
+    // head の移動だけでは STALE にしない。block digest の変化だけを見る。
+    const endSnap = snapshotAt(repoDir, endSha);
+    const endAnalysis = analyzeControlPlane(endSnap.docs);
+    const changed = [STATE_BLOCK.file, ROADMAP_BLOCK.file].filter(
+      (f) => analysis.blocks[f]?.digest !== endAnalysis.blocks[f]?.digest,
+    );
+    artifact.staleness.changedBlocks = changed;
+    artifact.staleness.materiallyStale = changed.length > 0;
+    if (changed.length === 0) {
+      artifact.staleness.reason = `head は ${startSha} → ${endSha} へ動いたが制御 block は不変。検査済み head を記録して継続`;
+    } else {
+      artifact.staleness.reason = `run 中に制御 block が変化: ${changed.join(', ')}`;
+      if (artifact.result === 'PRECURSOR') {
         artifact.result = 'STALE';
         artifact.failureReason = artifact.staleness.reason;
-        artifact.proposal = null;
-        artifact.proposalCount = 0;
+        artifact.dependency_ready_gate_ids = [];
       } else {
-        artifact.notes.push(`開始時点の結果 ${artifact.result} に加え、run 中に materially stale な変更を検出: ${cmp.reason}`);
+        artifact.notes.push(`開始時の結果 ${artifact.result} に加え、run 中に block 変化を検出`);
       }
-    } else {
-      artifact.staleness.reason = `監視対象 blob は変化(${changedWatched.join(', ')})したが、判断が依存する要素(materiality 署名)は不変。検査済み head を記録して継続`;
     }
     return finish();
   } catch (err) {
-    // 想定外の失敗でも artifact は必ず残す(評価不能 = VOID)。
     artifact.result = 'VOID';
     artifact.failureReason = `想定外の失敗: ${err?.stack ?? String(err)}`;
     return finish();
@@ -997,15 +543,15 @@ export async function runCanary(options = {}) {
   function finish() {
     artifact.generatedAtUtc = new Date().toISOString();
     try {
-      writeArtifact(artifactPath, artifact);
+      fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
+      fs.writeFileSync(artifactPath, JSON.stringify(artifact, null, 2) + '\n');
     } catch (writeErr) {
-      // artifact は失敗時にも必ず残す。書けない場合は OS 一時領域へ退避を試みる
       const fallback = path.join(os.tmpdir(), `control-plane-canary-fallback-${process.pid}.json`);
       try {
-        writeArtifact(fallback, artifact);
+        fs.writeFileSync(fallback, JSON.stringify(artifact, null, 2) + '\n');
         artifactPath = fallback;
       } catch {
-        console.error(`control-plane-canary: artifact を書き込めない(${String(writeErr)})。stdout の JSON を参照`);
+        console.error(`control-plane-canary: artifact を書き込めない(${String(writeErr)})`);
       }
     }
     return { artifact, artifactPath, exitCode: EXIT_CODES[artifact.result] ?? 1 };
@@ -1014,21 +560,15 @@ export async function runCanary(options = {}) {
 
 // ---------- CLI ----------
 
-function parseArgs(argv) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const opts = {};
+  const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--artifact') opts.artifactPath = argv[++i];
     else if (argv[i] === '--repo') opts.repoDir = argv[++i];
     else if (argv[i] === '--no-fetch') opts.fetch = false;
   }
-  return opts;
-}
-
-const isCliEntry =
-  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-
-if (isCliEntry) {
-  const { artifact, artifactPath, exitCode } = await runCanary(parseArgs(process.argv.slice(2)));
+  const { artifact, artifactPath, exitCode } = await runCanary(opts);
   console.log(JSON.stringify(artifact, null, 2));
   console.error(`control-plane-canary: result=${artifact.result} artifact=${artifactPath}`);
   process.exit(exitCode);
