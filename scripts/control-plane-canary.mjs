@@ -17,7 +17,8 @@
 //   - STALE : run 開始後に判断が依存する箇所が materially に変化した
 //             (main SHA が動いただけでは STALE にしない)
 //   - HOLD  : 意味判断が必要で決定論的に解決できない(散文 prerequisite、
-//             否定を含む曖昧な PASS 記述、materiality 判定不能 等)
+//             未解釈 routing 文に現れる主候補、否定・矛盾を含む曖昧な PASS 記述、
+//             materiality 判定不能 等)
 //
 // 意味理解の偽装をしない: この実装が検出するのは機械的矛盾だけである。
 // 正規表現で解決できない意味判断が必要になった時点で HOLD へ倒す。
@@ -131,12 +132,17 @@ export function parseRoadmapGates(roadmapText) {
   return { gates, duplicates };
 }
 
-// gate 定義配下の明示的な「Prerequisite:」リストを返す(無ければ null)。
+// gate 定義配下の明示的な「Prerequisite:」ブロックを返す(無ければ null)。
+// 「Prerequisite:」単独行 + リスト、太字、「Prerequisite: <本文>」の inline 形式を許容する。
+const PREREQ_HEADER_RE = /^(?:\*\*)?Prerequisites?(?:\*\*)?\s*[::]?\s*(.*)$/i;
+
 export function parseExplicitPrereqs(gateBody) {
   const lines = gateBody.split('\n');
-  const start = lines.findIndex((l) => /^Prerequisites?:?\s*$/i.test(l.trim()));
+  const start = lines.findIndex((l) => PREREQ_HEADER_RE.test(l.trim()));
   if (start === -1) return null;
   const items = [];
+  const inline = PREREQ_HEADER_RE.exec(lines[start].trim())[1].trim();
+  if (inline !== '') items.push(inline);
   for (let i = start + 1; i < lines.length; i++) {
     const t = lines[i].trim();
     if (t === '') continue;
@@ -146,28 +152,47 @@ export function parseExplicitPrereqs(gateBody) {
   return items;
 }
 
-// 依存順序 section(Dependency-Safe Routing)から「A → B → C」の矢印連鎖だけを
-// 機械的に読む。散文の依存(矢印なし)は解釈しない=prerequisite として扱わない。
-// 「W2 / W3 → W4」のような並記は保守的に「両方とも前提」とみなす。
+// 「独立lane / 独立canary として候補」と明記された文か(candidacy 指定として解釈済み扱い)
+function isIndependentDesignation(text) {
+  return /独立\s*(lane|レーン|canary|カナリア)/i.test(text) && /候補/.test(text);
+}
+
+// 依存順序 section(Dependency-Safe Routing)から「A → B → C」の矢印連鎖を
+// 機械的に読む。「W2 / W3 → W4」のような並記は保守的に「両方とも前提」とみなす。
+//
+// 矢印の無い散文(例:「F4はF3の後」)は意味解釈しない。代わりに、gate ID を含むのに
+// 連鎖としても candidacy 指定としても解釈できなかった文を「未解釈 routing 文」として
+// 全件収集する。そこに現れる gate は前提を決定論的に検証できないため、主候補なら
+// HOLD、候補なら eligible から除外する(fail-closed。散文を無視して PASS しない)。
 export function parseDependencyChains(roadmapText) {
   const sections = extractSections(roadmapText, (h) => /Dependency-Safe Routing|依存順序/i.test(h.text));
   const chains = [];
   const skippedArrowSentences = [];
+  const proseSentences = []; // { sentence, ids } — 未解釈 routing 文
   for (const sec of sections) {
     for (const rawLine of sec.body.split('\n')) {
-      for (const sentence of rawLine.split('。')) {
-        if (!sentence.includes('→')) continue;
-        const positions = sentence.split('→').map((seg) => gateIdsIn(seg));
-        if (positions.some((p) => p.length === 0)) {
-          // gate ID を含まない区間が混ざる連鎖は位置が揃わないため使わない(fail-safe)。
-          skippedArrowSentences.push(sentence.trim());
+      for (const rawSentence of rawLine.split('。')) {
+        const sentence = rawSentence.trim();
+        if (sentence === '') continue;
+        const ids = [...new Set(gateIdsIn(sentence))];
+        if (sentence.includes('→')) {
+          const positions = sentence.split('→').map((seg) => gateIdsIn(seg));
+          if (positions.some((p) => p.length === 0)) {
+            // gate ID を含まない区間が混ざる連鎖は位置が揃わないため使わない(fail-safe)。
+            skippedArrowSentences.push(sentence);
+            if (ids.length > 0) proseSentences.push({ sentence, ids });
+            continue;
+          }
+          chains.push(positions);
           continue;
         }
-        chains.push(positions);
+        if (ids.length === 0) continue;
+        if (isIndependentDesignation(sentence)) continue; // candidacy 指定として解釈済み
+        proseSentences.push({ sentence, ids });
       }
     }
   }
-  return { chains, sectionCount: sections.length, skippedArrowSentences };
+  return { chains, sectionCount: sections.length, skippedArrowSentences, proseSentences };
 }
 
 // 矢印連鎖から「gate → その直前段の gate 群(=前提)」を引く。
@@ -197,7 +222,7 @@ export function parseSmallestNextGate(currentStateText) {
       const m = declRe.exec(line);
       if (m) declarations.push({ id: m[1], title: m[2].replace(/[。.]+$/, '').trim() });
       // 「独立lane / 独立canary として候補」と明記された行だけを拾う(「独立した〜」等の散文は対象外)
-      if (/独立\s*(lane|レーン|canary|カナリア)/i.test(line) && /候補/.test(line)) independentLines.push(line);
+      if (isIndependentDesignation(line)) independentLines.push(line);
       if (/1\s*件/.test(line) || /1件/.test(line)) singleGateRuleQuote = line;
     }
     return { section: sec, declarations, independentLines, singleGateRuleQuote };
@@ -284,6 +309,7 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
       problems, holds, unknowns, notes,
       requiredSections: null, primary: null, independentLaneCandidates: [],
       gatesDefined: [], passMarkers: [], prerequisites: {}, eligible: [],
+      uninterpretedRoutingSentences: [],
       evidencePins: null, rationale: [], stopConditions: [], signatureParts: null,
     };
   }
@@ -341,7 +367,7 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
   const depSec = extractSections(roadmapText, (h) => /Dependency-Safe Routing|依存順序/i.test(h.text))[0];
   if (depSec) {
     for (const rawLine of depSec.body.split('\n')) {
-      if (/独立\s*(lane|レーン|canary|カナリア)/i.test(rawLine) && /候補/.test(rawLine)) {
+      if (isIndependentDesignation(rawLine)) {
         for (const id of gateIdsIn(rawLine)) independentSet.add(id);
       }
     }
@@ -370,6 +396,15 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
   }
 
   // --- prerequisite 照合(主候補 + 独立候補) ---
+  // PASS 記録の状態: satisfied(肯定のみ)/ ambiguous(否定語を含む、または肯定と否定が
+  // 同居して矛盾)/ absent。satisfied 以外は前提充足の根拠にしない(fail-closed)。
+  const markerStateOf = (gid) => {
+    const m = passMarkers.get(gid);
+    if (!m) return 'absent';
+    if (m.positive && !m.ambiguous) return 'satisfied';
+    return 'ambiguous';
+  };
+
   const prerequisites = {};
   const evalGate = (id) => {
     const entry = {
@@ -380,38 +415,52 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
       ambiguousChain: [],
       unverifiableExplicit: [],
       unmetExplicit: [],
+      ambiguousExplicit: [],
+      proseRoutingMentions: deps.proseSentences.filter((p) => p.ids.includes(id)).map((p) => p.sentence),
+      unparsedPrereqMention: false,
       alreadyPassMarked: false,
+      selfMarkerAmbiguous: false,
       eligible: false,
     };
     if (gates.has(id)) {
-      const ex = parseExplicitPrereqs(gates.get(id).body);
+      const body = gates.get(id).body;
+      const ex = parseExplicitPrereqs(body);
       entry.explicit = ex;
       if (ex) {
         for (const item of ex) {
           const ids = gateIdsIn(item);
           if (ids.length === 0) entry.unverifiableExplicit.push(item);
           else for (const pid of ids) {
-            const m = passMarkers.get(pid);
-            if (!m?.positive) entry.unmetExplicit.push(`${pid}(${item})`);
+            const st = markerStateOf(pid);
+            if (st === 'satisfied') continue;
+            if (st === 'ambiguous') entry.ambiguousExplicit.push(`${pid}(${item})`);
+            else entry.unmetExplicit.push(`${pid}(${item})`);
           }
         }
       }
+      // 本文が prerequisite に言及するのにブロックとして解析できない場合も検証不能扱い
+      if (/\bPrerequisites?\b/i.test(body) && (!ex || ex.length === 0)) entry.unparsedPrereqMention = true;
     }
     for (const pid of entry.chain) {
-      const m = passMarkers.get(pid);
-      if (m?.positive) continue;
-      if (m?.ambiguous) entry.ambiguousChain.push(pid);
+      const st = markerStateOf(pid);
+      if (st === 'satisfied') continue;
+      if (st === 'ambiguous') entry.ambiguousChain.push(pid);
       else entry.unmetChain.push(pid);
     }
-    const selfMarker = passMarkers.get(id);
-    if (selfMarker?.positive) entry.alreadyPassMarked = true;
+    const selfState = markerStateOf(id);
+    entry.alreadyPassMarked = selfState === 'satisfied';
+    entry.selfMarkerAmbiguous = selfState === 'ambiguous';
     entry.eligible =
       entry.definedInRoadmap &&
       !entry.alreadyPassMarked &&
+      !entry.selfMarkerAmbiguous &&
       entry.unmetChain.length === 0 &&
       entry.ambiguousChain.length === 0 &&
       entry.unmetExplicit.length === 0 &&
-      entry.unverifiableExplicit.length === 0;
+      entry.ambiguousExplicit.length === 0 &&
+      entry.unverifiableExplicit.length === 0 &&
+      !entry.unparsedPrereqMention &&
+      entry.proseRoutingMentions.length === 0;
     prerequisites[id] = entry;
     return entry;
   };
@@ -425,8 +474,16 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
       }
       if (e.unmetChain.length > 0) problems.push(`prerequisite 未達: 主候補 ${primary.id} の前提 ${e.unmetChain.join(', ')} に PASS 記録が無い`);
       if (e.unmetExplicit.length > 0) problems.push(`prerequisite 未達: 主候補 ${primary.id} の明示前提 ${e.unmetExplicit.join(', ')} に PASS 記録が無い`);
-      if (e.ambiguousChain.length > 0) holds.push(`前提 ${e.ambiguousChain.join(', ')} の PASS 記述が否定語を含み曖昧(意味判断が必要)`);
+      if (e.selfMarkerAmbiguous) {
+        holds.push(`主候補 ${primary.id} の PASS 記録が矛盾または曖昧(該当行: ${passMarkers.get(primary.id).lines.join(' / ')})`);
+      }
+      if (e.ambiguousChain.length > 0) holds.push(`前提 ${e.ambiguousChain.join(', ')} の PASS 記述が否定語を含むか矛盾しており曖昧(意味判断が必要)`);
+      if (e.ambiguousExplicit.length > 0) holds.push(`明示前提 ${e.ambiguousExplicit.join(', ')} の PASS 記述が曖昧(意味判断が必要)`);
       if (e.unverifiableExplicit.length > 0) holds.push(`主候補 ${primary.id} の明示 prerequisite が散文で機械検証不能: ${e.unverifiableExplicit.join(' / ')}`);
+      if (e.unparsedPrereqMention) holds.push(`主候補 ${primary.id} の ROADMAP 本文が prerequisite に言及するが機械解析できない(fail-closed)`);
+      if (e.proseRoutingMentions.length > 0) {
+        holds.push(`主候補 ${primary.id} が依存順序 section の未解釈 routing 文(散文)に現れ、前提を決定論的に検証できない: ${e.proseRoutingMentions.join(' / ')}`);
+      }
     }
   }
   for (const id of independentLaneCandidates) {
@@ -459,7 +516,7 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
 
   const stopConditions = [
     'FAIL: 機械的矛盾(文書欠落 / 同一 field の多重定義 / 存在しない gate / prerequisite 未達 / evidence pin 不一致 / 提案が 0 件または 2 件以上)',
-    'HOLD: 意味判断が必要で決定論的に解決できない(散文 prerequisite / 否定を含む曖昧な PASS 記述 / materiality 判定不能)',
+    'HOLD: 意味判断が必要で決定論的に解決できない(散文 prerequisite / 未解釈 routing 文に現れる主候補 / 否定・矛盾を含む曖昧な PASS 記述 / materiality 判定不能)',
     'STALE: run 開始後の diff が対象 assertion・Smallest Next Gate・prerequisite・PASS 条件・依存 evidence を変えた',
     'VOID: repository または origin/<default branch> を読めず評価不能',
   ];
@@ -467,7 +524,7 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
   if (opQuote) stopConditions.push(`OS Operating Rule: ${opQuote}`);
 
   // 恒常的な既知の限界(意味理解の偽装をしない旨の明示)
-  unknowns.push('矢印連鎖の無い散文の依存関係は機械解釈せず prerequisite として扱わない');
+  unknowns.push('矢印連鎖の無い散文の routing 文は意味解釈しない。gate ID を含む未解釈 routing 文に現れる gate は前提を検証できないため、主候補なら HOLD、候補なら eligible から除外する(fail-closed)');
   unknowns.push('独立 lane 候補の列挙は「独立lane/独立canary」明記行からの正規表現抽出(heuristic)であり、意味理解ではない');
   unknowns.push('依存順序の「A / B」並記は保守的に「両方とも前提」と解釈する');
   unknowns.push('提案 gate の実行に人間専権(identity / credentials 等)が必要かは機械判定できない。本カナリアは提案のみで実行しない');
@@ -479,6 +536,8 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
     smallestNextGateSection: sngSection ? normalizeBody(sngSection.section.body) : null,
     primaryRoadmapSection: primaryGateDef ? normalizeBody(primaryGateDef.body) : null,
     dependencyChains: deps.chains,
+    // 未解釈 routing 文(散文の依存)も判断が依存する要素。run 中の書き換えは materially stale
+    uninterpretedRoutingSentences: deps.proseSentences,
     primaryPrereqs: primary ? prerequisites[primary.id] ?? null : null,
     passMarkers: [...passMarkers.entries()]
       .map(([id, m]) => ({ id, positive: m.positive, ambiguous: m.ambiguous }))
@@ -502,6 +561,7 @@ export function analyzeControlPlane(docs, actualBlobs = null) {
     passMarkers: signatureParts.passMarkers,
     prerequisites,
     eligible,
+    uninterpretedRoutingSentences: deps.proseSentences,
     evidencePins,
     rationale,
     stopConditions,
@@ -605,26 +665,34 @@ export function detectDefaultBranch(repoDir, envv) {
   return null;
 }
 
+// git show の失敗を「path が存在しない(= 文書欠落として FAIL 系)」と
+// 「それ以外の読み取り不能(= 評価不能 VOID 系)」に分類する。
+const MISSING_PATH_RE = /(does not exist|exists on disk, but not in|invalid object name|bad revision|is in commit .* but not)/i;
+
 function readBlobAt(repoDir, commitSha, filePath) {
   const content = tryGit(repoDir, ['show', `${commitSha}:${filePath}`]);
   const sha = tryGit(repoDir, ['rev-parse', '--verify', '--quiet', `${commitSha}:${filePath}`]);
   return {
     content: content.ok ? content.out : null,
     sha: sha.ok ? sha.out.trim() : null,
+    hardError: !content.ok && content.error !== '' && !MISSING_PATH_RE.test(content.error) ? content.error : null,
   };
 }
 
 function snapshotAt(repoDir, commitSha) {
   const docs = {};
   const blobs = {};
+  const hardErrors = [];
   for (const f of CONTROL_DOCS) {
     const r = readBlobAt(repoDir, commitSha, f);
     docs[f] = r.content;
     blobs[f] = r.sha;
+    if (r.hardError) hardErrors.push(`${f}: ${r.hardError}`);
   }
   const fy = readBlobAt(repoDir, commitSha, FACTORY_WORKFLOW);
   blobs[FACTORY_WORKFLOW] = fy.sha;
-  return { docs, blobs };
+  if (fy.hardError) hardErrors.push(`${FACTORY_WORKFLOW}: ${fy.hardError}`);
+  return { docs, blobs, hardErrors };
 }
 
 // ---------- artifact ----------
@@ -738,6 +806,12 @@ export async function runCanary(options = {}) {
     // --- 開始 snapshot(worktree ではなく git object から読む) ---
     const snap = snapshotAt(repoDir, startSha);
     artifact.blobs = { ...snap.blobs };
+    if (snap.hardErrors.length > 0) {
+      // path 欠落ではない読み取り不能は「欠落 FAIL」に偽装せず評価不能として止める
+      artifact.result = 'VOID';
+      artifact.failureReason = `git object を読み取れない(評価不能): ${snap.hardErrors.join(' / ')}`;
+      return finish();
+    }
     const startAnalysis = analyzeControlPlane(snap.docs, snap.blobs);
     const startDecision = decide(startAnalysis);
 
@@ -750,6 +824,7 @@ export async function runCanary(options = {}) {
       passMarkers: startAnalysis.passMarkers,
       prerequisites: startAnalysis.prerequisites,
       eligible: startAnalysis.eligible,
+      uninterpretedRoutingSentences: startAnalysis.uninterpretedRoutingSentences,
     };
     artifact.proposal = startDecision.proposal;
     artifact.proposalCount = startDecision.proposalCount;
@@ -783,7 +858,17 @@ export async function runCanary(options = {}) {
         return finish();
       }
       const end = tryGit(repoDir, ['rev-parse', '--verify', `refs/remotes/origin/${branch}`]);
-      endSha = end.ok ? end.out.trim() : startSha;
+      if (!end.ok) {
+        // fetch は通ったのに参照を解決できない。startSha へ黙って倒さない(fail-closed)。
+        artifact.unknowns.push(`最終 fetch 後の origin/${branch} 解決に失敗: ${end.error}`);
+        if (artifact.result === 'PASS') {
+          artifact.result = 'HOLD';
+          artifact.failureReason = '最終 fetch 後に origin/<default branch> を解決できず、staleness を再確認できない';
+        }
+        artifact.git.mainShaAtFinalFetch = null;
+        return finish();
+      }
+      endSha = end.out.trim();
     } else {
       artifact.git.fetchAtEnd = 'skipped';
     }
@@ -848,7 +933,18 @@ export async function runCanary(options = {}) {
 
   function finish() {
     artifact.generatedAtUtc = new Date().toISOString();
-    writeArtifact(artifactPath, artifact);
+    try {
+      writeArtifact(artifactPath, artifact);
+    } catch (writeErr) {
+      // artifact は失敗時にも必ず残す。書けない場合は OS 一時領域へ退避を試みる
+      const fallback = path.join(os.tmpdir(), `control-plane-canary-fallback-${process.pid}.json`);
+      try {
+        writeArtifact(fallback, artifact);
+        artifactPath = fallback;
+      } catch {
+        console.error(`control-plane-canary: artifact を書き込めない(${String(writeErr)})。stdout の JSON を参照`);
+      }
+    }
     return { artifact, artifactPath, exitCode: EXIT_CODES[artifact.result] ?? 1 };
   }
 }

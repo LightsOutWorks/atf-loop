@@ -11,10 +11,13 @@
 #   - Secrets を参照しない。外部モデル・外部 API を呼ばない
 #   - .github/workflows/factory.yml には触れない(canary は blob SHA を読むだけ)
 #
-# 自己承認の防止:
+# 自己承認の防止(保護範囲を明記):
 #   pull_request で 3 正本が変更された時に起動するが、canary スクリプトは判定に
 #   PR 側 checkout(改変版)を使わず、常に origin/main の git object を読む。
-#   実装者が同じ PR で制御規則を書き換えて自己承認することはできない。
+#   よって同じ PR で「制御文書(3 正本)」を書き換えても canary の判断には使われない。
+#   限界: workflow 本体と scripts/ は pull_request の merge ref から実行されるため、
+#   canary 実装自体を書き換える PR はこの仕組みでは防げない(pull_request CI の
+#   構造的限界)。canary 実装の変更は従来どおり human review / merge の対象とする。
 #
 # pull_request_target は使用禁止(書き込み権限とSecretsを PR コードへ渡さないため)。
 

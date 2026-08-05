@@ -15,6 +15,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { fileURLToPath } from 'node:url';
+
 import {
   CONTROL_DOCS,
   FACTORY_WORKFLOW,
@@ -24,6 +26,7 @@ import {
   compareForStaleness,
   decide,
   materialSignature,
+  parseExplicitPrereqs,
   runCanary,
 } from './control-plane-canary.mjs';
 
@@ -98,7 +101,15 @@ C0とF3は独立laneとして候補になる。1 runで選ぶgateは1件だけ�
 ${pinBlock}${dup}`;
 }
 
-function makeRoadmap({ duplicateW0 = false, w0PassBody = '- compare channels' } = {}) {
+// 依存順序 section は実 ROADMAP の形状(矢印連鎖 + Foundation の散文依存)を模す
+const REAL_FOUNDATION_PROSE =
+  'F3は3文書がdefault branchへ揃った後にだけ実行する。F4はF3の後、F5はF4の反復成功後。';
+
+function makeRoadmap({
+  duplicateW0 = false,
+  w0PassBody = '- compare channels',
+  foundationProse = REAL_FOUNDATION_PROSE,
+} = {}) {
   return `# Test Roadmap
 
 ## 5. Gates
@@ -116,6 +127,12 @@ PASS:
 PASS:
 
 - reads docs
+
+#### F4 — Autonomous evolution PR
+
+PASS:
+
+- unattended draft PR
 
 #### F5 — Bounded auto-merge
 
@@ -156,7 +173,7 @@ Gateの現在statusと次の1件はCURRENT_STATE.mdだけに置く。
 
 依存順序:
 
-1. FoundationはF0 → F3。F4はF3の後。
+1. FoundationはF0 → F1 → F2。${foundationProse}
 2. World LearningはW0 → W0A → W1。
 3. Capability EvolutionはC0 → C1。
 4. C0とF3は独立canaryとして並行候補になりうる。ただし1 runにつき選ぶgateは1件。
@@ -304,6 +321,52 @@ test('evidence pin 不一致は FAIL、一致なら PASS', () => {
   assert.match(bad.failureReason, /evidence pin 不一致/);
 });
 
+test('ROADMAP §8 の散文依存(F4はF3の後)を無視して PASS しない(HOLD)', () => {
+  // 敵対的レビューで確認された fail-open の再現ケース: 実 ROADMAP と同形の散文依存の下で
+  // 次 gate を F4 にしても、F3 の PASS 記録なしに提案してはならない
+  const { decision } = analyzeAndDecide({
+    state: { nextGate: 'F4', nextGateTitle: 'Autonomous evolution PR' },
+  });
+  assert.equal(decision.result, 'HOLD');
+  assert.equal(decision.proposal, null);
+  assert.match(decision.failureReason, /未解釈 routing 文/);
+  assert.match(decision.failureReason, /F4/);
+});
+
+test('散文 routing 制約を持つ gate(F3)が主候補でも HOLD(fail-closed)', () => {
+  const { decision } = analyzeAndDecide({
+    state: { nextGate: 'F3', nextGateTitle: 'Runtime reads control plane' },
+  });
+  assert.equal(decision.result, 'HOLD');
+  assert.equal(decision.proposal, null);
+});
+
+test('散文 routing 文に現れる候補は eligible から除外される', () => {
+  const { analysis, decision } = analyzeAndDecide();
+  assert.equal(decision.result, 'PASS');
+  assert.ok(!analysis.eligible.includes('F4'));
+  assert.ok(!analysis.eligible.includes('F3'));
+  assert.ok(analysis.eligible.includes('C0'));
+  assert.ok(analysis.uninterpretedRoutingSentences.length >= 2);
+});
+
+test('肯定と否定が同居する PASS 記録は矛盾として前提充足に使わない(HOLD)', () => {
+  const { decision } = analyzeAndDecide({
+    state: { nextGate: 'W0A', passLines: ['OS正本化F0はPASS。', 'W0はPASS。', 'W0はまだPASSしていない。'] },
+  });
+  assert.equal(decision.result, 'HOLD');
+  assert.notEqual(decision.result, 'PASS');
+});
+
+test('Prerequisite の inline 形式は解析され、言及のみ(解析不能)は fail-closed に HOLD', () => {
+  assert.deepEqual(parseExplicitPrereqs('Prerequisite: F9の完了\n\nPASS:\n\n- x'), ['F9の完了']);
+  const { decision } = analyzeAndDecide({
+    roadmap: { w0PassBody: '- compare channels\n- prerequisite handling is defined elsewhere' },
+  });
+  assert.equal(decision.result, 'HOLD');
+  assert.match(decision.failureReason, /prerequisite/i);
+});
+
 // ---------- materiality 署名 ----------
 
 test('無関係な追記では署名が変わらず、次 gate・PASS 条件の変更では変わる', () => {
@@ -319,6 +382,15 @@ test('無関係な追記では署名が変わらず、次 gate・PASS 条件の�
   const passCondChanged = analyzeControlPlane(makeDocs({ roadmap: { w0PassBody: '- 強化された PASS 条件' } }));
   const cmp2 = compareForStaleness(base, passCondChanged);
   assert.equal(cmp2.materiallyStale, true);
+});
+
+test('散文 routing 文(未解釈の依存)の変更も materially stale', () => {
+  const base = analyzeControlPlane(makeDocs());
+  const proseChanged = analyzeControlPlane(
+    makeDocs({ roadmap: { foundationProse: 'F4とF5はいつでも実行できる。' } }),
+  );
+  const cmp = compareForStaleness(base, proseChanged);
+  assert.equal(cmp.materiallyStale, true);
 });
 
 test('変更後文書が解析不能なら materiality 判定不能 → stale 扱い(fail-closed)', () => {
@@ -545,11 +617,27 @@ test('E2E: 正本 blob が変わっても判断が依存する要素が不変な
   assert.deepEqual(artifact.staleness.changedWatchedFiles, ['CURRENT_STATE.md']);
 });
 
+test('E2E: artifact path が repository 内なら拒否して一時領域へ退避する', async () => {
+  const docs = pinnedDocs();
+  const { clone } = makeFixtureRepos('inside-artifact', docs);
+  const runnerTemp = path.join(tmpRoot, 'inside-artifact-temp');
+  const { artifact, artifactPath } = await runCanary({
+    repoDir: clone,
+    artifactPath: path.join(clone, 'artifact.json'),
+    env: { RUNNER_TEMP: runnerTemp },
+  });
+  assert.equal(artifact.result, 'PASS');
+  assert.ok(!artifactPath.startsWith(clone + path.sep));
+  assert.ok(fs.existsSync(path.join(runnerTemp, 'control-plane-canary', 'artifact.json')));
+  assert.ok(!fs.existsSync(path.join(clone, 'artifact.json')));
+  assert.equal(worktreeState(clone).status, '');
+});
+
 test('E2E: CLI エントリポイント(node scripts/control-plane-canary.mjs)が JSON を出力する', () => {
   const docs = pinnedDocs();
   const { clone } = makeFixtureRepos('cli', docs);
   const artifactPath = path.join(tmpRoot, 'cli-artifact.json');
-  const scriptPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'control-plane-canary.mjs');
+  const scriptPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'control-plane-canary.mjs');
 
   const stdout = execFileSync(process.execPath, [scriptPath, '--artifact', artifactPath], {
     cwd: clone,
