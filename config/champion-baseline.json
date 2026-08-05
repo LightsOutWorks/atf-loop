@@ -1,0 +1,494 @@
+{
+  "schema": "atf-configuration-provenance/v1",
+  "kind": "champion-baseline",
+  "title": "Current production configuration baseline (C0 — Configuration Provenance)",
+  "declared_at": "2026-08-05",
+  "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every field is either OBSERVED with repository evidence, or UNKNOWN with a concrete reason and a resolution path. Blank values, guesses and implicit defaults are forbidden by scripts/c0-provenance.mjs.",
+  "base": {
+    "repository": "LightsOutWorks/atf-loop",
+    "default_branch": "main",
+    "base_sha": "16b7ad3715fefff4f4909c7a8c480cad0acb6789",
+    "base_sha_policy": "base_sha is informational. A change of the default-branch head alone does NOT make this baseline STALE. The baseline becomes materially STALE only when one of the material_sources below changes content (git blob SHA-1 mismatch against the working tree)."
+  },
+  "material_sources": {
+    "OS.md": {
+      "git_blob_sha1": "a6e207202f78a00029b75f33a82f7005e671d429",
+      "sha256": "1de1d9620fab4ceace056b5bdd635ee5276e3a5cf96a721419080f98a7acc0ab",
+      "role": "Layer1/Layer2 principles governing what the Factory should optimize"
+    },
+    "CURRENT_STATE.md": {
+      "git_blob_sha1": "a92c9643cea1fcec8cca9d113e55f872b1a4f452",
+      "sha256": "f09491178075b07fdcf75154ca2f28000499a69c025261c381806ebd03674b34",
+      "role": "Observed snapshot of proven capabilities; source of the C0 gate definition"
+    },
+    "ROADMAP.md": {
+      "git_blob_sha1": "8fd95f3f81a4d593043b6dc1a613f1e68c249107",
+      "sha256": "26ac03e64bf3599e0bb16b135d550ca332cb190833ecdc86496a12e8511c655b",
+      "role": "Evidence-gated roadmap; defines C0 PASS criteria and the STALE rule"
+    },
+    ".github/workflows/factory.yml": {
+      "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+      "sha256": "b0db5655de6830ed33863326fcdbb7d1ed1259270ff7adbbffe756f1b0c4b322",
+      "role": "Production Loop definition; primary evidence for generation, gate, verification and publish configuration"
+    },
+    "CONSTRAINTS.md": {
+      "git_blob_sha1": "b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e",
+      "sha256": "02561a4d1add095d34a04f1c3ba33f9a23fcb1cbf1ec8edf1d30959cd7465eae",
+      "role": "Top-priority generation constraints and the fixed 6-check verification contract"
+    },
+    "smoke.mjs": {
+      "git_blob_sha1": "2188cf6df8322a0ff88018ead11490480edd630c",
+      "sha256": "af9888f0ef49f1f29404c5e877df839b1ea8ee3b82e3abcd6007dab8ace2a063",
+      "role": "Static smoke verification (fixed 6 checks on a minimal DOM shim)"
+    },
+    "scripts/interaction-smoke.mjs": {
+      "git_blob_sha1": "833e97d4400293df0f9feb4458784f4bea385c00",
+      "sha256": "4a24e1a2a4ee300825048eaa8dfec38da95f8187ae771a4e7b726eb6d623f6f5",
+      "role": "Interaction Contract verification with real pointer events (Playwright Chromium)"
+    },
+    "scripts/gate-prompt.txt": {
+      "git_blob_sha1": "ab371335e6752fee93045b519a57a89142876d96",
+      "sha256": "28ba969b1acf68dae77b309ab98f681e7eefb4bc1c48ff50f125ed3054b66c63",
+      "role": "Fixed prompt of the independent Codex content gate"
+    },
+    "scripts/build-catalog.mjs": {
+      "git_blob_sha1": "f035aec90e2ab7e57b45b36dea78d97eb5ee1296",
+      "sha256": "45be71fbd26ba48be5a31cab22245159e1ba83a271d3456bab2ad1a3b93226de",
+      "role": "Deterministic catalog builder (works/*/meta.json → root index.html, fail-closed)"
+    }
+  },
+  "capabilities": {
+    "generation": {
+      "provider_integration": {
+        "status": "OBSERVED",
+        "value": "Anthropic — Claude Code CLI installed from npm package @anthropic-ai/claude-code",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step: npm install -g @anthropic-ai/claude-code@2.1.220"
+        }
+      },
+      "cli_version": {
+        "status": "OBSERVED",
+        "value": { "name": "@anthropic-ai/claude-code", "version": "2.1.220", "pinning": "exact version pinned; changes require a PR" },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step pins @anthropic-ai/claude-code@2.1.220 (last proven in run #9, 2026-07-29, seed-006)"
+        }
+      },
+      "effective_model_id": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "factory.yml invokes `claude -p` without a --model argument, and no run artifact on the default branch records the model id the CLI resolved server-side. 'It is Claude Code, therefore model X' is a guess, not evidence.",
+        "resolution": "Capture the resolved model id from the CLI transcript/structured output in an instrumented run, or pin --model explicitly in factory.yml via a reviewed PR."
+      },
+      "provider_model_revision": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side model revision/snapshot is not exposed in any repository file or persisted run artifact.",
+        "resolution": "Record provider-published revision identifiers from API/CLI response metadata when the provider exposes them."
+      },
+      "reasoning_configuration": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No reasoning-effort / thinking configuration is declared in factory.yml, and the CLI default used at run time is not recorded anywhere in the repository.",
+        "resolution": "Declare the reasoning configuration explicitly in the invocation, or capture the effective value from CLI transcript output."
+      },
+      "provider_routing": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side routing/fallback between model deployments is not observable from the repository or from CLI output persisted so far.",
+        "resolution": "Only resolvable if the provider publishes routing metadata per request; record it when exposed, otherwise it stays UNKNOWN."
+      },
+      "hidden_system_prompt": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Claude Code CLI injects its own system prompt, which is not stored in this repository and is not captured in run artifacts.",
+        "resolution": "Capture the effective system prompt from a CLI transcript if the harness exposes it, or record the CLI version as its proxy (already OBSERVED) and treat the prompt as vendor-versioned."
+      },
+      "prompt_cache_state": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Whether provider-side prompt caching was active for any production run is not recorded in any artifact.",
+        "resolution": "Record cache_read/cache_write token counts from provider usage metadata in an instrumented run."
+      },
+      "prompt_source": {
+        "status": "OBSERVED",
+        "value": "Inline heredoc prompt 'ATF IDEA FUNNEL v1' (4 phases: generate 12 → merge → score C1..C7 → implement 1) in the 生成(Claude Code) step; CONSTRAINTS.md is declared the top-priority rule; a separate inline fix-prompt template is used for repair rounds",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "PROMPT heredoc in the 生成 step and FIX_TMPL heredoc in the スモーク検証 step"
+        }
+      },
+      "context_sources": {
+        "status": "OBSERVED",
+        "value": "The prompt instructs the generator to read CONSTRAINTS.md, smoke.mjs, and every existing works/*/index.html before generating; __WORK_DIR__ is substituted with the next works/seed-NNN",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "PROMPT heredoc 準備/タスク sections in the 生成 step"
+        }
+      },
+      "output_schema": {
+        "status": "OBSERVED",
+        "value": "Fixed output contract: works/seed-NNN/{index.html, devlog.md, funnel.json (seed/candidates/finalists/selected/reason with C1..C7 scores), meta.json (seed/title/description/primary_input/success_condition only)}",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "PROMPT heredoc task items 2–5 in the 生成 step"
+        }
+      },
+      "allowed_tools": {
+        "status": "OBSERVED",
+        "value": "Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite,Bash(node:*)",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "--allowedTools argument of both claude -p invocations (generate and fix)"
+        }
+      },
+      "turn_budget": {
+        "status": "OBSERVED",
+        "value": { "generate_max_turns": 120, "fix_max_turns": 60, "max_fix_rounds": 3 },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "--max-turns 120 (生成 step), --max-turns 60 and MAX_FIX=3 (スモーク検証 step)"
+        }
+      },
+      "permissions_and_sandbox": {
+        "status": "OBSERVED",
+        "value": "Runs in the checked-out workspace on the GitHub-hosted runner; writes are policed after the fact by integrity_check (git status --porcelain filter): any tracked-file modification or any new file outside works/seed-NNN/ stops the run fail-closed",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "integrity_check function in lib.sh (準備 step) and its call sites"
+        }
+      },
+      "auth_mechanism": {
+        "status": "OBSERVED",
+        "value": "OAuth token via the repository secret declaration CLAUDE_CODE_OAUTH_TOKEN (issued by `claude setup-token`). Only the existence of the declaration is recorded; the value, its hash, prefix and length are never observed or recorded.",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "secrets.CLAUDE_CODE_OAUTH_TOKEN references in the 準備 and 生成/スモーク検証 steps"
+        }
+      },
+      "token_usage": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No production run persists input/output/cache token counts for the generation CLI; factory run artifacts contain logs, not structured usage records.",
+        "resolution": "Persist the CLI's usage metadata (if exposed) into the run artifact in an instrumented run."
+      },
+      "marginal_cost": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Generation authenticates with a subscription OAuth token. Marginal cost per run is not evidenced anywhere; asserting it is zero (or any number) without billing evidence would be a guess.",
+        "resolution": "Reconcile provider billing/usage exports against run timestamps, or record per-run usage metadata once available."
+      },
+      "latency": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Per-step wall-clock exists transiently in GitHub Actions run logs but is not persisted as structured, queryable provenance on the default branch.",
+        "resolution": "Record step start/end timestamps into the run artifact (as the C0 observer does for itself) in an instrumented factory run."
+      }
+    },
+    "semantic_gate": {
+      "provider_integration": {
+        "status": "OBSERVED",
+        "value": "OpenAI — Codex CLI installed from npm package @openai/codex",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step: npm install -g @openai/codex@0.146.0"
+        }
+      },
+      "cli_version": {
+        "status": "OBSERVED",
+        "value": { "name": "@openai/codex", "version": "0.146.0", "pinning": "exact version pinned; changes require a PR" },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step pins @openai/codex@0.146.0"
+        }
+      },
+      "effective_model_id": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "codex exec is invoked without an explicit model argument; the model resolved by the CLI/provider is not recorded in any repository file or persisted artifact.",
+        "resolution": "Pin the model explicitly in the codex exec invocation via a reviewed PR, or capture the resolved model id from CLI output into the run artifact."
+      },
+      "provider_model_revision": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side revision/snapshot for the gate model is not exposed in the repository or persisted run artifacts.",
+        "resolution": "Record provider-published revision identifiers when the provider exposes them."
+      },
+      "reasoning_configuration": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No reasoning-effort configuration is declared for codex exec, and the effective default is not recorded.",
+        "resolution": "Declare it explicitly in the invocation or capture the effective value from CLI output."
+      },
+      "provider_routing": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side routing/fallback is not observable from the repository.",
+        "resolution": "Record it only if the provider publishes per-request routing metadata."
+      },
+      "hidden_system_prompt": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Codex CLI injects its own system prompt, which is not stored in this repository and is not captured in run artifacts.",
+        "resolution": "Capture the effective system prompt from CLI output if the harness exposes it, or treat it as vendor-versioned via the pinned CLI version (already OBSERVED)."
+      },
+      "prompt_cache_state": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Whether provider-side prompt caching was active for any gate execution is not recorded in any artifact.",
+        "resolution": "Record cache-related usage metadata from provider/CLI output in an instrumented run."
+      },
+      "prompt_source": {
+        "status": "OBSERVED",
+        "value": "Fixed gate prompt read from scripts/gate-prompt.txt: independent auditor judges only the candidate index.html against 3 criteria; first output line must be exactly PUBLISH to pass, anything else (including ambiguity) is NO_PUBLISH",
+        "evidence": {
+          "kind": "repository",
+          "path": "scripts/gate-prompt.txt",
+          "git_blob_sha1": "ab371335e6752fee93045b519a57a89142876d96",
+          "derived_from": "Full content of scripts/gate-prompt.txt, loaded by the 公開内容ゲート step"
+        }
+      },
+      "invocation": {
+        "status": "OBSERVED",
+        "value": "codex exec --cd <temp gate dir> --sandbox read-only --skip-git-repo-check --output-last-message <file>, executed exactly once; the UTF-8-validated candidate index.html is appended in full to the fixed prompt so the verdict does not depend on file-read tooling",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "公開内容ゲート step: codex exec argument list and GATE_INPUT assembly"
+        }
+      },
+      "verdict_contract": {
+        "status": "OBSERVED",
+        "value": "First line of the last message, trimmed, must equal PUBLISH exactly; empty output, non-zero exit, invalid auth and any other first line stop the run fail-closed as NO_PUBLISH",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "FIRST_LINE comparison and fail() branches in the 公開内容ゲート step"
+        }
+      },
+      "input_scope": {
+        "status": "OBSERVED",
+        "value": "Only the candidate works/seed-NNN/index.html (iconv-validated UTF-8 copy in a temp dir outside the repository) is exposed to the gate; creator intent, devlog and funnel records are excluded by the prompt",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "GATE_DIR copy step and gate prompt scope statement"
+        }
+      },
+      "auth_mechanism": {
+        "status": "OBSERVED",
+        "value": "Pre-authenticated CLI credential file restored from the repository secret declaration CODEX_AUTH_JSON into ~/.codex/auth.json (chmod 600, deleted in the always() cleanup step). Only the existence of the declaration is recorded; the value, its hash, prefix and length are never observed or recorded.",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "secrets.CODEX_AUTH_JSON reference, auth.json restore, and 後片付け step"
+        }
+      },
+      "token_usage": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No structured token usage for the gate execution is persisted in the repository or run artifacts.",
+        "resolution": "Persist CLI usage metadata into the run artifact in an instrumented run."
+      },
+      "marginal_cost": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "The gate authenticates with a restored CLI credential; actual cost per verdict is not evidenced anywhere and is not assumed to be zero.",
+        "resolution": "Reconcile provider billing/usage exports against gate run timestamps."
+      },
+      "latency": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Gate step wall-clock exists transiently in run logs but is not persisted as structured provenance.",
+        "resolution": "Record gate start/end timestamps into the run artifact in an instrumented run."
+      }
+    },
+    "deterministic_verification": {
+      "node_version_declared": {
+        "status": "OBSERVED",
+        "value": "22 (major version declared via actions/setup-node; the exact patch version is resolved at run time and recorded by the C0 observer for its own runs only)",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "actions/setup-node@v4 with node-version: '22'"
+        }
+      },
+      "runner_os": {
+        "status": "OBSERVED",
+        "value": { "label": "ubuntu-latest", "note": "This is a runner LABEL, not a fixed OS version. The concrete OS, architecture and kernel are runtime facts; the C0 observer records them per C0 run, and they are UNKNOWN for past factory runs." },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "jobs.factory.runs-on: ubuntu-latest"
+        }
+      },
+      "static_smoke": {
+        "status": "OBSERVED",
+        "value": "node smoke.mjs <work dir> — fixed 6 checks (exists / no external refs / syntax / load+init / start transition / replay reset) executed on a minimal DOM shim with a virtual clock; expectations may not be weakened per CONSTRAINTS.md",
+        "evidence": {
+          "kind": "repository",
+          "path": "smoke.mjs",
+          "git_blob_sha1": "2188cf6df8322a0ff88018ead11490480edd630c",
+          "derived_from": "smoke.mjs implementation; check list fixed in CONSTRAINTS.md 機械検証 section"
+        }
+      },
+      "interaction_smoke": {
+        "status": "OBSERVED",
+        "value": "node scripts/interaction-smoke.mjs <work dir> — drives meta.json's primary_input (tap/hold/drag) with real Playwright Chromium pointer events until window.__GAME__.checkSuccess() is true; fail-closed on missing meta, invalid input type, or timeout (25s budget)",
+        "evidence": {
+          "kind": "repository",
+          "path": "scripts/interaction-smoke.mjs",
+          "git_blob_sha1": "833e97d4400293df0f9feb4458784f4bea385c00",
+          "derived_from": "scripts/interaction-smoke.mjs implementation"
+        }
+      },
+      "browser_engine": {
+        "status": "OBSERVED",
+        "value": { "package": "playwright", "version": "1.62.1", "browser": "chromium", "install_location": "outside the repository (RUNNER_TEMP) so integrity_check is not violated" },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Interaction Smoke 用ブラウザ準備 step: npm install --prefix ... playwright@1.62.1"
+        }
+      },
+      "catalog_builder": {
+        "status": "OBSERVED",
+        "value": "node scripts/build-catalog.mjs — regenerates root index.html from works/*/meta.json; fail-closed (exit 1 without writing) on missing/corrupt meta.json; release dates derived from git history with -M100% rename tracking",
+        "evidence": {
+          "kind": "repository",
+          "path": "scripts/build-catalog.mjs",
+          "git_blob_sha1": "f035aec90e2ab7e57b45b36dea78d97eb5ee1296",
+          "derived_from": "scripts/build-catalog.mjs implementation"
+        }
+      },
+      "constraints_contract": {
+        "status": "OBSERVED",
+        "value": "CONSTRAINTS.md is the top-priority rule set: single-file HTML, no external communication/assets, content restrictions, English-only player-facing text, generic font families, fixed 6 smoke checks, verification-honesty rules, max 3 fix rounds",
+        "evidence": {
+          "kind": "repository",
+          "path": "CONSTRAINTS.md",
+          "git_blob_sha1": "b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e",
+          "derived_from": "Full content of CONSTRAINTS.md"
+        }
+      },
+      "integrity_check": {
+        "status": "OBSERVED",
+        "value": "git status --porcelain=v1 -uall filtered for anything other than untracked files under the target works/seed-NNN/; any hit stops the run fail-closed (anti-fake-success): tracked-file edits, deletions, and out-of-scope new files are all violations",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "integrity_check function in lib.sh and its call sites in 生成/スモーク検証/公開 steps"
+        }
+      }
+    },
+    "publish_runtime": {
+      "triggers": {
+        "status": "OBSERVED",
+        "value": "workflow_dispatch (boolean input dry_run, default false) and schedule cron '0 1 * * 6' (Saturday 10:00 JST); schedule runs are always full runs",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "on: block of factory.yml"
+        }
+      },
+      "workflow_permissions": {
+        "status": "OBSERVED",
+        "value": "permissions: contents: write (required to push works and catalog to main)",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "permissions: block of factory.yml"
+        }
+      },
+      "concurrency_and_timeout": {
+        "status": "OBSERVED",
+        "value": { "concurrency_group": "factory", "cancel_in_progress": false, "job_timeout_minutes": 80 },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "concurrency: block and jobs.factory.timeout-minutes"
+        }
+      },
+      "checkout_configuration": {
+        "status": "OBSERVED",
+        "value": "actions/checkout@v4 with fetch-depth: 0; persist-credentials is true only for normal runs and false for dry_run canaries",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Checkout step: persist-credentials: ${{ inputs.dry_run != true }}"
+        }
+      },
+      "publish_mechanism": {
+        "status": "OBSERVED",
+        "value": "Only when the gate verdict is PUBLISH: commit works/seed-NNN (and a separate catalog commit when index.html changed) as github-actions[bot], then git push origin HEAD:main with up to 4 push attempts in total (initial attempt plus up to 3 retries, exponential backoff and rebase onto origin/main between attempts); GitHub Pages redeploys automatically from main",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "目録生成 and 公開 steps"
+        }
+      },
+      "dry_run_canary": {
+        "status": "OBSERVED",
+        "value": "dry_run=true runs the identical path through generation, smoke, integrity, gate and local commit, then skips only the push to main; unset DRY_RUN stops fail-closed",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "公開 step DRY_RUN branch and run-name expression"
+        }
+      },
+      "artifact_persistence": {
+        "status": "OBSERVED",
+        "value": "actions/upload-artifact@v4, name factory-run-<run_number>-<run_attempt>, path RUNNER_TEMP/factory-log (outside the repository working tree), if: always(); credentials cleanup (rm -rf ~/.codex) also runs always()",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "後片付け and 実行ログを artifact として保存 steps"
+        }
+      },
+      "pages_reachability_verification": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No workflow step verifies after push that the Pages URL returns HTTP 200 and lists the new work; past successful publication proves the path has worked, not that every future push reaches Pages (CURRENT_STATE.md §5).",
+        "resolution": "Add a post-publish reachability check as its own evidence-gated change; out of scope for C0."
+      }
+    }
+  }
+}
