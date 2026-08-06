@@ -261,7 +261,7 @@ Goal: 同型・低リスク変更に限りhuman mergeを退役させる。
 
 Prerequisite:
 
-- human mergeがcycle time、error、wait、scale、capabilityの実測律速であること。満たさなければF5は起票せず`NO_ACTION`とする。
+- human mergeが「Autonomy Is a Means」の発火条件(a)〜(e)の少なくとも1つを満たすこと。満たさなければF5は起票せず`NO_ACTION`とする。
 - 対象となるPR経路が、human merge以外の範囲でreviewable draft PR / deterministic tests / independent verdictまで反復成功していること
 - deterministic acceptance contract
 - independent reviewer
@@ -539,11 +539,21 @@ Gateの現在statusと次の1件は`CURRENT_STATE.md`だけに置く。本書へ
 
 依存順序:
 
-1. FoundationはF0 → F1 → F2 → F3が必須。F3は3文書がdefault branchへ揃った後にだけ実行する。F4とF5は互いの必須prerequisiteではなく、それぞれ「Autonomy Is a Means」の発火条件が観測された時だけF3後の条件付きgateとして候補化し、X1の必須前提ではない。
-2. World Learningのcore pathはW0（手動比較カナリア）→ W1（計測）→ W2 / W3 → W4（shadow learning）→ W5。W0AはW0後に「Autonomy Is a Means」の発火条件が証明された時だけ候補化するoptional gateであり、W1のprerequisiteではない。
-3. Capability EvolutionはC0 → C1 / C2 → C3 → C4 → C5。C6は既存構造では表現できない律速が証明された時だけ候補化する。
-4. C0とF3は、World LaneをblockせずProduction Loopを変更しない独立canaryとして並行候補になりうる。ただし1 runにつき選ぶgateは1件。
-5. Selection Record v2は、F3通過後のF4候補、または現行PR運用で行う独立した証明済み欠陥修理として扱える。
+1. FoundationはF0 → F1 → F2 → F3。F3は3文書がdefault branchへ揃った後にだけ実行する。
+2. F4とF5は、それぞれF3後の条件付きgate。互いをprerequisiteにせず、X1にも必須ではない。
+3. World LearningはW0 → W1。
+4. W1後にW2とW3の両方。
+5. W2とW3の両方がPASSした後にW4 → W5。
+6. W0AはW0後の条件付きoptional gateで、W1には不要。
+7. Capability EvolutionはC0後にC1とC2の両方。
+8. C1とC2の両方がPASSした後にC3 → C4 → C5。
+9. C6は固定順序へ推測で入れず、実測ボトルネック発火時だけの条件付きgate。X1には不要。
+10. W5とC5の両方がX0のprerequisite。
+11. F3とX0の両方がX1のprerequisite。
+12. C0とF3は、World LaneをblockせずProduction Loopを変更しない独立canaryとして並行候補になりうる。ただし1 runにつき選ぶgateは1件。
+13. Selection Record v2は、「Autonomy Is a Means」の発火条件を満たす場合に限りF3通過後のF4候補として扱える。
+
+`dependency-ready`は構造上のprerequisite充足だけを意味し、candidate-eligibleや実行権限を意味しない。F4 / F5 / W0A / C6は、発火証拠が無ければ候補化せず`NO_ACTION`とする。`NO_ACTION`は`CURRENT_STATE.md`のstatusへ書かない。
 
 どの候補を今選ぶかは本文書の並びでは決めない。`CURRENT_STATE.md`の証拠を使い、Goal First、律速仮説、情報利得、可逆性、費用で順位付けする。
 
