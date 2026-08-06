@@ -1,0 +1,657 @@
+{
+  "schema": "atf-configuration-provenance/v1",
+  "kind": "champion-baseline",
+  "title": "Current production configuration baseline (C0 — Configuration Provenance)",
+  "declared_at": "2026-08-05",
+  "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every OBSERVED value IS the canonical value deterministically extracted from its evidence source at declaration time; scripts/c0-provenance.mjs re-extracts the canonical value at observation time and requires a deep exact match (no token-presence checks, so subsets, additions and substitutions all FAIL). Fields whose canonical value cannot be safely extracted are UNKNOWN with reason and resolution — keeping the OBSERVED count high is explicitly not a goal. The observer also enforces the exact v1 schema, step-scoped secret declarations, repository/history binding and production/snapshot separation.",
+  "base": {
+    "repository": "LightsOutWorks/atf-loop",
+    "default_branch": "main",
+    "base_sha": "16b7ad3715fefff4f4909c7a8c480cad0acb6789",
+    "base_sha_policy": "base_sha must exist as a commit in the executing repository, must be an ancestor of the inspected HEAD, and its tree must contain the declared material blobs. A change of the default-branch head alone does NOT make this baseline STALE. The baseline becomes materially STALE only when a production_material source below changes content; control_plane_snapshot sources may drift through normal updates and their drift is recorded as information only."
+  },
+  "material_sources": {
+    "OS.md": {
+      "classification": "control_plane_snapshot",
+      "git_blob_sha1": "a6e207202f78a00029b75f33a82f7005e671d429",
+      "sha256": "1de1d9620fab4ceace056b5bdd635ee5276e3a5cf96a721419080f98a7acc0ab",
+      "role": "Layer1/Layer2 principles governing what the Factory should optimize"
+    },
+    "CURRENT_STATE.md": {
+      "classification": "control_plane_snapshot",
+      "git_blob_sha1": "a92c9643cea1fcec8cca9d113e55f872b1a4f452",
+      "sha256": "f09491178075b07fdcf75154ca2f28000499a69c025261c381806ebd03674b34",
+      "role": "Observed snapshot of proven capabilities; source of the C0 gate definition"
+    },
+    "ROADMAP.md": {
+      "classification": "control_plane_snapshot",
+      "git_blob_sha1": "8fd95f3f81a4d593043b6dc1a613f1e68c249107",
+      "sha256": "26ac03e64bf3599e0bb16b135d550ca332cb190833ecdc86496a12e8511c655b",
+      "role": "Evidence-gated roadmap; defines C0 PASS criteria and the STALE rule"
+    },
+    ".github/workflows/factory.yml": {
+      "classification": "production_material",
+      "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+      "sha256": "b0db5655de6830ed33863326fcdbb7d1ed1259270ff7adbbffe756f1b0c4b322",
+      "role": "Production Loop definition; primary evidence for generation, gate, verification and publish configuration"
+    },
+    "CONSTRAINTS.md": {
+      "classification": "production_material",
+      "git_blob_sha1": "b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e",
+      "sha256": "02561a4d1add095d34a04f1c3ba33f9a23fcb1cbf1ec8edf1d30959cd7465eae",
+      "role": "Top-priority generation constraints and the fixed 6-check verification contract"
+    },
+    "smoke.mjs": {
+      "classification": "production_material",
+      "git_blob_sha1": "2188cf6df8322a0ff88018ead11490480edd630c",
+      "sha256": "af9888f0ef49f1f29404c5e877df839b1ea8ee3b82e3abcd6007dab8ace2a063",
+      "role": "Static smoke verification (fixed 6 checks on a minimal DOM shim)"
+    },
+    "scripts/interaction-smoke.mjs": {
+      "classification": "production_material",
+      "git_blob_sha1": "833e97d4400293df0f9feb4458784f4bea385c00",
+      "sha256": "4a24e1a2a4ee300825048eaa8dfec38da95f8187ae771a4e7b726eb6d623f6f5",
+      "role": "Interaction Contract verification with real pointer events (Playwright Chromium)"
+    },
+    "scripts/gate-prompt.txt": {
+      "classification": "production_material",
+      "git_blob_sha1": "ab371335e6752fee93045b519a57a89142876d96",
+      "sha256": "28ba969b1acf68dae77b309ab98f681e7eefb4bc1c48ff50f125ed3054b66c63",
+      "role": "Fixed prompt of the independent Codex content gate"
+    },
+    "scripts/build-catalog.mjs": {
+      "classification": "production_material",
+      "git_blob_sha1": "f035aec90e2ab7e57b45b36dea78d97eb5ee1296",
+      "sha256": "45be71fbd26ba48be5a31cab22245159e1ba83a271d3456bab2ad1a3b93226de",
+      "role": "Deterministic catalog builder (works/*/meta.json → root index.html, fail-closed)"
+    }
+  },
+  "capabilities": {
+    "generation": {
+      "provider_integration": {
+        "status": "OBSERVED",
+        "value": {
+          "vendor": "Anthropic",
+          "npm_package": "@anthropic-ai/claude-code"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step: npm install -g @anthropic-ai/claude-code@2.1.220"
+        }
+      },
+      "cli_version": {
+        "status": "OBSERVED",
+        "value": {
+          "name": "@anthropic-ai/claude-code",
+          "version": "2.1.220"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step pins @anthropic-ai/claude-code@2.1.220 (last proven in run #9, 2026-07-29, seed-006)"
+        }
+      },
+      "effective_model_id": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "factory.yml invokes `claude -p` without a --model argument, and no run artifact on the default branch records the model id the CLI resolved server-side. 'It is Claude Code, therefore model X' is a guess, not evidence.",
+        "resolution": "Capture the resolved model id from the CLI transcript/structured output in an instrumented run, or pin --model explicitly in factory.yml via a reviewed PR."
+      },
+      "provider_model_revision": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side model revision/snapshot is not exposed in any repository file or persisted run artifact.",
+        "resolution": "Record provider-published revision identifiers from API/CLI response metadata when the provider exposes them."
+      },
+      "reasoning_configuration": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No reasoning-effort / thinking configuration is declared in factory.yml, and the CLI default used at run time is not recorded anywhere in the repository.",
+        "resolution": "Declare the reasoning configuration explicitly in the invocation, or capture the effective value from CLI transcript output."
+      },
+      "provider_routing": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side routing/fallback between model deployments is not observable from the repository or from CLI output persisted so far.",
+        "resolution": "Only resolvable if the provider publishes routing metadata per request; record it when exposed, otherwise it stays UNKNOWN."
+      },
+      "hidden_system_prompt": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Claude Code CLI injects its own system prompt, which is not stored in this repository and is not captured in run artifacts.",
+        "resolution": "Capture the effective system prompt from a CLI transcript if the harness exposes it, or record the CLI version as its proxy (already OBSERVED) and treat the prompt as vendor-versioned."
+      },
+      "prompt_cache_state": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Whether provider-side prompt caching was active for any production run is not recorded in any artifact.",
+        "resolution": "Record cache_read/cache_write token counts from provider usage metadata in an instrumented run."
+      },
+      "prompt_source": {
+        "status": "OBSERVED",
+        "value": {
+          "container": ".github/workflows/factory.yml",
+          "generate_prompt_sha256": "fa2529012a0152e1969c8d31b2e0178e6a9b7302d4e06a06c4ec7e80a8f461b3",
+          "fix_prompt_sha256": "dcb7ef1a29bf3b25c10e23e8f90b9c554f0d7d6fdb1672bb8b649bf175fd3e9c"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "SHA-256 of the PROMPT and FIX_TMPL heredoc bodies extracted verbatim from factory.yml (complete prompt text pinning)"
+        }
+      },
+      "context_sources": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "The prompt's context-assembly instructions are natural-language prose; a complete canonical machine extraction is not stable, and a partial token list would be a fail-open claim. The full instruction text is already pinned by generation.prompt_source.generate_prompt_sha256.",
+        "resolution": "Derive the actually-read context from a structured CLI transcript in an instrumented run, or restructure the prompt to declare a machine-readable context manifest."
+      },
+      "output_schema": {
+        "status": "OBSERVED",
+        "value": {
+          "files": [
+            "devlog.md",
+            "funnel.json",
+            "index.html",
+            "meta.json"
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Complete sorted set of __WORK_DIR__/<file> references extracted from factory.yml; the full output contract text is pinned by prompt_source hashes"
+        }
+      },
+      "allowed_tools": {
+        "status": "OBSERVED",
+        "value": "Read,Write,Edit,MultiEdit,Glob,Grep,TodoWrite,Bash(node:*)",
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "--allowedTools argument of both claude -p invocations (generate and fix)"
+        }
+      },
+      "turn_budget": {
+        "status": "OBSERVED",
+        "value": {
+          "generate_max_turns": 120,
+          "fix_max_turns": 60,
+          "max_fix_rounds": 3
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "--max-turns 120 (生成 step), --max-turns 60 and MAX_FIX=3 (スモーク検証 step)"
+        }
+      },
+      "permissions_and_sandbox": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "The generation CLI's effective permission/sandbox semantics cannot be completely extracted from workflow text as a canonical value; a token-level claim would be fail-open. The write-policing implementation is pinned by deterministic_verification.integrity_check.lib_sha256.",
+        "resolution": "Adopt a structured sandbox/permission declaration in the workflow, or capture the CLI's effective permission report in an instrumented run."
+      },
+      "auth_mechanism": {
+        "status": "OBSERVED",
+        "value": {
+          "secret_declarations": [
+            "CLAUDE_CODE_OAUTH_TOKEN"
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Complete set of env mappings NAME: ${{ secrets.X }} in the step(s) that invoke claude -p; run-body and comment strings are ignored. Only declaration names are recorded — values, hashes, prefixes and lengths never are"
+        }
+      },
+      "token_usage": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No production run persists input/output/cache token counts for the generation CLI; factory run artifacts contain logs, not structured usage records.",
+        "resolution": "Persist the CLI's usage metadata (if exposed) into the run artifact in an instrumented run."
+      },
+      "marginal_cost": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Generation authenticates with a subscription OAuth token. Marginal cost per run is not evidenced anywhere; asserting it is zero (or any number) without billing evidence would be a guess.",
+        "resolution": "Reconcile provider billing/usage exports against run timestamps, or record per-run usage metadata once available."
+      },
+      "latency": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Per-step wall-clock exists transiently in GitHub Actions run logs but is not persisted as structured, queryable provenance on the default branch.",
+        "resolution": "Record step start/end timestamps into the run artifact (as the C0 observer does for itself) in an instrumented factory run."
+      }
+    },
+    "semantic_gate": {
+      "provider_integration": {
+        "status": "OBSERVED",
+        "value": {
+          "vendor": "OpenAI",
+          "npm_package": "@openai/codex"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step: npm install -g @openai/codex@0.146.0"
+        }
+      },
+      "cli_version": {
+        "status": "OBSERVED",
+        "value": {
+          "name": "@openai/codex",
+          "version": "0.146.0"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "CLI install step pins @openai/codex@0.146.0"
+        }
+      },
+      "effective_model_id": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "codex exec is invoked without an explicit model argument; the model resolved by the CLI/provider is not recorded in any repository file or persisted artifact.",
+        "resolution": "Pin the model explicitly in the codex exec invocation via a reviewed PR, or capture the resolved model id from CLI output into the run artifact."
+      },
+      "provider_model_revision": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side revision/snapshot for the gate model is not exposed in the repository or persisted run artifacts.",
+        "resolution": "Record provider-published revision identifiers when the provider exposes them."
+      },
+      "reasoning_configuration": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No reasoning-effort configuration is declared for codex exec, and the effective default is not recorded.",
+        "resolution": "Declare it explicitly in the invocation or capture the effective value from CLI output."
+      },
+      "provider_routing": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Provider-side routing/fallback is not observable from the repository.",
+        "resolution": "Record it only if the provider publishes per-request routing metadata."
+      },
+      "hidden_system_prompt": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Codex CLI injects its own system prompt, which is not stored in this repository and is not captured in run artifacts.",
+        "resolution": "Capture the effective system prompt from CLI output if the harness exposes it, or treat it as vendor-versioned via the pinned CLI version (already OBSERVED)."
+      },
+      "prompt_cache_state": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Whether provider-side prompt caching was active for any gate execution is not recorded in any artifact.",
+        "resolution": "Record cache-related usage metadata from provider/CLI output in an instrumented run."
+      },
+      "prompt_source": {
+        "status": "OBSERVED",
+        "value": {
+          "path": "scripts/gate-prompt.txt"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": "scripts/gate-prompt.txt",
+          "git_blob_sha1": "ab371335e6752fee93045b519a57a89142876d96",
+          "derived_from": "Path extracted from GATE_PROMPT=$(cat <path>) in factory.yml; content pinned by this material's hashes"
+        }
+      },
+      "invocation": {
+        "status": "OBSERVED",
+        "value": {
+          "command": "codex exec",
+          "flags": [
+            "--cd",
+            "--sandbox read-only",
+            "--skip-git-repo-check",
+            "--output-last-message"
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "codex exec invocation joined across continuation lines; canonical form is the ordered -- flag tokens with attached literal values"
+        }
+      },
+      "verdict_contract": {
+        "status": "OBSERVED",
+        "value": {
+          "pass_token": "PUBLISH"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Pass token extracted from the [ \"$FIRST_LINE\" = \"<token>\" ] comparison in the 公開内容ゲート step"
+        }
+      },
+      "input_scope": {
+        "status": "OBSERVED",
+        "value": {
+          "copied_file": "index.html"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "File name extracted from the iconv UTF-8 copy into GATE_DIR (source and destination names must match)"
+        }
+      },
+      "auth_mechanism": {
+        "status": "OBSERVED",
+        "value": {
+          "secret_declarations": [
+            "CODEX_AUTH_JSON"
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Complete set of env mappings NAME: ${{ secrets.X }} in the step that invokes codex exec; run-body and comment strings are ignored. Only declaration names are recorded — values, hashes, prefixes and lengths never are"
+        }
+      },
+      "token_usage": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No structured token usage for the gate execution is persisted in the repository or run artifacts.",
+        "resolution": "Persist CLI usage metadata into the run artifact in an instrumented run."
+      },
+      "marginal_cost": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "The gate authenticates with a restored CLI credential; actual cost per verdict is not evidenced anywhere and is not assumed to be zero.",
+        "resolution": "Reconcile provider billing/usage exports against gate run timestamps."
+      },
+      "latency": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "Gate step wall-clock exists transiently in run logs but is not persisted as structured provenance.",
+        "resolution": "Record gate start/end timestamps into the run artifact in an instrumented run."
+      }
+    },
+    "deterministic_verification": {
+      "node_version_declared": {
+        "status": "OBSERVED",
+        "value": {
+          "declared": "22"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "actions/setup-node@v4 with node-version: '22' (major version declaration; the resolved patch version is a runtime fact)"
+        }
+      },
+      "runner_os": {
+        "status": "OBSERVED",
+        "value": {
+          "label": "ubuntu-latest"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "jobs.factory.runs-on — this is a runner LABEL, not a fixed OS version; the concrete OS/kernel are runtime facts recorded by the C0 observer for its own runs"
+        }
+      },
+      "static_smoke": {
+        "status": "OBSERVED",
+        "value": {
+          "entrypoint": "node smoke.mjs",
+          "implementation_sha256": "af9888f0ef49f1f29404c5e877df839b1ea8ee3b82e3abcd6007dab8ace2a063"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": "smoke.mjs",
+          "git_blob_sha1": "2188cf6df8322a0ff88018ead11490480edd630c",
+          "derived_from": "Invocation extracted from factory.yml; implementation pinned by SHA-256 of smoke.mjs"
+        }
+      },
+      "interaction_smoke": {
+        "status": "OBSERVED",
+        "value": {
+          "entrypoint": "node scripts/interaction-smoke.mjs",
+          "contract_inputs": [
+            "tap",
+            "hold",
+            "drag"
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": "scripts/interaction-smoke.mjs",
+          "git_blob_sha1": "833e97d4400293df0f9feb4458784f4bea385c00",
+          "derived_from": "Invocation extracted from factory.yml; contract inputs extracted from the VALID_INPUTS array in scripts/interaction-smoke.mjs"
+        }
+      },
+      "browser_engine": {
+        "status": "OBSERVED",
+        "value": {
+          "package": "playwright",
+          "version": "1.62.1",
+          "browser": "chromium"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Interaction Smoke 用ブラウザ準備 step: npm install playwright@1.62.1 and playwright install --with-deps chromium"
+        }
+      },
+      "catalog_builder": {
+        "status": "OBSERVED",
+        "value": {
+          "entrypoint": "node scripts/build-catalog.mjs",
+          "implementation_sha256": "45be71fbd26ba48be5a31cab22245159e1ba83a271d3456bab2ad1a3b93226de"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": "scripts/build-catalog.mjs",
+          "git_blob_sha1": "f035aec90e2ab7e57b45b36dea78d97eb5ee1296",
+          "derived_from": "Invocation extracted from factory.yml; implementation pinned by SHA-256 of scripts/build-catalog.mjs"
+        }
+      },
+      "constraints_contract": {
+        "status": "OBSERVED",
+        "value": {
+          "contract_sha256": "02561a4d1add095d34a04f1c3ba33f9a23fcb1cbf1ec8edf1d30959cd7465eae"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": "CONSTRAINTS.md",
+          "git_blob_sha1": "b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e",
+          "derived_from": "SHA-256 of the complete CONSTRAINTS.md content (the contract is the file itself)"
+        }
+      },
+      "integrity_check": {
+        "status": "OBSERVED",
+        "value": {
+          "policing_function": "integrity_check",
+          "lib_sha256": "71ac6a52d5d03e4909864a7d397d9c61b6ac7eca1738d2177f163a324f696e77"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "SHA-256 of the lib.sh heredoc body extracted from factory.yml, which must define integrity_check()"
+        }
+      },
+      "effective_node_version": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "actions/setup-node resolves the latest 22.x at run time; the exact Node version used by past factory runs is not persisted anywhere. The C0 observer records its own effective Node version as a runtime fact, which must not be conflated with the factory's.",
+        "resolution": "Persist `node --version` output into the factory run artifact in an instrumented run."
+      },
+      "runner_image_revision": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "ubuntu-latest is a label; the concrete runner image revision (ImageVersion) used by past factory runs is not persisted anywhere.",
+        "resolution": "Persist the ImageOS/ImageVersion environment values into the factory run artifact in an instrumented run."
+      },
+      "browser_revision": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "playwright@1.62.1 pins the npm package, but the concrete Chromium build revision it downloads is resolved at install time and is not persisted anywhere.",
+        "resolution": "Persist `playwright --version` and the browser build revision from the install log into the factory run artifact in an instrumented run."
+      }
+    },
+    "publish_runtime": {
+      "triggers": {
+        "status": "OBSERVED",
+        "value": {
+          "events": [
+            "workflow_dispatch",
+            "schedule"
+          ],
+          "cron": "0 1 * * 6"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Complete list of on: block event keys plus the schedule cron, extracted in file order"
+        }
+      },
+      "workflow_permissions": {
+        "status": "OBSERVED",
+        "value": {
+          "contents": "write"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "permissions: block of factory.yml (required to push works and catalog to main)"
+        }
+      },
+      "concurrency_and_timeout": {
+        "status": "OBSERVED",
+        "value": {
+          "concurrency_group": "factory",
+          "cancel_in_progress": false,
+          "job_timeout_minutes": 80
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "concurrency: block and jobs.factory.timeout-minutes"
+        }
+      },
+      "checkout_configuration": {
+        "status": "OBSERVED",
+        "value": {
+          "action": "actions/checkout@v4",
+          "fetch_depth": 0,
+          "persist_credentials_expression": "${{ inputs.dry_run != true }}"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Checkout step: fetch-depth 0; credentials persist only for normal runs, not dry_run canaries"
+        }
+      },
+      "declared_action_refs": {
+        "status": "OBSERVED",
+        "value": {
+          "refs": [
+            "actions/checkout@v4",
+            "actions/setup-node@v4",
+            "actions/upload-artifact@v4"
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "every uses: reference in factory.yml — these are declared tag refs, not resolved commits"
+        }
+      },
+      "step_timeouts": {
+        "status": "OBSERVED",
+        "value": {
+          "job": 80,
+          "steps": [
+            10,
+            25,
+            35,
+            10,
+            5
+          ]
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "every timeout-minutes declaration in factory.yml, in file order: job first, then per-step (browser prep, generation, smoke+fix loop, gate, catalog)"
+        }
+      },
+      "publish_mechanism": {
+        "status": "OBSERVED",
+        "value": {
+          "push_command": "git push origin HEAD:main",
+          "max_attempts": 4
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "公開 step: gate-verdict-gated push loop `for i in 1 2 3 4` (1 initial attempt + up to 3 retries with backoff and rebase onto origin/main)"
+        }
+      },
+      "dry_run_canary": {
+        "status": "OBSERVED",
+        "value": {
+          "input_names": [
+            "dry_run"
+          ],
+          "guard_value": "true"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "Complete list of workflow_dispatch input names plus the value compared against $DRY_RUN in the publish guard"
+        }
+      },
+      "artifact_persistence": {
+        "status": "OBSERVED",
+        "value": {
+          "action": "actions/upload-artifact@v4",
+          "condition": "always()",
+          "path_expression": "${{ runner.temp }}/factory-log"
+        },
+        "evidence": {
+          "kind": "repository",
+          "path": ".github/workflows/factory.yml",
+          "git_blob_sha1": "49314d2d531704485064fa1995922f19b8418870",
+          "derived_from": "if / path extracted from the step chunk that uses actions/upload-artifact"
+        }
+      },
+      "resolved_action_commits": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "factory.yml declares Action tag refs (e.g. actions/checkout@v4); the commit each tag resolved to at any past run is not persisted anywhere, and guessing current tag targets would not be evidence about those runs.",
+        "resolution": "Persist the resolved action commit SHAs (available in the runner's job metadata) into the run artifact in an instrumented run, or pin Actions by commit SHA via a reviewed PR."
+      },
+      "pages_reachability_verification": {
+        "status": "UNKNOWN",
+        "value": null,
+        "reason": "No workflow step verifies after push that the Pages URL returns HTTP 200 and lists the new work; past successful publication proves the path has worked, not that every future push reaches Pages (CURRENT_STATE.md §5).",
+        "resolution": "Add a post-publish reachability check as its own evidence-gated change; out of scope for C0."
+      }
+    }
+  }
+}

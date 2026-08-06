@@ -1,0 +1,92 @@
+# c0-provenance.yml — C0 Configuration Provenance canary (read-only observer)
+#
+# 目的: 現行Production構成(config/champion-baseline.json)を working tree と照合し、
+#   provenance.json / result.json / verification.log を artifact として残す。
+#
+# このワークフローは観測専用である:
+#   - 外部モデルを呼ばない(ネットワーク越しの推論なし)
+#   - Secrets を一切読まない(secrets コンテキストへの参照なし)
+#   - リポジトリへ書き込まない(permissions: contents: read / persist-credentials: false /
+#     成果物は RUNNER_TEMP 配下のみ。スクリプト自身もリポジトリ内への出力を拒否する)
+#   - 成功・失敗にかかわらず artifact を保存する(if: always())
+#
+# pull_request_target は使用しない(fork PR への secrets/write 露出を作らないため)。
+
+name: c0-provenance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      # C0 自身の4ファイル
+      - '.github/workflows/c0-provenance.yml'
+      - 'config/champion-baseline.json'
+      - 'scripts/c0-provenance.mjs'
+      - 'scripts/c0-provenance.test.mjs'
+      # Production material(これだけが変わるPRでもC0を自動起動し、STALEを検出する)
+      - '.github/workflows/factory.yml'
+      - 'CONSTRAINTS.md'
+      - 'smoke.mjs'
+      - 'scripts/interaction-smoke.mjs'
+      - 'scripts/gate-prompt.txt'
+      - 'scripts/build-catalog.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    name: 検証テスト → 構成観測(read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 決定論テスト + C0 観測(artifact は RUNNER_TEMP のみ)
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/c0-provenance"
+          mkdir -p "$OUT"
+          echo "C0_OUT=$OUT" >> "$GITHUB_ENV"
+
+          status=0
+          node --test scripts/c0-provenance.test.mjs 2>&1 | tee "$OUT/verification.log" || status=$?
+
+          if [ "$status" -ne 0 ]; then
+            # fail-closed: テストが壊れた状態の観測結果は信頼できないため観測を実行しない
+            echo "[c0] unit tests failed (exit=$status); skipping observation (fail-closed)" | tee -a "$OUT/verification.log"
+            printf '{\n  "schema": "atf-configuration-provenance/v1",\n  "kind": "c0-result",\n  "result": "FAIL",\n  "reasons": ["unit tests failed before observation; see verification.log"]\n}\n' > "$OUT/result.json"
+          else
+            # スクリプトは PASS 以外で非0終了する。verification.log は自身で追記保存する。
+            node scripts/c0-provenance.mjs --out "$OUT" || status=$?
+          fi
+
+          {
+            echo "## 🔍 C0 Configuration Provenance"
+            echo ""
+            if [ -f "$OUT/result.json" ]; then
+              echo '```json'
+              cat "$OUT/result.json"
+              echo '```'
+            else
+              echo "result.json が生成されませんでした(観測前の失敗)。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: 観測結果を artifact として保存(成功・失敗共通)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c0-provenance-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/c0-provenance
+          if-no-files-found: warn
