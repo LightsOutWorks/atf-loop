@@ -208,7 +208,7 @@ Pinned harness versions observed:
 - Codex CLI `0.146.0`
 - Playwright `1.62.1`
 
-Runtime provenance: 実効model ID、reasoning構成、resolved prompt/schema version、provider routing、能力別cost/latencyは、`config/champion-baseline.json`にOBSERVED / UNKNOWNとして宣言され、C0 canaryが決定論的に照合する。ただしfactory runが自身のrun artifactへこれらを記録する実装はまだない。baseline宣言はrun時点の実測記録の代替ではない。
+Runtime provenance: `config/champion-baseline.json`は、operatorが制御しrepoから決定論的に抽出できる項目(prompt source、output schema、CLI version、allowed tools、verdict contract、workflow permissions等の31項目)を**OBSERVED**として宣言し、C0 canaryが照合する。一方、effective model ID / provider model revision、reasoning構成、実際に読まれたcontext、provider routing、token usage、cost、latency等の25項目は**UNKNOWN**のまま宣言されている。factory runが自身のrun artifactへこれらの実測値を記録する実装はまだなく、baseline宣言はrun時点の実測記録の代替ではない。
 
 ---
 
@@ -264,13 +264,13 @@ seed-011では1位同点にもかかわらず、存在しないC1/C4/C6差を採
 
 mainには確定済みの訂正が未反映である。PR #18は、生存候補のscoreを追加すると同時に、phase2で消えた候補のtitle/descriptionを記録対象から除いた。0005のCapabilityを`Added`、変更を観測の純増とする記述は不正確で、正しくは`Modified`。0007も、phase2 dispositionの従来からの欠落と、PR #18で発生した候補内容の消失を分離して記録する必要がある。
 
-訂正文はSelection Record v2変更へ相乗りする方針だが、本観測時点でもそのPRはopen PRとして存在しない(open PRはW0 precursorのdraft PR #24のみ)。
+訂正文はSelection Record v2変更へ相乗りする方針だが、Selection Record v2を実装するopen PRは観測時点で確認できない。
 
 ---
 
 ## 7. World Signal and Distribution
 
-`eval.json` at blob `5ccf159975aecc74ca60b7813ce5e144b23c58dd`(前回観測から不変)contains:
+`eval.json` at blob `5ccf159975aecc74ca60b7813ce5e144b23c58dd`(前回観測から不変) contains:
 
 - seed-001〜009の9作のみ
 - 9作すべて`world: null`
@@ -366,7 +366,7 @@ Source: `ATF再設計裁定v2 2026-08-04.md`; not present on the default branch 
 - **C6**: 条件付きgateであり、発火証拠(実測ボトルネック)がないため候補化しない。
 - **C1 / C2**: 構造上はready。ただし両者を比較するための律速・情報利得・可逆性・費用・人間時間・総複雑性の証拠が不足している。
 - 現在のproduction bottleneckは未証明(§10)。
-- **よって現時点では次gateを正本化しない。** 次の1件の選定は、IOS §15とROADMAP §3・§8の選択規則による意味的順位付けstep(F3後半、未実装)の成果物であり、その入力を本文書が提供する。
+- **Routing conclusion: NO_ACTION — INSUFFICIENT_EVIDENCE.** 現在の証拠は、意味的stepが`NO_ACTION`を決定するには十分だが、C1 / C2のどちらか1件を提案するには不十分である。したがって現行F3の「1件だけ提案」というPASS条件は未充足のままである。
 
 ---
 
