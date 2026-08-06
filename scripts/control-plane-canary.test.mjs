@@ -20,6 +20,7 @@ import {
   STATE_BLOCK,
   analyzeControlPlane,
   decide,
+  digestOf,
   extractJsonBlocks,
   findCycle,
   runCanary,
@@ -42,13 +43,34 @@ function fence(marker, payload) {
   return ['```json ' + marker, JSON.stringify(payload, null, 2), '```'].join('\n');
 }
 
-// reader が読んではならない書式例(より長い fence で包んだ code block)
+// reader が正本として読んではならない decoy(同じ marker を持つが最上位 fence ではない)
+const DECOY = fence(STATE_BLOCK.marker, { schema: STATE_BLOCK.schema, base_sha: 'e'.repeat(40), gates: [] });
+const indented = (text, pad) => text.split('\n').map((l) => pad + l).join('\n');
+
+const DECOY_CASES = {
+  '外側の ``` fence': ['```', DECOY, '```'].join('\n'),
+  '外側の ~~~ fence': ['~~~', DECOY, '~~~'].join('\n'),
+  'HTML comment': ['<!--', DECOY, '-->'].join('\n'),
+  '4 スペース indent': indented(DECOY, '    '),
+  'tab indent': indented(DECOY, '\t'),
+};
+
+// canonical の後ろに置いても canonical 1 件だけが読まれる decoy 群
+// (3 連 fence の入れ子だけは以降の fence 状態をずらすため個別テストで担保する)
 const EXAMPLE_PROSE = [
   '書式例(reader は読まない):',
   '',
   '````',
-  fence(STATE_BLOCK.marker, { schema: STATE_BLOCK.schema, base_sha: 'e'.repeat(40), gates: [] }),
+  DECOY,
   '````',
+  '',
+  DECOY_CASES['外側の ~~~ fence'],
+  '',
+  DECOY_CASES['HTML comment'],
+  '',
+  DECOY_CASES['4 スペース indent'],
+  '',
+  DECOY_CASES['tab indent'],
 ].join('\n');
 
 function stateDoc({
@@ -115,12 +137,29 @@ function run(opts = {}) {
 
 // ---------- block 抽出 ----------
 
-test('marker 付き block だけを抽出し、書式例 code block は読まない', () => {
-  const doc = stateDoc();
-  const blocks = extractJsonBlocks(doc, STATE_BLOCK.marker);
+test('最上位 fence の marker 付き block だけを抽出し、decoy は読まない', () => {
+  const blocks = extractJsonBlocks(stateDoc(), STATE_BLOCK.marker);
   assert.equal(blocks.length, 1);
   assert.match(blocks[0], /"base_sha": "0{40}"/);
   assert.doesNotMatch(blocks[0], /e{40}/);
+});
+
+test('外側 fence / ~~~ / HTML comment / indent 内の marker は正本として読まない', () => {
+  for (const [name, body] of Object.entries(DECOY_CASES)) {
+    const doc = `# Current State\n\n自由文。\n\n${body}\n\n末尾の自由文。\n`;
+    assert.equal(extractJsonBlocks(doc, STATE_BLOCK.marker).length, 0, `${name}: 読んではならない`);
+    // canonical block が無い文書として扱われる = HOLD(decoy を正本にしない)
+    const { decision } = run({ stateRaw: doc });
+    assert.equal(decision.result, 'HOLD', `${name}: HOLD であるべき`);
+  }
+});
+
+test('canonical と decoy が同居しても canonical 1 件だけを正本にする', () => {
+  const { analysis, decision } = run();
+  assert.equal(decision.result, 'PRECURSOR');
+  const blocks = extractJsonBlocks(stateDoc(), STATE_BLOCK.marker);
+  assert.equal(blocks.length, 1);
+  assert.equal(analysis.blocks['CURRENT_STATE.md'].digest, digestOf(blocks[0]));
 });
 
 test('block が無ければ HOLD(FAIL ではない)', () => {
@@ -310,18 +349,19 @@ function git(dir, ...args) {
 
 const FACTORY_STUB = 'name: factory-stub\n';
 
-function writeDocs(dir, docs) {
+function writeDocs(dir, docs, { withFactory = true } = {}) {
   for (const [file, content] of Object.entries(docs)) {
     if (content == null) continue;
     fs.writeFileSync(path.join(dir, file), content);
   }
+  if (!withFactory) return;
   fs.mkdirSync(path.join(dir, '.github', 'workflows'), { recursive: true });
   fs.writeFileSync(path.join(dir, FACTORY_WORKFLOW), FACTORY_STUB);
 }
 
 // commit1(base) → commit2(制御文書。base_sha は commit1 を指す)という履歴を作る。
 // 追加で、main の祖先ではない side commit も置く(base_sha 非祖先テスト用)。
-function makeRepos(name, { docsFor = () => makeDocs(), sideBranch = false } = {}) {
+function makeRepos(name, { docsFor = () => makeDocs(), sideBranch = false, withFactory = true } = {}) {
   const upstream = path.join(tmpRoot, `${name}-up`);
   const clone = path.join(tmpRoot, `${name}-clone`);
   fs.mkdirSync(upstream, { recursive: true });
@@ -341,7 +381,7 @@ function makeRepos(name, { docsFor = () => makeDocs(), sideBranch = false } = {}
     git(upstream, 'checkout', '-q', 'main');
   }
 
-  writeDocs(upstream, docsFor({ baseSha, sideSha }));
+  writeDocs(upstream, docsFor({ baseSha, sideSha }), { withFactory });
   git(upstream, 'add', '-A');
   git(upstream, 'commit', '-q', '-m', 'control plane');
   git(tmpRoot, 'clone', '-q', upstream, clone);
@@ -377,6 +417,30 @@ test('E2E: origin/main の block を読んで PRECURSOR。証拠を記録し wor
   assert.ok(artifact.doesNotProve.some((s) => /PASS/.test(s)));
   assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).result, 'PRECURSOR');
   assert.deepEqual(worktree(clone), before);
+});
+
+test('E2E: Factory 証拠(factory.yml)が無ければ PRECURSOR にせず HOLD', async () => {
+  const { clone } = makeRepos('nofactory', {
+    withFactory: false,
+    docsFor: ({ baseSha }) => makeDocs({ state: { baseSha } }),
+  });
+  const artifactPath = path.join(tmpRoot, 'nofactory.json');
+  const { artifact, exitCode } = await runCanary({ repoDir: clone, artifactPath, env: {} });
+  assert.equal(artifact.result, 'HOLD');
+  assert.equal(exitCode, EXIT_CODES.HOLD);
+  assert.equal(artifact.blobs[FACTORY_WORKFLOW], null);
+  assert.equal(artifact.factoryEvidence.blobSha, null);
+  assert.ok(artifact.factoryEvidence.problems.length > 0);
+  assert.match(artifact.failureReason, /Factory 証拠/);
+  assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).result, 'HOLD');
+});
+
+test('E2E: Factory 証拠がある正常系では blob SHA を記録して PRECURSOR', async () => {
+  const { clone } = makeRepos('factory-ok', { docsFor: ({ baseSha }) => makeDocs({ state: { baseSha } }) });
+  const { artifact } = await runCanary({ repoDir: clone, artifactPath: path.join(tmpRoot, 'factory-ok.json'), env: {} });
+  assert.equal(artifact.result, 'PRECURSOR');
+  assert.match(artifact.factoryEvidence.blobSha, /^[0-9a-f]{40}$/);
+  assert.deepEqual(artifact.factoryEvidence.problems, []);
 });
 
 test('E2E: base_sha が検査 head の祖先でなければ STALE', async () => {

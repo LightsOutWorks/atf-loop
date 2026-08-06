@@ -16,7 +16,8 @@
 //   PRECURSOR … block を読み、構造検証を通し、dependency-ready 集合を確定できた
 //   FAIL      … 構造矛盾(schema 不正 / status 欠落・不正 / 未知 gate 参照 / 自己参照 /
 //                依存 cycle / gate 集合の cross-doc 不整合 / block 重複)
-//   HOLD      … 機械可読 block または正本が default branch に無い、鮮度を再確認できない
+//   HOLD      … 機械可読 block・正本・Factory 証拠(factory.yml)が default branch に無い、
+//                または鮮度を再確認できない
 //   STALE     … run 中に block が変化した、または base_sha が検査 head の祖先でない
 //   VOID      … repository / origin を読めず評価不能
 //
@@ -51,23 +52,38 @@ const SHA_RE = /^[0-9a-f]{40}$/;
 
 // ---------- block 抽出 ----------
 
-// info string が「json <marker>」の fenced block だけを収集する。
-// 外側をより長い fence で包んだ書式例は、その外側 block の本文として扱われ収集されない。
+// canonical block として認めるのは、Markdown 最上位・行頭 0 列のバッククォート fence で、
+// info string がちょうど「json <marker>」のものだけ。
+// 次の内部にある marker は正本として読まない:
+//   - 外側の ``` fence(その block の本文として扱われる)
+//   - 外側の ~~~ fence(fence 文字が異なるため収集条件を満たさない)
+//   - HTML comment
+//   - 4 スペースまたは tab で indent された code block(行頭 0 列でない)
+const FENCE_RE = /^(`{3,}|~{3,})\s*(.*?)\s*$/;
+
 export function extractJsonBlocks(text, marker) {
   const want = `json ${marker}`;
-  const lines = String(text ?? '').split('\n');
   const blocks = [];
   let open = null;
-  for (const line of lines) {
-    const m = /^\s*(`{3,})\s*(.*?)\s*$/.exec(line);
-    if (!m) {
-      if (open) open.body.push(line);
+  let inComment = false;
+  for (const line of String(text ?? '').split('\n')) {
+    if (open === null) {
+      // fence の外でだけ HTML comment を追跡する(comment 内の行は一切解釈しない)
+      if (inComment) {
+        if (line.includes('-->')) inComment = false;
+        continue;
+      }
+      if (line.replace(/<!--[\s\S]*?-->/g, '').includes('<!--')) {
+        inComment = true;
+        continue;
+      }
+      const m = FENCE_RE.exec(line);
+      if (m) open = { char: m[1][0], len: m[1].length, info: m[2], body: [] };
       continue;
     }
-    if (open === null) {
-      open = { fence: m[1], info: m[2], body: [] };
-    } else if (m[1].length >= open.fence.length && m[2] === '') {
-      if (open.info === want) blocks.push(open.body.join('\n'));
+    const m = FENCE_RE.exec(line);
+    if (m && m[1][0] === open.char && m[1].length >= open.len && m[2] === '') {
+      if (open.char === '`' && open.info === want) blocks.push(open.body.join('\n'));
       open = null;
     } else {
       open.body.push(line);
@@ -338,15 +354,28 @@ const MISSING_PATH_RE = /(does not exist|exists on disk, but not in|invalid obje
 function snapshotAt(repoDir, commitSha) {
   const docs = {};
   const blobs = {};
-  const hardErrors = [];
+  const hardErrors = []; // 3 正本の読み取り不能(評価不能 → VOID)
+  const factoryProblems = []; // Factory 証拠の欠落・読み取り不能(→ HOLD)
   for (const file of [...CONTROL_DOCS, FACTORY_WORKFLOW]) {
     const content = tryGit(repoDir, ['show', `${commitSha}:${file}`]);
     const sha = tryGit(repoDir, ['rev-parse', '--verify', '--quiet', `${commitSha}:${file}`]);
     if (CONTROL_DOCS.includes(file)) docs[file] = content.ok ? content.out : null;
     blobs[file] = sha.ok ? sha.out.trim() : null;
-    if (!content.ok && !MISSING_PATH_RE.test(content.error)) hardErrors.push(`${file}: ${content.error}`);
+    if (file === FACTORY_WORKFLOW) {
+      // Factory 証拠は必須。存在・読取可能・blob SHA 非 null をすべて要求する。
+      if (!content.ok) {
+        factoryProblems.push(
+          MISSING_PATH_RE.test(content.error)
+            ? `${file} が default branch に存在しない`
+            : `${file} を読み取れない: ${content.error}`,
+        );
+      }
+      if (blobs[file] === null) factoryProblems.push(`${file} の blob SHA を取得できない`);
+    } else if (!content.ok && !MISSING_PATH_RE.test(content.error)) {
+      hardErrors.push(`${file}: ${content.error}`);
+    }
   }
-  return { docs, blobs, hardErrors };
+  return { docs, blobs, hardErrors, factoryProblems };
 }
 
 // ---------- artifact ----------
@@ -398,6 +427,7 @@ export async function runCanary(options = {}) {
     },
     blobs: {},
     blocks: {},
+    factoryEvidence: { path: FACTORY_WORKFLOW, blobSha: null, problems: [] },
     baseSha: { declared: null, exists: null, isAncestorOfInspectedHead: null },
     gates: [],
     dependency_ready_gate_ids: [],
@@ -409,7 +439,7 @@ export async function runCanary(options = {}) {
     ],
     stopConditions: [
       'FAIL: 構造矛盾(schema 不正 / 未知 field / status 欠落・不正 / gate ID 重複 / 未知 gate 参照 / 自己参照 / 依存 cycle / cross-doc の gate 集合不一致 / block 重複)',
-      'HOLD: 機械可読 block または正本が default branch に無い、あるいは鮮度を再確認できない',
+      'HOLD: 機械可読 block または正本が default branch に無い / Factory 証拠(factory.yml の存在・読取・blob SHA)を取得できない / 鮮度を再確認できない',
       'STALE: run 中に block が変化した、または base_sha が検査 head の祖先でない / 実在しない',
       'VOID: repository または origin/<default branch> を読めず評価不能',
       'PASS は本 reader が生成しない(意味的順位付け step の成果物)',
@@ -465,6 +495,17 @@ export async function runCanary(options = {}) {
     artifact.baseSha.declared = analysis.baseShaDeclared;
     artifact.result = decision.result;
     artifact.failureReason = decision.failureReason;
+
+    // Factory 証拠(factory.yml の存在・読取可能性・blob SHA)が欠ければ PRECURSOR にしない
+    artifact.factoryEvidence = {
+      path: FACTORY_WORKFLOW,
+      blobSha: snap.blobs[FACTORY_WORKFLOW],
+      problems: snap.factoryProblems,
+    };
+    if (snap.factoryProblems.length > 0 && artifact.result === 'PRECURSOR') {
+      artifact.result = 'HOLD';
+      artifact.failureReason = `Factory 証拠を取得できない: ${snap.factoryProblems.join(' / ')}`;
+    }
 
     // base_sha: 実在 commit かつ検査対象 head の祖先であること(完全一致は求めない)
     if (artifact.result === 'PRECURSOR' && analysis.baseShaDeclared) {

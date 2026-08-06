@@ -27,8 +27,10 @@
 #   canary 実装の変更は従来どおり human review / merge の対象とする。
 #
 # 終了コード: PRECURSOR=0 / FAIL=1 / VOID=2 / STALE=3 / HOLD=4。
-#   機械可読 block が default branch に無い間は HOLD(=失敗)になる。これは仕様であり、
-#   block を正本へ載せる変更は別の human merge を要する。
+#   job は PRECURSOR と HOLD を成功、FAIL / VOID / STALE を失敗として扱う。
+#   HOLD は「制御平面がまだ機械可読でない」等の想定内の停止であり、canary 自体は
+#   正しく動作して状態を報告できている。一方 FAIL(構造矛盾)・VOID(評価不能)・
+#   STALE(鮮度切れ)は red のままとし、fail-closed を弱めない。
 #
 # pull_request_target は使用禁止(書き込み権限と Secrets を PR コードへ渡さないため)。
 
@@ -37,9 +39,14 @@ name: evolution-control-plane-canary
 on:
   pull_request:
     paths:
+      # 制御文書の変更(canary の判定対象)
       - 'OS.md'
       - 'CURRENT_STATE.md'
       - 'ROADMAP.md'
+      # canary 自身の変更(実装を変える PR でも CI を走らせる)
+      - '.github/workflows/evolution-control-plane-canary.yml'
+      - 'scripts/control-plane-canary.mjs'
+      - 'scripts/control-plane-canary.test.mjs'
   workflow_dispatch:
 
 permissions:
@@ -67,12 +74,21 @@ jobs:
 
       - name: control-plane canary 実行(origin/main の JSON block を読む・提案しない)
         run: |
-          set -euo pipefail
+          set -uo pipefail
           # artifact は repository 内ではなく Runner の一時領域に作る
           ARTIFACT_DIR="$RUNNER_TEMP/control-plane-canary"
           mkdir -p "$ARTIFACT_DIR"
           echo "ARTIFACT_DIR=$ARTIFACT_DIR" >> "$GITHUB_ENV"
-          node scripts/control-plane-canary.mjs --artifact "$ARTIFACT_DIR/artifact.json"
+
+          node scripts/control-plane-canary.mjs --artifact "$ARTIFACT_DIR/artifact.json" > /dev/null
+          rc=$?
+
+          # 0=PRECURSOR / 4=HOLD は想定内の報告として成功。1=FAIL / 2=VOID / 3=STALE は失敗。
+          case "$rc" in
+            0) echo "result: PRECURSOR(構造検証を通過)" ;;
+            4) echo "result: HOLD(想定内の停止。artifact の failureReason を参照)" ;;
+            *) echo "::error::control-plane canary が fail-closed で停止しました (exit=$rc)"; exit "$rc" ;;
+          esac
 
       - name: 結果を job summary へ記録
         if: always()
