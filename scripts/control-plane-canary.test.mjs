@@ -21,7 +21,7 @@ import {
   analyzeControlPlane,
   decide,
   digestOf,
-  extractJsonBlocks,
+  extractCanonicalBlock,
   findCycle,
   runCanary,
 } from './control-plane-canary.mjs';
@@ -43,36 +43,58 @@ function fence(marker, payload) {
   return ['```json ' + marker, JSON.stringify(payload, null, 2), '```'].join('\n');
 }
 
-// reader が正本として読んではならない decoy(同じ marker を持つが最上位 fence ではない)
+// 1 行目以外に置かれた同じ marker は正本として読まれない(decoy)
 const DECOY = fence(STATE_BLOCK.marker, { schema: STATE_BLOCK.schema, base_sha: 'e'.repeat(40), gates: [] });
 const indented = (text, pad) => text.split('\n').map((l) => pad + l).join('\n');
 
-const DECOY_CASES = {
-  '外側の ``` fence': ['```', DECOY, '```'].join('\n'),
-  '外側の ~~~ fence': ['~~~', DECOY, '~~~'].join('\n'),
-  'HTML comment': ['<!--', DECOY, '-->'].join('\n'),
-  '4 スペース indent': indented(DECOY, '    '),
-  'tab indent': indented(DECOY, '\t'),
-};
-
-// canonical の後ろに置いても canonical 1 件だけが読まれる decoy 群
-// (3 連 fence の入れ子だけは以降の fence 状態をずらすため個別テストで担保する)
-const EXAMPLE_PROSE = [
-  '書式例(reader は読まない):',
+// canonical の後ろに置かれる自由文と decoy 群(reader は 1 行目しか読まないため全て無視される)
+const TRAILING_PROSE = [
+  '# Current State',
+  '',
+  '人間向けの自由文。ここに「W0: PASS」と書いても reader は読まない。',
+  '',
+  '<pre>',
+  DECOY,
+  '</pre>',
+  '',
+  '<details><summary>書式例</summary>',
+  DECOY,
+  '</details>',
+  '',
+  '<div>',
+  DECOY,
+  '</div>',
   '',
   '````',
   DECOY,
   '````',
   '',
-  DECOY_CASES['外側の ~~~ fence'],
+  '~~~',
+  DECOY,
+  '~~~',
   '',
-  DECOY_CASES['HTML comment'],
+  '<!--',
+  DECOY,
+  '-->',
   '',
-  DECOY_CASES['4 スペース indent'],
+  indented(DECOY, '    '),
   '',
-  DECOY_CASES['tab indent'],
+  indented(DECOY, '\t'),
+  '',
+  DECOY, // 素の重複(1 行目ではないので canonical にならない)
 ].join('\n');
 
+// canonical block を 1 行目から始められなくする prefix(いずれも block 未設置 = HOLD)
+const PREFIX_CASES = {
+  BOM: '﻿',
+  '先頭の空白 1 文字': ' ',
+  '見出し行': '# Current State\n\n',
+  '空行': '\n',
+  'HTML tag': '<div>\n',
+  '別 fence': '```\n```\n',
+};
+
+// canonical block は必ず 1 行目。自由文と decoy は block の後ろに置く。
 function stateDoc({
   gates = DEFAULT_GATES,
   baseSha = ZERO_SHA,
@@ -80,9 +102,9 @@ function stateDoc({
   marker = STATE_BLOCK.marker,
   extraTop = null,
   mutate = null,
-  duplicate = false,
   rawBlock = null,
-  withExample = true,
+  prefix = '',
+  withProse = true,
 } = {}) {
   const payload = {
     schema,
@@ -92,17 +114,7 @@ function stateDoc({
   };
   if (mutate) mutate(payload);
   const block = rawBlock ?? fence(marker, payload);
-  return [
-    '# Current State',
-    '',
-    '人間向けの自由文。ここに「W0: PASS」と書いても reader は読まない。',
-    '',
-    block,
-    ...(duplicate ? ['', block] : []),
-    '',
-    ...(withExample ? [EXAMPLE_PROSE] : []),
-    '',
-  ].join('\n');
+  return prefix + [block, '', ...(withProse ? [TRAILING_PROSE] : []), ''].join('\n');
 }
 
 function roadmapDoc({
@@ -110,8 +122,8 @@ function roadmapDoc({
   schema = ROADMAP_BLOCK.schema,
   marker = ROADMAP_BLOCK.marker,
   mutate = null,
-  duplicate = false,
   rawBlock = null,
+  prefix = '',
 } = {}) {
   const payload = {
     schema,
@@ -119,7 +131,7 @@ function roadmapDoc({
   };
   if (mutate) mutate(payload);
   const block = rawBlock ?? fence(marker, payload);
-  return ['# Roadmap', '', '自由文。', '', block, ...(duplicate ? ['', block] : []), ''].join('\n');
+  return prefix + [block, '', '# Roadmap', '', '自由文。', ''].join('\n');
 }
 
 function makeDocs(opts = {}) {
@@ -137,46 +149,54 @@ function run(opts = {}) {
 
 // ---------- block 抽出 ----------
 
-test('最上位 fence の marker 付き block だけを抽出し、decoy は読まない', () => {
-  const blocks = extractJsonBlocks(stateDoc(), STATE_BLOCK.marker);
-  assert.equal(blocks.length, 1);
-  assert.match(blocks[0], /"base_sha": "0{40}"/);
-  assert.doesNotMatch(blocks[0], /e{40}/);
+test('1 行目の canonical block だけを読み、後続の decoy は読まない', () => {
+  const found = extractCanonicalBlock(stateDoc(), STATE_BLOCK.marker);
+  assert.equal(found.present, true);
+  assert.equal(found.terminated, true);
+  assert.match(found.text, /"base_sha": "0{40}"/);
+  assert.doesNotMatch(found.text, /e{40}/); // pre / details / div / fence / comment / indent 内の decoy
+  const { analysis, decision } = run();
+  assert.equal(decision.result, 'PRECURSOR');
+  assert.equal(analysis.blocks['CURRENT_STATE.md'].digest, digestOf(found.text));
 });
 
-test('外側 fence / ~~~ / HTML comment / indent 内の marker は正本として読まない', () => {
-  for (const [name, body] of Object.entries(DECOY_CASES)) {
-    const doc = `# Current State\n\n自由文。\n\n${body}\n\n末尾の自由文。\n`;
-    assert.equal(extractJsonBlocks(doc, STATE_BLOCK.marker).length, 0, `${name}: 読んではならない`);
-    // canonical block が無い文書として扱われる = HOLD(decoy を正本にしない)
-    const { decision } = run({ stateRaw: doc });
-    assert.equal(decision.result, 'HOLD', `${name}: HOLD であるべき`);
+test('1 文字でも prefix があれば block 未設置として HOLD', () => {
+  for (const [name, prefix] of Object.entries(PREFIX_CASES)) {
+    assert.equal(extractCanonicalBlock(stateDoc({ prefix }), STATE_BLOCK.marker).present, false, `${name}: 読んではならない`);
+    assert.equal(run({ state: { prefix } }).decision.result, 'HOLD', `${name}: HOLD であるべき`);
+    assert.equal(run({ roadmap: { prefix } }).decision.result, 'HOLD', `${name}: HOLD であるべき`);
   }
 });
 
-test('canonical と decoy が同居しても canonical 1 件だけを正本にする', () => {
-  const { analysis, decision } = run();
-  assert.equal(decision.result, 'PRECURSOR');
-  const blocks = extractJsonBlocks(stateDoc(), STATE_BLOCK.marker);
-  assert.equal(blocks.length, 1);
-  assert.equal(analysis.blocks['CURRENT_STATE.md'].digest, digestOf(blocks[0]));
+test('pre / div / details 内の marker は正本にならない(block 未設置 = HOLD)', () => {
+  for (const [name, wrap] of Object.entries({
+    pre: ['<pre>', '</pre>'],
+    div: ['<div>', '</div>'],
+    details: ['<details><summary>例</summary>', '</details>'],
+  })) {
+    const doc = [wrap[0], DECOY, wrap[1], ''].join('\n');
+    assert.equal(extractCanonicalBlock(doc, STATE_BLOCK.marker).present, false, name);
+    assert.equal(run({ stateRaw: doc }).decision.result, 'HOLD', name);
+  }
+});
+
+test('1 行目の block が閉じ fence で終わっていなければ FAIL', () => {
+  const doc = ['```json ' + STATE_BLOCK.marker, '{ "schema": "atf.control-state/1" }', ''].join('\n');
+  const { decision } = run({ stateRaw: doc });
+  assert.equal(decision.result, 'FAIL');
+  assert.match(decision.failureReason, /閉じ fence/);
 });
 
 test('block が無ければ HOLD(FAIL ではない)', () => {
   const { decision } = run({ stateRaw: '# Current State\n\n自由文だけ。W0: PASS\n' });
   assert.equal(decision.result, 'HOLD');
-  assert.match(decision.failureReason, /機械可読 block/);
+  assert.match(decision.failureReason, /canonical block/);
 });
 
 test('正本が読めなければ HOLD', () => {
   const docs = makeDocs();
   docs['OS.md'] = null;
   assert.equal(decide(analyzeControlPlane(docs)).result, 'HOLD');
-});
-
-test('block 重複は FAIL', () => {
-  assert.equal(run({ state: { duplicate: true } }).decision.result, 'FAIL');
-  assert.equal(run({ roadmap: { duplicate: true } }).decision.result, 'FAIL');
 });
 
 // ---------- 正常系と dependency-ready ----------
@@ -361,7 +381,7 @@ function writeDocs(dir, docs, { withFactory = true } = {}) {
 
 // commit1(base) → commit2(制御文書。base_sha は commit1 を指す)という履歴を作る。
 // 追加で、main の祖先ではない side commit も置く(base_sha 非祖先テスト用)。
-function makeRepos(name, { docsFor = () => makeDocs(), sideBranch = false, withFactory = true } = {}) {
+function makeRepos(name, { docsFor = () => makeDocs(), sideBranch = false, withFactory = true, prepare = null } = {}) {
   const upstream = path.join(tmpRoot, `${name}-up`);
   const clone = path.join(tmpRoot, `${name}-clone`);
   fs.mkdirSync(upstream, { recursive: true });
@@ -382,6 +402,7 @@ function makeRepos(name, { docsFor = () => makeDocs(), sideBranch = false, withF
   }
 
   writeDocs(upstream, docsFor({ baseSha, sideSha }), { withFactory });
+  if (prepare) prepare(upstream);
   git(upstream, 'add', '-A');
   git(upstream, 'commit', '-q', '-m', 'control plane');
   git(tmpRoot, 'clone', '-q', upstream, clone);
@@ -419,28 +440,75 @@ test('E2E: origin/main の block を読んで PRECURSOR。証拠を記録し wor
   assert.deepEqual(worktree(clone), before);
 });
 
-test('E2E: Factory 証拠(factory.yml)が無ければ PRECURSOR にせず HOLD', async () => {
-  const { clone } = makeRepos('nofactory', {
-    withFactory: false,
-    docsFor: ({ baseSha }) => makeDocs({ state: { baseSha } }),
-  });
-  const artifactPath = path.join(tmpRoot, 'nofactory.json');
-  const { artifact, exitCode } = await runCanary({ repoDir: clone, artifactPath, env: {} });
-  assert.equal(artifact.result, 'HOLD');
-  assert.equal(exitCode, EXIT_CODES.HOLD);
-  assert.equal(artifact.blobs[FACTORY_WORKFLOW], null);
-  assert.equal(artifact.factoryEvidence.blobSha, null);
-  assert.ok(artifact.factoryEvidence.problems.length > 0);
-  assert.match(artifact.failureReason, /Factory 証拠/);
-  assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).result, 'HOLD');
-});
-
-test('E2E: Factory 証拠がある正常系では blob SHA を記録して PRECURSOR', async () => {
+test('E2E: Factory 証拠がある正常系では mode / type / blob SHA を記録して PRECURSOR', async () => {
   const { clone } = makeRepos('factory-ok', { docsFor: ({ baseSha }) => makeDocs({ state: { baseSha } }) });
   const { artifact } = await runCanary({ repoDir: clone, artifactPath: path.join(tmpRoot, 'factory-ok.json'), env: {} });
   assert.equal(artifact.result, 'PRECURSOR');
+  assert.equal(artifact.factoryEvidence.type, 'blob');
+  assert.equal(artifact.factoryEvidence.mode, '100644');
+  assert.equal(artifact.factoryEvidence.readable, true);
   assert.match(artifact.factoryEvidence.blobSha, /^[0-9a-f]{40}$/);
+  assert.equal(artifact.blobs[FACTORY_WORKFLOW], artifact.factoryEvidence.blobSha);
   assert.deepEqual(artifact.factoryEvidence.problems, []);
+  assert.deepEqual(artifact.factoryEvidence.atFinalFetch.problems, []);
+});
+
+test('E2E: factory.yml が欠落 / directory / symlink なら PRECURSOR にせず HOLD', async () => {
+  const cases = {
+    欠落: { withFactory: false, prepare: null },
+    directory: {
+      withFactory: false,
+      prepare: (dir) => {
+        fs.mkdirSync(path.join(dir, FACTORY_WORKFLOW), { recursive: true });
+        fs.writeFileSync(path.join(dir, FACTORY_WORKFLOW, 'inner.yml'), 'name: inner\n');
+      },
+    },
+    symlink: {
+      withFactory: false,
+      prepare: (dir) => {
+        fs.mkdirSync(path.join(dir, '.github', 'workflows'), { recursive: true });
+        fs.writeFileSync(path.join(dir, '.github', 'workflows', 'real.yml'), FACTORY_STUB);
+        fs.symlinkSync('real.yml', path.join(dir, FACTORY_WORKFLOW));
+      },
+    },
+  };
+  for (const [name, spec] of Object.entries(cases)) {
+    const { clone } = makeRepos(`factory-${name}`, {
+      withFactory: spec.withFactory,
+      prepare: spec.prepare,
+      docsFor: ({ baseSha }) => makeDocs({ state: { baseSha } }),
+    });
+    const artifactPath = path.join(tmpRoot, `factory-${name}.json`);
+    const { artifact, exitCode } = await runCanary({ repoDir: clone, artifactPath, env: {} });
+    assert.equal(artifact.result, 'HOLD', `${name}: HOLD であるべき`);
+    assert.equal(exitCode, EXIT_CODES.HOLD, name);
+    assert.ok(artifact.factoryEvidence.problems.length > 0, name);
+    assert.match(artifact.failureReason, /Factory 証拠/, name);
+    assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).result, 'HOLD', name);
+  }
+});
+
+test('E2E: run 中に factory.yml が変更 / 削除されたら STALE', async () => {
+  const mutations = {
+    変更: (dir) => fs.writeFileSync(path.join(dir, FACTORY_WORKFLOW), FACTORY_STUB + '# changed\n'),
+    削除: (dir) => fs.rmSync(path.join(dir, FACTORY_WORKFLOW)),
+  };
+  for (const [name, mutate] of Object.entries(mutations)) {
+    const repos = makeRepos(`factory-drift-${name}`, { docsFor: ({ baseSha }) => makeDocs({ state: { baseSha } }) });
+    const artifactPath = path.join(tmpRoot, `factory-drift-${name}.json`);
+    const { artifact, exitCode } = await runCanary({
+      repoDir: repos.clone,
+      artifactPath,
+      env: {},
+      afterStartSnapshot: async () => commitUpstream(repos.upstream, mutate, `factory ${name}`),
+    });
+    assert.equal(artifact.result, 'STALE', `${name}: STALE であるべき`);
+    assert.equal(exitCode, EXIT_CODES.STALE, name);
+    assert.equal(artifact.staleness.materiallyStale, true, name);
+    assert.deepEqual(artifact.dependency_ready_gate_ids, [], name);
+    assert.match(artifact.failureReason, /factory\.yml|Factory 証拠/, name);
+    assert.equal(JSON.parse(fs.readFileSync(artifactPath, 'utf8')).result, 'STALE', name);
+  }
 });
 
 test('E2E: base_sha が検査 head の祖先でなければ STALE', async () => {
