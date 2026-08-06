@@ -448,6 +448,49 @@ test('provenance.json carries only schema-verified content (no derived_from, no 
   assert.ok(!badWritten.includes('DO-NOT-TRANSCRIBE-9f2c'), 'undeclared additions must not reach provenance.json');
 });
 
+// ---------- 投影gate: 全通過時のみ capabilities を artifact へ ----------
+
+test('withhold-1: on a schema FAIL (extra key), forged values never appear in provenance.json', (t) => {
+  const fix = makeFixture(t, {
+    mutateBaseline: (doc) => {
+      doc.capabilities.generation.cli_version.value.version = 'FAKE-VERSION-77aa';
+      doc.capabilities.generation.cli_version.annotation = 'schema violation trigger';
+    },
+  });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.equal(outcome.provenance.verification.performed, false);
+  const written = fs.readFileSync(path.join(fix.out, 'provenance.json'), 'utf8');
+  assert.ok(!written.includes('FAKE-VERSION-77aa'), 'forged value must not reach the artifact');
+  assert.equal(JSON.parse(written).capabilities.status, 'WITHHELD');
+});
+
+test('withhold-2: on a canonical mismatch (coverage < 100%), forged values never appear in provenance.json', (t) => {
+  const fix = makeFixture(t, {
+    mutateBaseline: (doc) => { doc.capabilities.generation.cli_version.value.version = 'FAKE-VERSION-88bb'; },
+  });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.equal(outcome.provenance.verification.performed, true);
+  assert.ok(outcome.provenance.verification.coverage_percent < 100);
+  const written = fs.readFileSync(path.join(fix.out, 'provenance.json'), 'utf8');
+  assert.ok(!written.includes('FAKE-VERSION-88bb'), 'forged value must not reach the artifact');
+  assert.equal(JSON.parse(written).capabilities.status, 'WITHHELD');
+});
+
+test('withhold-3: on a clean PASS, all OBSERVED fields are projected into provenance.json', (t) => {
+  const fix = makeFixture(t);
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'PASS');
+  const written = JSON.parse(fs.readFileSync(path.join(fix.out, 'provenance.json'), 'utf8'));
+  assert.notEqual(written.capabilities.status, 'WITHHELD');
+  let observed = 0;
+  for (const fields of Object.values(written.capabilities)) {
+    for (const entry of Object.values(fields)) if (entry.status === 'OBSERVED') observed++;
+  }
+  assert.equal(observed, Object.keys(OBSERVED_VERIFIERS).length, 'every registered OBSERVED field must survive projection on PASS');
+});
+
 test('misclassifying a snapshot document as production material FAILs', (t) => {
   const fix = makeFixture(t, {
     mutateBaseline: (doc) => { doc.material_sources['CURRENT_STATE.md'].classification = 'production_material'; },

@@ -1341,6 +1341,18 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
     'Latency of the C0 observer itself. This is NOT production factory latency and must never be compared against it.'
   );
 
+  // capabilities は「schema / manifest / repository-history / material / evidence /
+  // verifier をすべて通過し、coverage 100% で、HOLD/FAIL/VOID/STALE 理由が皆無」の
+  // 場合だけ artifact へ投影する。それ以外は明示的 WITHHELD とし、baseline の値
+  // (偽値を含みうる)を FAIL artifact へ運ばない。
+  const fullyVerified =
+    verification.performed === true &&
+    verification.coverage_percent === 100 &&
+    holdReasons.length === 0 &&
+    failReasons.length === 0 &&
+    voidReasons.length === 0 &&
+    staleReasons.length === 0;
+
   const provenance = {
     schema: SCHEMA_VERSION,
     kind: 'provenance-observation',
@@ -1379,16 +1391,33 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
       verified_evidence_policy:
         'capabilities are projected to schema-verified content only; free-text derived_from cannot be canonically verified and is excluded from this artifact (it remains in the baseline declaration)',
     },
-    capabilities: baseline ? projectVerifiedCapabilities(baseline.capabilities) : null,
+    capabilities:
+      baseline && fullyVerified
+        ? projectVerifiedCapabilities(baseline.capabilities)
+        : {
+            status: 'WITHHELD',
+            reason:
+              'capabilities are projected into this artifact only when schema, manifest, repository-history, material, evidence and verifier checks all pass with verification performed and coverage 100%; declared values are not carried into a non-PASS artifact — see result.json reasons',
+          },
     runtime,
   };
 
   const provenanceJson = JSON.stringify(provenance, null, 2);
-  const secretHits = [
+  // baseline 原文も走査する: capabilities が WITHHELD の場合でも、baseline へ
+  // 混入した Secret らしい値は FAIL として報告する(artifact へは載らない)。
+  const rawHits = [
     ...scanForSecrets(provenanceJson),
     ...scanKeysForSecretLeaks(provenance),
+    ...(baseline ? scanForSecrets(JSON.stringify(baseline)) : []),
     ...(baseline ? scanKeysForSecretLeaks(baseline) : []),
   ];
+  const seenHits = new Set();
+  const secretHits = rawHits.filter((h) => {
+    const k = `${h.kind}|${h.label}|${h.keyPath ?? ''}`;
+    if (seenHits.has(k)) return false;
+    seenHits.add(k);
+    return true;
+  });
   if (secretHits.length) {
     for (const h of secretHits) {
       failReasons.push(`secret-like content detected (${h.kind}: ${h.label}${h.keyPath ? ` at ${h.keyPath}` : ''}) — value withheld`);
