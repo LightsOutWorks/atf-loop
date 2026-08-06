@@ -491,6 +491,54 @@ test('withhold-3: on a clean PASS, all OBSERVED fields are projected into proven
   assert.equal(observed, Object.keys(OBSERVED_VERIFIERS).length, 'every registered OBSERVED field must survive projection on PASS');
 });
 
+// ---------- 固定status: OBSERVED field を UNKNOWN へ降格して coverage を偽装できない ----------
+
+test('status-1: demoting a single registered OBSERVED field to UNKNOWN FAILs (manifest fixes status)', (t) => {
+  const fix = makeFixture(t, {
+    mutateBaseline: (doc) => {
+      doc.capabilities.generation.cli_version = {
+        status: 'UNKNOWN',
+        value: null,
+        reason: 'pretending this is unknown to shrink the verification denominator',
+        resolution: 'n/a',
+      };
+    },
+  });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('generation.cli_version must have status OBSERVED')));
+  assert.equal(outcome.provenance.capabilities.status, 'WITHHELD');
+});
+
+test('status-2: demoting all 31 registered OBSERVED fields to UNKNOWN FAILs (0/0 is not coverage 100%)', (t) => {
+  const fix = makeFixture(t, {
+    mutateBaseline: (doc) => {
+      for (const key of Object.keys(OBSERVED_VERIFIERS)) {
+        const [cap, name] = key.split('.');
+        doc.capabilities[cap][name] = {
+          status: 'UNKNOWN',
+          value: null,
+          reason: 'mass-demoted to fake an empty, vacuously-100%-covered denominator',
+          resolution: 'n/a',
+        };
+      }
+    },
+  });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('must have status OBSERVED')));
+  assert.equal(outcome.provenance.capabilities.status, 'WITHHELD');
+});
+
+test('status-3: the normal fixture keeps all 31 fields OBSERVED at coverage 100% and PASSes', (t) => {
+  const fix = makeFixture(t);
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'PASS', outcome.reasons.join('\n'));
+  assert.equal(outcome.provenance.verification.observed_fields, Object.keys(OBSERVED_VERIFIERS).length);
+  assert.equal(outcome.provenance.verification.verified_fields, Object.keys(OBSERVED_VERIFIERS).length);
+  assert.equal(outcome.provenance.verification.coverage_percent, 100);
+});
+
 test('misclassifying a snapshot document as production material FAILs', (t) => {
   const fix = makeFixture(t, {
     mutateBaseline: (doc) => { doc.material_sources['CURRENT_STATE.md'].classification = 'production_material'; },

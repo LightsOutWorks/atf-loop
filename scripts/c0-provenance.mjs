@@ -303,7 +303,19 @@ export function enforceManifest(baseline) {
       continue;
     }
     for (const fieldName of fields) {
-      if (!g[fieldName]) problems.push(`manifest: required field missing: ${group}.${fieldName}`);
+      const entry = g[fieldName];
+      if (!entry) {
+        problems.push(`manifest: required field missing: ${group}.${fieldName}`);
+        continue;
+      }
+      // 各 field の期待 status は schema が固定する: OBSERVED_VERIFIERS に
+      // 登録された field は必ず OBSERVED、それ以外は必ず UNKNOWN。
+      // OBSERVED→UNKNOWN への恣意的な降格(coverage分母からの離脱)を
+      // manifest違反として拒否する。
+      const expected = OBSERVED_VERIFIERS[`${group}.${fieldName}`] ? 'OBSERVED' : 'UNKNOWN';
+      if (entry.status !== expected) {
+        problems.push(`manifest: ${group}.${fieldName} must have status ${expected} (schema ${SCHEMA_VERSION} fixes this field's status; actual status withheld)`);
+      }
     }
     for (const fieldName of Object.keys(g)) {
       if (!fields.includes(fieldName)) {
@@ -865,10 +877,15 @@ export function projectVerifiedCapabilities(caps) {
 }
 
 // 全OBSERVED fieldを registry で検証する。
+// observedTotal は宣言中の実際の OBSERVED 件数であり、OBSERVED_VERIFIERS の
+// 登録件数(schemaが固定するOBSERVED件数)と完全一致しない限り problem を積む。
+// これにより、登録済みfieldをUNKNOWNへ降格して分母を減らす、または全降格して
+// 0/0 を偽装するいずれの経路も coverage 100% に到達できない。
 // 戻り値: {problems, observedTotal, verifiedOk, missingVerifier}
 export function verifyObservedFields(baseline, ctx) {
   const problems = [];
   const missingVerifier = [];
+  const expectedTotal = Object.keys(OBSERVED_VERIFIERS).length;
   let observedTotal = 0;
   let verifiedOk = 0;
   for (const [cap, fields] of Object.entries(baseline.capabilities || {})) {
@@ -905,8 +922,14 @@ export function verifyObservedFields(baseline, ctx) {
       verifiedOk++;
     }
   }
+  if (observedTotal !== expectedTotal) {
+    problems.push(
+      `observed field count ${observedTotal} does not match the ${expectedTotal} fields fixed as OBSERVED by schema ${SCHEMA_VERSION} — demoting a registered field to UNKNOWN (or vice versa) is a manifest violation, not a way to change the verification denominator`
+    );
+  }
   return { problems, observedTotal, verifiedOk, missingVerifier };
 }
+
 // ---------- working tree との照合 ----------
 
 export function verifyMaterialSources(baseline, repoRoot) {
@@ -1310,7 +1333,9 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
             performed: true,
             observed_fields: vres.observedTotal,
             verified_fields: vres.verifiedOk,
-            coverage_percent: vres.observedTotal === 0 ? 100 : Math.floor((vres.verifiedOk / vres.observedTotal) * 100),
+            // observedTotal=0 は「何も検証できていない」であって「全件検証済み」ではない。
+            // 0/0 を100%として偽装できないよう、分母0は0%として扱う。
+            coverage_percent: vres.observedTotal === 0 ? 0 : Math.floor((vres.verifiedOk / vres.observedTotal) * 100),
           };
           if (verification.coverage_percent < 100) {
             failReasons.push(
