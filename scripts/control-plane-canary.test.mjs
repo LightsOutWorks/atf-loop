@@ -273,6 +273,20 @@ test('余分な gate は両方向とも FAIL', () => {
   assert.match(extraInRoadmap.decision.failureReason, /"X9".*CURRENT_STATE\.md に status が無い/s);
 });
 
+test('両文書に同じ空 ID を置いても黙って除外されず FAIL(cross-doc 一致の偽装を防ぐ)', () => {
+  for (const emptyId of ['', '   ']) {
+    const gates = [{ id: emptyId, lane: 'foundation', status: 'NOT_STARTED', prerequisites: [] }];
+    const { decision } = run({ state: { gates }, roadmap: { gates } });
+    assert.equal(decision.result, 'FAIL', `id=${JSON.stringify(emptyId)}`);
+    assert.match(decision.failureReason, /id が非文字列または空/);
+    assert.notEqual(decision.result, 'PRECURSOR');
+  }
+});
+
+test('正常 fixture は PRECURSOR を維持する', () => {
+  assert.equal(run().decision.result, 'PRECURSOR');
+});
+
 test('未知 gate の参照は FAIL', () => {
   const { decision } = run({ roadmap: { mutate: (p) => { p.gates[3].prerequisites = ['Z9']; } } });
   assert.equal(decision.result, 'FAIL');

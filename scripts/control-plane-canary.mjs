@@ -150,7 +150,10 @@ function validateStateBlock(data, problems) {
     if (typeof g.status === 'string' && !GATE_STATUSES.includes(g.status)) {
       problems.push(`${at}: status "${g.status}" が許可値(${GATE_STATUSES.join(' / ')})でない`);
     }
-    if (typeof g.id !== 'string' || g.id.trim() === '') return;
+    if (typeof g.id !== 'string' || g.id.trim() === '') {
+      problems.push(`${at}: id が非文字列または空(空白のみを含む)`);
+      return;
+    }
     if (gates.has(g.id)) problems.push(`${where}: gate ID "${g.id}" が重複している`);
     else gates.set(g.id, { status: g.status, evidence: g.evidence });
   });
@@ -174,7 +177,10 @@ function validateRoadmapBlock(data, problems) {
     checkFields(g, { id: 'string', lane: 'string', prerequisites: 'array' }, at, problems);
     checkStringArray(g.prerequisites, `${at}.prerequisites`, problems);
     if (typeof g.lane === 'string' && g.lane.trim() === '') problems.push(`${at}: lane が空`);
-    if (typeof g.id !== 'string' || g.id.trim() === '') return;
+    if (typeof g.id !== 'string' || g.id.trim() === '') {
+      problems.push(`${at}: id が非文字列または空(空白のみを含む)`);
+      return;
+    }
     if (gates.has(g.id)) problems.push(`${where}: gate ID "${g.id}" が重複している`);
     else gates.set(g.id, { lane: g.lane, prerequisites: typeOf(g.prerequisites) === 'array' ? g.prerequisites : [] });
   });
