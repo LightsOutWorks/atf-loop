@@ -82,8 +82,7 @@
       "id": "C0",
       "status": "PASS",
       "evidence": [
-        "main workflow run 31075997147: 31/31 deterministic tests passed, coverage 100%",
-        "run artifact 8957508638"
+        "main workflow run 31075997147 at 01245a29acaab5547a8fbcdff201beb37abf04f9: C0 result PASS; 68/68 deterministic tests passed; 31/31 OBSERVED fields verified (coverage 100%); artifact 8957508638"
       ]
     },
     {
@@ -129,6 +128,8 @@
   ]
 }
 ```
+
+Canonical routing note: The JSON block above is the sole current source for gate status, base revision, and dependency routing. The unchanged human-readable body below is a historical snapshot observed at main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343, retained as F1 provenance and not as a second current state. Until it is refreshed after the first main runtime canary, its Observed at, Base SHA, capability status, bottleneck, Smallest Next Gate, Evidence Index, and update instruction MUST NOT be used for current routing.
 
 # Current State
 
