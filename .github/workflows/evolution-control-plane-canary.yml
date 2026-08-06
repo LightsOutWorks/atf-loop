@@ -1,0 +1,162 @@
+# evolution-control-plane-canary.yml — F3 precursor の read-only カナリア。
+#
+# job は 2 つに分かれている。
+#
+#   tests  … 決定論テストだけを実行する。pull_request と workflow_dispatch の両方で走る。
+#            pull_request の green は「実装テストに合格した」ことだけを意味し、
+#            default branch の runtime 状態については何も主張しない。
+#   canary … runtime 判定。workflow_dispatch のときだけ実行する。
+#            PRECURSOR だけを green とし、HOLD / FAIL / VOID / STALE はすべて red。
+#            artifact 欠落・JSON 不正・exit code と artifact.result の不一致も red。
+#
+# canary が読むもの:
+#   origin/<default branch> の CURRENT_STATE.md / ROADMAP.md の 1 行目にある versioned
+#   JSON block と、3 正本の blob SHA、および factory.yml の Factory 証拠
+#   (type=blob / mode 100644 か 100755 / 読取可能、開始時と終了時の一致)。
+#
+# 何を主張しないか:
+#   - PASS を出さない。OS 基準による意味的順位付けと権限判断は別 step であり未実装。
+#     したがって F3 は PRECURSOR に留まる
+#   - gate を「実行可能」「選択可能」とは主張しない
+#   - 自由文の意味監査はしない。判断入力は 1 行目の JSON block だけ
+#
+# 何をしないか(Production Loop 非干渉・成功偽装の防止):
+#   - repository への書き込み・branch/PR/comment 作成・merge・push は一切しない
+#   - Secrets を参照しない。外部モデル・外部 API を呼ばない
+#   - .github/workflows/factory.yml には触れない(canary は証拠として読むだけ)
+#
+# 自己承認の防止(保護範囲を明記):
+#   canary は判定に PR 側 checkout(改変版)を使わず、常に origin/<default branch> の
+#   git object を読む。よって制御文書を書き換える PR があっても canary の判断には
+#   使われない。限界: workflow 本体と scripts/ は checkout された ref から実行されるため、
+#   canary 実装自体を書き換える変更はこの仕組みでは防げない。実装の変更は従来どおり
+#   human review / merge の対象とする。
+#
+# pull_request_target は使用禁止(書き込み権限と Secrets を PR コードへ渡さないため)。
+
+name: evolution-control-plane-canary
+
+on:
+  pull_request:
+    paths:
+      - 'OS.md'
+      - 'CURRENT_STATE.md'
+      - 'ROADMAP.md'
+      - '.github/workflows/evolution-control-plane-canary.yml'
+      - 'scripts/control-plane-canary.mjs'
+      - 'scripts/control-plane-canary.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: 決定論テスト(実装のみ・runtime 判定を含まない)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: node --test(外部依存なし)
+        run: node --test scripts/control-plane-canary.test.mjs
+
+  canary:
+    name: runtime canary(workflow_dispatch のみ・PRECURSOR だけ green)
+    if: github.event_name == 'workflow_dispatch'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: control-plane canary 実行(origin の JSON block を読む・提案しない)
+        run: |
+          set -uo pipefail
+          # artifact は repository 内ではなく Runner の一時領域に作る
+          ARTIFACT_DIR="$RUNNER_TEMP/control-plane-canary"
+          mkdir -p "$ARTIFACT_DIR"
+          echo "ARTIFACT_DIR=$ARTIFACT_DIR" >> "$GITHUB_ENV"
+          ART="$ARTIFACT_DIR/artifact.json"
+
+          # Actions の run: は bash -e で実行されるため非 0 終了は `|| rc=$?` で受ける
+          rc=0
+          node scripts/control-plane-canary.mjs --artifact "$ART" > /dev/null || rc=$?
+
+          if [ ! -f "$ART" ]; then
+            echo "::error::artifact が生成されていない (exit=$rc)"
+            exit 1
+          fi
+
+          # JSON として読めない artifact は red
+          result=$(node -e '
+            const a = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            if (typeof a.result !== "string") throw new Error("result field が無い");
+            process.stdout.write(a.result);
+          ' "$ART") || {
+            echo "::error::artifact が JSON として不正、または result field が無い"
+            exit 1
+          }
+
+          # exit code と artifact.result の不一致は red(どちらかが壊れている)
+          case "$result" in
+            PRECURSOR) expected=0 ;;
+            FAIL) expected=1 ;;
+            VOID) expected=2 ;;
+            STALE) expected=3 ;;
+            HOLD) expected=4 ;;
+            *) echo "::error::未知の result: $result"; exit 1 ;;
+          esac
+          if [ "$rc" != "$expected" ]; then
+            echo "::error::exit code と artifact.result が不一致 (exit=$rc / result=$result / 期待 exit=$expected)"
+            exit 1
+          fi
+
+          # PRECURSOR だけが green。HOLD / FAIL / VOID / STALE はすべて red。
+          if [ "$result" != "PRECURSOR" ]; then
+            echo "::error::runtime canary result=$result (PRECURSOR ではないため失敗として扱う)"
+            exit 1
+          fi
+          echo "result: PRECURSOR"
+
+      - name: 結果を job summary へ記録
+        if: always()
+        run: |
+          set -euo pipefail
+          SRC="${ARTIFACT_DIR:-$RUNNER_TEMP/control-plane-canary}/artifact.json"
+          {
+            echo "## 🕊️ control-plane canary (F3 precursor)"
+            echo ""
+            if [ -f "$SRC" ]; then
+              echo '```json'
+              cat "$SRC"
+              echo '```'
+            else
+              echo "artifact が生成されていない。job ログを参照。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: artifact 保存(成功・失敗にかかわらず)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-plane-canary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/control-plane-canary
+          if-no-files-found: error
