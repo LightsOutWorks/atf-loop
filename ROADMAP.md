@@ -136,6 +136,8 @@ Autonomy is a means, not the objective. The Factory optimizes the shortest safe,
 - `STALE`: baseまたは依存条件が変化し、比較が無効になった。
 - `HOLD`: Hard Boundary、Layer0、証拠の曖昧さ、認証・費用等で安全に進めない。
 
+`NO_ACTION`は、発火条件または試す価値のある候補が存在しない時のrouting上の結論である。gateのPASS / FAILでもCURRENT_STATE.mdのstatusでもない。変更・PR・canaryを作らず、当該gateを候補化しない。
+
 `VOID`を`FAIL`として学習しない。`STALE`な結果を再利用しない。
 
 ---
@@ -242,7 +244,7 @@ PASS:
 
 #### F4 — Autonomous evolution PR
 
-Goal: 「Autonomy Is a Means」の発火条件((a)〜(e))を満たすと記録された人間介入1件だけを無人化する。発火条件を満たす人間介入が無ければ`NO_ACTION`とし、手動経路を維持する。
+Goal: Evolution PR作成経路(branch / draft PR / tests / independent verdict)内で、「Autonomy Is a Means」の発火条件((a)〜(e))を満たすと記録された人間介入1件だけを無人化する。発火条件を満たす人間介入が無ければ`NO_ACTION`とし、手動経路を維持する。
 
 PASS:
 
@@ -251,7 +253,7 @@ PASS:
 - 実装担当が検証規則やHard Boundaryを同じPRで緩められない
 - merge、Secrets、permissions、kill switchはこのgateの対象外
 
-First candidate: Selection Record v2 and the verified JOURNAL 0005 / 0007 corrections.
+First candidate（発火条件が証拠として記録された場合のinitial canary candidate）: Selection Record v2 and the verified JOURNAL 0005 / 0007 corrections.
 
 #### F5 — Verified bounded auto-merge
 
@@ -260,7 +262,7 @@ Goal: 同型・低リスク変更に限りhuman mergeを退役させる。
 Prerequisite:
 
 - human mergeがcycle time、error、wait、scale、capabilityの実測律速であること。満たさなければF5は起票せず`NO_ACTION`とする。
-- F4の反復成功
+- 対象となるPR経路が、human merge以外の範囲でreviewable draft PR / deterministic tests / independent verdictまで反復成功していること
 - deterministic acceptance contract
 - independent reviewer
 - strict up-to-date base and rollback
@@ -293,7 +295,7 @@ itch.ioは既存projectの手動作成と初回HTML5設定が必要であり、b
 
 #### W0A — Proven distribution automation
 
-Goal: 手動カナリアで実在を確認した経路の反復作業だけを、Production Loopと分離して自動化する。
+Goal: W0で実在を確認した反復作業が「Autonomy Is a Means」の発火条件(a)〜(e)を満たす場合だけ自動化候補にする。満たさなければ`NO_ACTION`とし手動経路を維持する。W1はW0Aの有無にかかわらず進められる。
 
 PASS:
 
@@ -482,7 +484,7 @@ PASS is continuous, not terminal:
 - governance taxを証拠が消えた時に削除する
 - current Champion、State、Roadmap gateがdefault branchから再構成できる
 - 新しい部品が登場しても、製品名の移行プロジェクトではなく通常canaryとして吸収できる
-- 外部能力または機構の発見 → bounded canary → independent verification → Adopt / Reject → 再観測を、少なくとも2回連続で無人完走する
+- 外部能力または機構の発見 → bounded canary → independent verification → Adopt / Reject → 再観測を、How・実装・評価・改善の判断を人へ戻さず、少なくとも2回連続で完走する。§3で許容されたBoundary / Layer0上または一時的な実行ギャップの単純な機械操作は、この条件を無効にしない。
 - 少なくとも1件のRejectと1回のrollback経路を独立証拠で実証する
 - 自己改変案を、その変更の影響を受ける評価器や検証規則が自己承認しない
 - 外部innovationから独立検証済みWorld Valueまでの時間・成功率・費用を再構成できる
@@ -537,8 +539,8 @@ Gateの現在statusと次の1件は`CURRENT_STATE.md`だけに置く。本書へ
 
 依存順序:
 
-1. FoundationはF0 → F1 → F2 → F3が必須。F3は3文書がdefault branchへ揃った後にだけ実行する。F4/F5は「Autonomy Is a Means」の発火条件が観測された時だけ候補化し、X1の必須前提ではない。
-2. World LearningはW0（手動比較カナリア）→ W0A（distribution自動化）→ W1（計測）→ W2 / W3 → W4（shadow learning）→ W5。
+1. FoundationはF0 → F1 → F2 → F3が必須。F3は3文書がdefault branchへ揃った後にだけ実行する。F4とF5は互いの必須prerequisiteではなく、それぞれ「Autonomy Is a Means」の発火条件が観測された時だけF3後の条件付きgateとして候補化し、X1の必須前提ではない。
+2. World Learningのcore pathはW0（手動比較カナリア）→ W1（計測）→ W2 / W3 → W4（shadow learning）→ W5。W0AはW0後に「Autonomy Is a Means」の発火条件が証明された時だけ候補化するoptional gateであり、W1のprerequisiteではない。
 3. Capability EvolutionはC0 → C1 / C2 → C3 → C4 → C5。C6は既存構造では表現できない律速が証明された時だけ候補化する。
 4. C0とF3は、World LaneをblockせずProduction Loopを変更しない独立canaryとして並行候補になりうる。ただし1 runにつき選ぶgateは1件。
 5. Selection Record v2は、F3通過後のF4候補、または現行PR運用で行う独立した証明済み欠陥修理として扱える。
