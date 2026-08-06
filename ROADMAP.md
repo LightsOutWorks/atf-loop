@@ -34,13 +34,21 @@ Factoryは3つの軸で進化する。
 
 ---
 
-## 2. Final Goal
+## 2. North Star / Final Goal
 
 最終ゴールは、特定モデル、特定ベンダー、ゲーム工場、またはmulti-agent workspaceを所有することではない。
 
 **Human Desireを、その時代に利用可能な最高の外部知能・道具・実行基盤の組合せによって、最小の人間介入でWorld Valueへ変換し続ける、自己改善型Intelligence Transformation Systemを持つこと。**
 
 Factoryは高価な基盤モデルや汎用部品を自前で再開発しない。世界中の研究所・企業・OSSが加速させる部品を候補として観測し、能力単位で比較し、ATF自身の仕事で勝った構成だけを採用する。
+
+**North Star: 世界で進化する外部知能と機構をHuman Desireへ変換する速度と確度そのものを自己改善し続ける、個人所有の自律進化機関。**
+
+到達形は、固定された単一のFactoryではない。Objectiveごとに、その時点の最良のモデル、機構、道具、役割、検証、配信を一時的なFactoryとして編成し、運用し、証拠が失われれば交換・解散する **Factory Compiler** である。ブラウザトイは最初の検証基質であり、永続する中心ではない。
+
+外部Radarはモデルや製品だけでなく、論文、OSS、公式release、実運用事例から、探索、評価、選択、保持、routing、memory、governance、distribution、world-signal instrumentation等の機構も能力単位で抽出する。将来はRadar、benchmark、canary設計、adoption ruleそのものもChallengerとして比較する。
+
+永続する核はHuman Desire / Boundary、`OS.md`、証拠の完全性、独立検証、rollbackである。現行ATFのコードと構成もChampion候補の1つにすぎない。外部のFactoryまたは別構成が同一contractで勝てば、ATF自身を退役させる。
 
 目標ループ:
 
@@ -86,16 +94,30 @@ Next Factory run
 
 モデルだけを交換し、周辺条件を記録しない比較は無効。
 
+進歩は、最新技術の採用数、agent数、出力数、benchmark点数ではなく、**外部の知能・機構の発見から、独立検証済みのWorld Valueへ変換するまでの時間、成功率、費用**で測る。成長は指数関数を保証せず、外部技術のS字曲線を証拠付きの採用でつなぐ階段状の改善として扱う。
+
+自己改善は自己承認ではない。自己改変案は、その変更の影響を受けない検証contractと独立verifierによってのみ採用できる。
+
 ---
 
 ## 3. Autonomous Evolution Contract
+
+### Autonomy Is a Means
+
+Autonomy is a means, not the objective. The Factory optimizes the shortest safe, low-cost route from Human Desire to independently verified World Value; it does not maximize the percentage of actions performed by AI.
+
+低頻度で単純な人間操作が、その自動化よりも総複雑性、費用、故障面、証拠負担を小さくする場合、その操作は残してよい。ただし、これはBoundary / Layer0上の操作または一時的な実行ギャップに限り、人間へHow、評価、改善を恒久的に戻す根拠にはしない。
+
+人間介入の自動化は、その介入が記録上、(a) cycle timeまたはscaleの律速、(b) 反復するerror / failure、(c) recurring wait / coordination state、(d) capability ceiling、または(e) verified total costの悪化、の少なくとも1つになった時だけChallenger候補にする。該当証拠がなければ単純な操作を残し、自律率を上げるためだけの機構は作らない。
+
+自動化候補は通常のBenchmark → Canary → Independent Verificationを通し、成果、所要時間、費用、信頼性、総複雑性を含む経路全体が改善した場合だけ採用する。Higher autonomy is not evidence of progress.
 
 将来のEvolution runは毎回、次の順で動く。
 
 1. default branchの`OS.md`を読む。
 2. default branchと直近run証拠から`CURRENT_STATE.md`の鮮度を検証する。
 3. `ROADMAP.md`の依存関係を読む。
-4. 権限内かつprerequisite済みのgateを、ゴールへの直接性・現在の律速仮説・情報利得・可逆性・費用で順位付けし、1 runにつき1件選ぶ。人間専権が必要なら`HOLD`し、独立laneの別gateへ進む場合は非依存性を記録する。
+4. 権限内かつprerequisite済みのgateを、ゴールへの直接性・現在の律速仮説・情報利得・可逆性・費用・人間時間・総複雑性で順位付けし、1 runにつき1件選ぶ。人間介入の自動化は、「Autonomy Is a Means」の発火条件を満たす場合だけ候補化する。人間専権が必要なら`HOLD`し、独立laneの別gateへ進む場合は非依存性を記録する。
 5. 現在の律速が不明なら変更を作らず、観測を追加する。
 6. 仮説、base SHA、変更変数、PASS / FAIL / VOID / STALE条件、rollbackを事前登録する。
 7. 最小のcanaryを実行する。
@@ -220,7 +242,7 @@ PASS:
 
 #### F4 — Autonomous evolution PR
 
-Goal: 証明済みの欠陥またはRoadmap gateから、branch / draft PR / tests / independent verdictまで人手0にする。
+Goal: 「Autonomy Is a Means」の発火条件((a)〜(e))を満たすと記録された人間介入1件だけを無人化する。発火条件を満たす人間介入が無ければ`NO_ACTION`とし、手動経路を維持する。
 
 PASS:
 
@@ -237,6 +259,7 @@ Goal: 同型・低リスク変更に限りhuman mergeを退役させる。
 
 Prerequisite:
 
+- human mergeがcycle time、error、wait、scale、capabilityの実測律速であること。満たさなければF5は起票せず`NO_ACTION`とする。
 - F4の反復成功
 - deterministic acceptance contract
 - independent reviewer
@@ -376,14 +399,18 @@ PASS:
 
 #### C2 — External Capability Radar
 
-Goal: 新モデル、ツール、ハーネス、実行基盤を継続観測し、試す価値のあるChallengerだけを起票する。
+Goal: 新モデル、ツール、ハーネス、実行基盤、および論文・OSS・実運用から抽出した外部機構を継続観測し、試す価値のあるChallengerだけを起票する。
 
 PASS:
 
 - official sourceを優先
 - capability単位で候補化
+- source fact / vendor claim / inference / unknownを分離する
 - expected gain / cost / risk / required secretを記録
-- rankingだけでproduction変更しない
+- affected gate / minimal canary / success signal / rollbackを付ける
+- rankingや調査結果だけでproduction変更しない
+
+C0以前のread-only landscape reconnaissanceは準備として許可するが、C2のPASSでも採用証拠でもない。既存gateをblockせず、productionを変更せず、追加課金やSecretsを要求しない範囲に限る。新しい有効候補が無ければ`NO_ACTION`を正しい結論とする。
 
 #### C3 — Capability Champion / Challenger
 
@@ -455,6 +482,11 @@ PASS is continuous, not terminal:
 - governance taxを証拠が消えた時に削除する
 - current Champion、State、Roadmap gateがdefault branchから再構成できる
 - 新しい部品が登場しても、製品名の移行プロジェクトではなく通常canaryとして吸収できる
+- 外部能力または機構の発見 → bounded canary → independent verification → Adopt / Reject → 再観測を、少なくとも2回連続で無人完走する
+- 少なくとも1件のRejectと1回のrollback経路を独立証拠で実証する
+- 自己改変案を、その変更の影響を受ける評価器や検証規則が自己承認しない
+- 外部innovationから独立検証済みWorld Valueまでの時間・成功率・費用を再構成できる
+- §3の範囲で、Boundary / Layer0上または一時的な実行ギャップにある低頻度で単純な認証、開始、合格済みPRのmerge、publish等の機械操作は、それが律速でなく、How・実装・評価・改善の判断を人へ戻さない限り残してよい
 
 この状態でも進化は完了しない。観測対象と部品市場が動く限り、ループは継続する。
 
@@ -505,7 +537,7 @@ Gateの現在statusと次の1件は`CURRENT_STATE.md`だけに置く。本書へ
 
 依存順序:
 
-1. FoundationはF0 → F1 → F2。F3は3文書がdefault branchへ揃った後にだけ実行する。F4はF3の後、F5はF4の反復成功後。
+1. FoundationはF0 → F1 → F2 → F3が必須。F3は3文書がdefault branchへ揃った後にだけ実行する。F4/F5は「Autonomy Is a Means」の発火条件が観測された時だけ候補化し、X1の必須前提ではない。
 2. World LearningはW0（手動比較カナリア）→ W0A（distribution自動化）→ W1（計測）→ W2 / W3 → W4（shadow learning）→ W5。
 3. Capability EvolutionはC0 → C1 / C2 → C3 → C4 → C5。C6は既存構造では表現できない律速が証明された時だけ候補化する。
 4. C0とF3は、World LaneをblockせずProduction Loopを変更しない独立canaryとして並行候補になりうる。ただし1 runにつき選ぶgateは1件。
@@ -513,4 +545,4 @@ Gateの現在statusと次の1件は`CURRENT_STATE.md`だけに置く。本書へ
 
 どの候補を今選ぶかは本文書の並びでは決めない。`CURRENT_STATE.md`の証拠を使い、Goal First、律速仮説、情報利得、可逆性、費用で順位付けする。
 
-ドキュメントを置いただけでは自走ではない。F3とF4が通って初めて、3軸が実行系へ接続されたと言える。
+ドキュメントを置いただけでは自走ではない。F3が通り、選ばれたgateを実行・独立検証できて初めて、3軸が実行系へ接続されたと言える。F4/F5は発火条件がある場合だけ必要になる。
