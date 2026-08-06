@@ -369,6 +369,85 @@ test('adding a fictitious capability group or field FAILs (exact schema)', (t) =
   assert.ok(ob.reasons.some((r) => r.includes('field not defined by schema') && r.includes('magic_capability')));
 });
 
+// ---------- 階層別 strict schema: 余分key・偽evidenceの6 negative tests ----------
+
+test('strict-1: an extra root key FAILs', (t) => {
+  const fix = makeFixture(t, { mutateBaseline: (doc) => { doc.extra = 'x'; } });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('baseline: key not defined by schema') && r.includes('extra')));
+});
+
+test('strict-2: an extra base key FAILs', (t) => {
+  const fix = makeFixture(t, { mutateBaseline: (doc) => { doc.base.extra = 'x'; } });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('base: key not defined by schema') && r.includes('extra')));
+});
+
+test('strict-3: an extra material entry key FAILs', (t) => {
+  const fix = makeFixture(t, { mutateBaseline: (doc) => { doc.material_sources['smoke.mjs'].extra = 'x'; } });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('material_sources[smoke.mjs]: key not defined by schema') && r.includes('extra')));
+});
+
+test('strict-4: an extra OBSERVED entry key FAILs', (t) => {
+  const fix = makeFixture(t, { mutateBaseline: (doc) => { doc.capabilities.generation.cli_version.annotation = 'x'; } });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('cli_version: key not defined by schema') && r.includes('annotation')));
+});
+
+test('strict-5: an extra evidence key FAILs', (t) => {
+  const fix = makeFixture(t, { mutateBaseline: (doc) => { doc.capabilities.generation.cli_version.evidence.extra = 'x'; } });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('cli_version.evidence: key not defined by schema') && r.includes('extra')));
+});
+
+test('strict-6: fake evidence attached to an UNKNOWN entry FAILs', (t) => {
+  const fix = makeFixture(t, {
+    mutateBaseline: (doc) => {
+      doc.capabilities.generation.effective_model_id.evidence = {
+        kind: 'repository',
+        path: FY,
+        git_blob_sha1: computeGitBlobSha1(FIXTURE_FILES[FY]),
+        derived_from: 'fabricated evidence on an UNKNOWN field',
+      };
+    },
+  });
+  const outcome = runFixture(fix);
+  assert.equal(outcome.result, 'FAIL');
+  assert.ok(outcome.reasons.some((r) => r.includes('effective_model_id: key not defined by schema') && r.includes('evidence')));
+});
+
+test('provenance.json carries only schema-verified content (no derived_from, no extra keys)', (t) => {
+  const ok = makeFixture(t);
+  const outcome = runFixture(ok);
+  assert.equal(outcome.result, 'PASS');
+  const written = JSON.parse(fs.readFileSync(path.join(ok.out, 'provenance.json'), 'utf8'));
+  for (const fields of Object.values(written.capabilities)) {
+    for (const entry of Object.values(fields)) {
+      assert.ok(!('derived_from' in (entry.evidence ?? {})), 'derived_from must not be transcribed into provenance.json');
+      if (entry.status === 'OBSERVED') assert.deepEqual(Object.keys(entry).sort(), ['evidence', 'status', 'value']);
+      else assert.deepEqual(Object.keys(entry).sort(), ['reason', 'resolution', 'status', 'value']);
+    }
+  }
+  // baselineから転記される capabilities には derived_from が一切残らない
+  // (runtime facts は観測者自身の第一次観測であり、転記ではないため対象外)
+  assert.ok(!JSON.stringify(written.capabilities).includes('derived_from'));
+
+  // FAILケースでも、余分keyの内容はartifactへ転記されない
+  const bad = makeFixture(t, {
+    mutateBaseline: (doc) => { doc.capabilities.generation.cli_version.smuggled_note = 'DO-NOT-TRANSCRIBE-9f2c'; },
+  });
+  const ob = runFixture(bad);
+  assert.equal(ob.result, 'FAIL');
+  const badWritten = fs.readFileSync(path.join(bad.out, 'provenance.json'), 'utf8');
+  assert.ok(!badWritten.includes('DO-NOT-TRANSCRIBE-9f2c'), 'undeclared additions must not reach provenance.json');
+});
+
 test('misclassifying a snapshot document as production material FAILs', (t) => {
   const fix = makeFixture(t, {
     mutateBaseline: (doc) => { doc.material_sources['CURRENT_STATE.md'].classification = 'production_material'; },

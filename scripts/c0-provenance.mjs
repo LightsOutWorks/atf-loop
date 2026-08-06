@@ -6,7 +6,9 @@
 //
 // C0 evidence contract (schema atf-configuration-provenance/v1):
 //   1. exact schema — capability group / field / material path は固定manifestと完全一致。
-//      欠落も未定義の追加も FAIL(追加したければ schema version を上げる)。
+//      さらに root / base / material entry / OBSERVED entry / UNKNOWN entry /
+//      repository・runtime evidence の各階層で required/allowed keys と型を固定する。
+//      欠落も未定義の追加も型違反も FAIL(追加したければ schema version を上げる)。
 //   2. verifier registry — 全OBSERVED fieldは OBSERVED_VERIFIERS に登録された検証器で
 //      「値が証拠内容を正しく表すこと」を検証される。登録のないfieldをOBSERVEDにするとFAIL。
 //      検証は (a) sourceから決定論的に抽出した値との exact compare、または
@@ -141,7 +143,27 @@ export function scanKeysForSecretLeaks(doc, keyPath = '$') {
   return hits;
 }
 
-// ---------- field schema 検証 ----------
+// ---------- field schema 検証(階層別 strict schema) ----------
+// root / base / material entry / OBSERVED entry / UNKNOWN entry /
+// repository evidence / runtime evidence の各階層で required keys・allowed keys・
+// 型を固定する。余分なkey・必須key欠落・型違反はすべてFAIL。
+
+function checkExactKeys(problems, label, obj, required, optional = []) {
+  const allowed = new Set([...required, ...optional]);
+  for (const k of required) {
+    if (!(k in obj)) problems.push(`${label}: required key missing: ${k}`);
+  }
+  for (const k of Object.keys(obj)) {
+    if (!allowed.has(k)) {
+      problems.push(`${label}: key not defined by schema ${SCHEMA_VERSION}: ${k} (undeclared additions are forbidden)`);
+    }
+  }
+}
+
+const OBSERVED_ENTRY_KEYS = ['status', 'value', 'evidence'];
+const UNKNOWN_ENTRY_KEYS = ['status', 'value', 'reason', 'resolution'];
+const REPOSITORY_EVIDENCE_KEYS = ['kind', 'path', 'git_blob_sha1', 'derived_from'];
+const RUNTIME_EVIDENCE_KEYS = ['kind', 'source', 'derived_from'];
 
 export function validateFieldEntry(name, entry) {
   const problems = [];
@@ -151,31 +173,33 @@ export function validateFieldEntry(name, entry) {
     return problems;
   }
   if (entry.status === 'OBSERVED') {
+    checkExactKeys(problems, name, entry, OBSERVED_ENTRY_KEYS);
     if (entry.value === undefined || entry.value === null || entry.value === '') {
       p('OBSERVED requires a non-empty value');
     }
     const ev = entry.evidence;
-    if (!ev || typeof ev !== 'object') {
+    if (!ev || typeof ev !== 'object' || Array.isArray(ev)) {
       p('OBSERVED requires evidence');
       return problems;
     }
-    if (typeof ev.derived_from !== 'string' || !ev.derived_from.trim()) {
-      p('evidence.derived_from (どの宣言・出力から取得したか) is required');
-    }
     if (ev.kind === 'repository') {
+      checkExactKeys(problems, `${name}.evidence`, ev, REPOSITORY_EVIDENCE_KEYS);
       if (typeof ev.path !== 'string' || !ev.path.trim()) p('repository evidence requires path');
       if (typeof ev.git_blob_sha1 !== 'string' || !SHA1_RE.test(ev.git_blob_sha1)) {
         p('repository evidence requires a valid 40-hex git_blob_sha1');
       }
-      if (ev.sha256 !== undefined && !SHA256_RE.test(String(ev.sha256))) {
-        p('evidence.sha256 must be 64-hex when present');
-      }
     } else if (ev.kind === 'runtime') {
+      checkExactKeys(problems, `${name}.evidence`, ev, RUNTIME_EVIDENCE_KEYS);
       if (typeof ev.source !== 'string' || !ev.source.trim()) p('runtime evidence requires source');
     } else {
       p('evidence.kind must be "repository" or "runtime" (actual value withheld)');
     }
+    if (typeof ev.derived_from !== 'string' || !ev.derived_from.trim()) {
+      p('evidence.derived_from (どの宣言・出力から取得したか) is required');
+    }
   } else if (entry.status === 'UNKNOWN') {
+    // UNKNOWN entry への evidence 等の偽装追加は「key not defined by schema」でFAILする
+    checkExactKeys(problems, name, entry, UNKNOWN_ENTRY_KEYS);
     if (entry.value !== null) p('UNKNOWN requires value: null');
     if (typeof entry.reason !== 'string' || !entry.reason.trim()) {
       p('UNKNOWN requires a concrete reason');
@@ -192,22 +216,35 @@ export function validateFieldEntry(name, entry) {
 export function validateBaseline(doc) {
   const problems = [];
   if (!doc || typeof doc !== 'object') return ['baseline is not an object'];
+  // root 階層の strict schema(余分な root key はFAIL)
+  checkExactKeys(problems, 'baseline', doc, ['schema', 'kind', 'declared_at', 'base', 'material_sources', 'capabilities'], ['title', 'declaration_note']);
   if (doc.kind !== 'champion-baseline') problems.push('kind must be "champion-baseline" (actual value withheld)');
-  if (!doc.base || typeof doc.base !== 'object') {
+  if (typeof doc.declared_at !== 'string' || !doc.declared_at.trim()) problems.push('declared_at must be a non-empty string');
+  if (doc.title !== undefined && typeof doc.title !== 'string') problems.push('title must be a string when present');
+  if (doc.declaration_note !== undefined && typeof doc.declaration_note !== 'string') problems.push('declaration_note must be a string when present');
+  if (!doc.base || typeof doc.base !== 'object' || Array.isArray(doc.base)) {
     problems.push('base section is required');
   } else {
+    checkExactKeys(problems, 'base', doc.base, ['repository', 'default_branch', 'base_sha'], ['base_sha_policy']);
     if (typeof doc.base.base_sha !== 'string' || !SHA1_RE.test(doc.base.base_sha)) {
       problems.push('base.base_sha must be a 40-hex commit SHA');
     }
     if (typeof doc.base.repository !== 'string' || !/^[^/\s]+\/[^/\s]+$/.test(doc.base.repository)) {
       problems.push('base.repository must be an owner/name string');
     }
+    if (typeof doc.base.default_branch !== 'string' || !doc.base.default_branch.trim()) {
+      problems.push('base.default_branch must be a non-empty string');
+    }
+    if (doc.base.base_sha_policy !== undefined && typeof doc.base.base_sha_policy !== 'string') {
+      problems.push('base.base_sha_policy must be a string when present');
+    }
   }
   if (!doc.material_sources || typeof doc.material_sources !== 'object' || Object.keys(doc.material_sources).length === 0) {
     problems.push('material_sources must be a non-empty object');
   } else {
     for (const [p, m] of Object.entries(doc.material_sources)) {
-      if (!m || typeof m !== 'object') { problems.push(`material_sources[${p}] must be an object`); continue; }
+      if (!m || typeof m !== 'object' || Array.isArray(m)) { problems.push(`material_sources[${p}] must be an object`); continue; }
+      checkExactKeys(problems, `material_sources[${p}]`, m, ['classification', 'git_blob_sha1', 'sha256', 'role']);
       if (typeof m.git_blob_sha1 !== 'string' || !SHA1_RE.test(m.git_blob_sha1)) {
         problems.push(`material_sources[${p}].git_blob_sha1 must be 40-hex`);
       }
@@ -797,6 +834,36 @@ export function canonicalObservedValues(ctx) {
   return Object.fromEntries(Object.entries(OBSERVED_VERIFIERS).map(([k, r]) => [k, r.canonical(ctx)]));
 }
 
+// provenance.json へは検証可能な内容だけを転記する(未検証の追加情報を運ばない)。
+// - OBSERVED: status / value(canonical照合の対象)/ evidence の schema key のみ。
+//   derived_from は自由文で canonical 照合できないため verified evidence から外す
+//   (宣言文書 baseline 側には残る)。
+// - UNKNOWN: status / value:null / reason / resolution のみ。
+// - schema 不正 entry は内容を転記しない。
+export function projectVerifiedCapabilities(caps) {
+  if (!caps || typeof caps !== 'object') return null;
+  const out = {};
+  for (const [group, fields] of Object.entries(caps)) {
+    out[group] = {};
+    for (const [name, e] of Object.entries(fields && typeof fields === 'object' ? fields : {})) {
+      if (e?.status === 'OBSERVED' && e.evidence && typeof e.evidence === 'object') {
+        const ev =
+          e.evidence.kind === 'repository'
+            ? { kind: 'repository', path: e.evidence.path, git_blob_sha1: e.evidence.git_blob_sha1 }
+            : e.evidence.kind === 'runtime'
+              ? { kind: 'runtime', source: e.evidence.source }
+              : null;
+        out[group][name] = ev ? { status: 'OBSERVED', value: e.value, evidence: ev } : { schema_violation: true };
+      } else if (e?.status === 'UNKNOWN') {
+        out[group][name] = { status: 'UNKNOWN', value: null, reason: e.reason, resolution: e.resolution };
+      } else {
+        out[group][name] = { schema_violation: true };
+      }
+    }
+  }
+  return out;
+}
+
 // 全OBSERVED fieldを registry で検証する。
 // 戻り値: {problems, observedTotal, verifiedOk, missingVerifier}
 export function verifyObservedFields(baseline, ctx) {
@@ -1307,8 +1374,12 @@ export function run({ repoRoot, outDir, baselinePath, env = process.env, log: ec
       observed_git_blob_sha1: d.observed?.git_blob_sha1 ?? d.observed,
       note: 'control-plane snapshot drift; recorded for information, does not invalidate the baseline',
     })),
-    verification,
-    capabilities: baseline?.capabilities ?? null,
+    verification: {
+      ...verification,
+      verified_evidence_policy:
+        'capabilities are projected to schema-verified content only; free-text derived_from cannot be canonically verified and is excluded from this artifact (it remains in the baseline declaration)',
+    },
+    capabilities: baseline ? projectVerifiedCapabilities(baseline.capabilities) : null,
     runtime,
   };
 
