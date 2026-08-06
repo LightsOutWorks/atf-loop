@@ -1,3 +1,161 @@
+```json atf-control-roadmap-v1
+{
+  "schema": "atf.control-roadmap/1",
+  "gates": [
+    {
+      "id": "F0",
+      "lane": "foundation",
+      "prerequisites": []
+    },
+    {
+      "id": "F1",
+      "lane": "foundation",
+      "prerequisites": [
+        "F0"
+      ]
+    },
+    {
+      "id": "F2",
+      "lane": "foundation",
+      "prerequisites": [
+        "F1"
+      ]
+    },
+    {
+      "id": "F3",
+      "lane": "foundation",
+      "prerequisites": [
+        "F2"
+      ]
+    },
+    {
+      "id": "F4",
+      "lane": "foundation",
+      "prerequisites": [
+        "F3"
+      ]
+    },
+    {
+      "id": "F5",
+      "lane": "foundation",
+      "prerequisites": [
+        "F3"
+      ]
+    },
+    {
+      "id": "W0",
+      "lane": "world",
+      "prerequisites": []
+    },
+    {
+      "id": "W0A",
+      "lane": "world",
+      "prerequisites": [
+        "W0"
+      ]
+    },
+    {
+      "id": "W1",
+      "lane": "world",
+      "prerequisites": [
+        "W0"
+      ]
+    },
+    {
+      "id": "W2",
+      "lane": "world",
+      "prerequisites": [
+        "W1"
+      ]
+    },
+    {
+      "id": "W3",
+      "lane": "world",
+      "prerequisites": [
+        "W1"
+      ]
+    },
+    {
+      "id": "W4",
+      "lane": "world",
+      "prerequisites": [
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "id": "W5",
+      "lane": "world",
+      "prerequisites": [
+        "W4"
+      ]
+    },
+    {
+      "id": "C0",
+      "lane": "capability",
+      "prerequisites": []
+    },
+    {
+      "id": "C1",
+      "lane": "capability",
+      "prerequisites": [
+        "C0"
+      ]
+    },
+    {
+      "id": "C2",
+      "lane": "capability",
+      "prerequisites": [
+        "C0"
+      ]
+    },
+    {
+      "id": "C3",
+      "lane": "capability",
+      "prerequisites": [
+        "C1",
+        "C2"
+      ]
+    },
+    {
+      "id": "C4",
+      "lane": "capability",
+      "prerequisites": [
+        "C3"
+      ]
+    },
+    {
+      "id": "C5",
+      "lane": "capability",
+      "prerequisites": [
+        "C4"
+      ]
+    },
+    {
+      "id": "C6",
+      "lane": "capability",
+      "prerequisites": []
+    },
+    {
+      "id": "X0",
+      "lane": "convergence",
+      "prerequisites": [
+        "W5",
+        "C5"
+      ]
+    },
+    {
+      "id": "X1",
+      "lane": "convergence",
+      "prerequisites": [
+        "F3",
+        "X0"
+      ]
+    }
+  ]
+}
+```
+
 # Lights Out Factory Roadmap
 
 Status: **LAYER2 ROADMAP HYPOTHESIS — evidence gates, not a calendar promise**  

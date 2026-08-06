@@ -1,3 +1,135 @@
+```json atf-control-state-v1
+{
+  "schema": "atf.control-state/1",
+  "base_sha": "2420fae05435c84602efbaaae5de83457f36311e",
+  "gates": [
+    {
+      "id": "F0",
+      "status": "PASS",
+      "evidence": [
+        "PR #22 merged as merge commit 6bef0f7e001d6ecebddcea4f9904b9dc47cc0343; OS.md blob a6e207202f78a00029b75f33a82f7005e671d429 on main; SHA-256 match with approved source recorded in CURRENT_STATE.md section 11"
+      ]
+    },
+    {
+      "id": "F1",
+      "status": "PASS",
+      "evidence": [
+        "CURRENT_STATE.md on main at 2420fae05435c84602efbaaae5de83457f36311e (blob a92c9643cea1fcec8cca9d113e55f872b1a4f452) with observed_at, base SHA, evidence scope, implemented/unproven separation, single bottleneck and smallest next gate"
+      ]
+    },
+    {
+      "id": "F2",
+      "status": "PASS",
+      "evidence": [
+        "ROADMAP.md on main at 2420fae05435c84602efbaaae5de83457f36311e (blob 084fbaf430e3585887317140eebde27c4e8071a5) as an evidence-gated dependency graph with lanes, prerequisites and rollback conditions"
+      ]
+    },
+    {
+      "id": "F3",
+      "status": "IN_PROGRESS",
+      "evidence": [
+        "PR #25 merged: F3 precursor reader scripts/control-plane-canary.mjs, its deterministic tests and .github/workflows/evolution-control-plane-canary.yml are on main; semantic ranking per OS criteria and F3 PASS are not yet proven"
+      ]
+    },
+    {
+      "id": "F4",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "F5",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "W0",
+      "status": "HOLD",
+      "evidence": [
+        "Draft PR #24 is a W0 precursor held as HOLD; the W0 comparable distribution canary itself has not been executed"
+      ]
+    },
+    {
+      "id": "W0A",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "W1",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "W2",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "W3",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "W4",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "W5",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "C0",
+      "status": "PASS",
+      "evidence": [
+        "main workflow run 31075997147: 31/31 deterministic tests passed, coverage 100%",
+        "run artifact 8957508638"
+      ]
+    },
+    {
+      "id": "C1",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "C2",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "C3",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "C4",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "C5",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "C6",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "X0",
+      "status": "NOT_STARTED",
+      "evidence": []
+    },
+    {
+      "id": "X1",
+      "status": "NOT_STARTED",
+      "evidence": []
+    }
+  ]
+}
+```
+
 # Current State
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**  
