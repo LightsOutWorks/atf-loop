@@ -80,8 +80,10 @@ jobs:
           mkdir -p "$ARTIFACT_DIR"
           echo "ARTIFACT_DIR=$ARTIFACT_DIR" >> "$GITHUB_ENV"
 
-          node scripts/control-plane-canary.mjs --artifact "$ARTIFACT_DIR/artifact.json" > /dev/null
-          rc=$?
+          # Actions の run: は bash -e で実行されるため、非 0 終了は `|| rc=$?` で受ける
+          # (そのまま書くと rc=$? へ到達せず step が即失敗する)
+          rc=0
+          node scripts/control-plane-canary.mjs --artifact "$ARTIFACT_DIR/artifact.json" > /dev/null || rc=$?
 
           # 0=PRECURSOR / 4=HOLD は想定内の報告として成功。1=FAIL / 2=VOID / 3=STALE は失敗。
           case "$rc" in
