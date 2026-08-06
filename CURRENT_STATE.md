@@ -129,7 +129,7 @@
 }
 ```
 
-Canonical routing note: The JSON block above is the sole current source for gate status, base revision, and dependency routing. The unchanged human-readable body below is a historical snapshot observed at main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343, retained as F1 provenance and not as a second current state. Until it is refreshed after the first main runtime canary, its Observed at, Base SHA, capability status, bottleneck, Smallest Next Gate, Evidence Index, and update instruction MUST NOT be used for current routing.
+Canonical routing note: The JSON block above is the sole current source within CURRENT_STATE.md for gate status, base revision, and gate-status inputs to routing. The atf-control-roadmap-v1 block at byte 0 of ROADMAP.md is the sole current source for structural prerequisites. Together, these two canonical blocks are the sole machine inputs for dependency routing. The unchanged human-readable body below is a historical snapshot observed at main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343, retained as F1 provenance and not as a second current state. Until it is refreshed after the first main runtime canary, its Observed at, Base SHA, capability status, bottleneck, Smallest Next Gate, Evidence Index, and update instruction MUST NOT be used for current routing.
 
 # Current State
 
