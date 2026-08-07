@@ -62,9 +62,9 @@ North Starは変えない。デザイア連鎖も変えない: 北極星 ← 不
 
 | # | 物 | 内容 |
 |---|---|---|
-| 1 | `genome.schema.json` | JSON Schema 2020-12。全objectに`additionalProperties:false`、全fieldはenum/有界整数/有界number/固定長配列のみ。**自由文字列型ゼロ**(CIメタテストで恒久断言)。`title_words`=語彙bankへのindex整数2〜3個。mechanic=enum(初期値1系統のみ。2系統目以降はenum拡張PR=ヒロ承認の「新しい動詞」経路)。`__proto__`/`constructor`等の危険キーはajvとcanonical化で拒否 |
+| 1 | `genome.schema.json` | JSON Schema 2020-12。全objectに`additionalProperties:false`、全fieldはenum/有界整数/有界number/固定長配列のみ。**自由文字列型ゼロ**(監査反映: ブラックリスト断言でなく**再帰的ホワイトリスト構造のCIメタテスト**で恒久断言 — 許可形状は有界整数・有界数値・安全文字クラスenum・boolean・固定オブジェクト・固定長配列のみ、それ以外はFAIL。schema内の全文字列リテラル(キー・enum・const含む)は`^[a-z0-9_]{1,32}$`に一致、準拠文書の最大直列化サイズも計算して断言)。`title_words`=語彙bankへのindex整数2〜3個。mechanic=enum(初期値1系統のみ。2系統目以降はenum拡張PR=ヒロ承認の「新しい動詞」経路)。`__proto__`/`constructor`等の危険キーはajvとcanonical化で拒否。**設計規則: 固定長配列のラスタ/サンプル列解釈(グリッド状色配列・音符列等による画像/メロディ表現)を禁止**(schema PRレビュー項目) |
 | 2 | `vocab-bank.json` | 英単語約200語。ヒロが1回全数レビュー(商標・固有名詞・不適切語の不在確認)。拡張はヒロ承認PR |
-| 3 | `player.html` | 全作品共通の固定シェル。既存works/の最良seed 1本をパラメータ化リファクタして作る。唯一の可変部は`<script type="application/json" id="genome">`のdata island 1穴。meta CSP: `default-src 'none'; script-src 'sha256-<固定script hash>'`。CONSTRAINTS準拠(外部通信ゼロ・単一HTML)。変更PR時のみAST静的検査(eval/Function/innerHTML/document.write/insertAdjacentHTML/動的import不在) |
+| 3 | `player.html` | 全作品共通の固定シェル。既存works/の最良seed 1本をパラメータ化リファクタして作る。唯一の可変部は`<script type="application/json" id="genome">`のdata island 1穴。meta CSP: `default-src 'none'; script-src 'sha256-<固定script hash>'; base-uri 'none'; form-action 'none'`(監査反映: default-srcはbase-uriへフォールバックしないため明示。CSPが主、AST検査は従)。CONSTRAINTS準拠(外部通信ゼロ・単一HTML)。変更PR時のみAST静的検査(eval/Function/innerHTML/document.write/insertAdjacentHTML/動的import/文字列引数のsetTimeout・setInterval/srcdoc/on*属性/base要素の不在) |
 | 4 | `forge.mjs`(約100〜150行) | desire.json(Human Desire定数)+ledger(read-only)からプロンプト組立 → Messages APIをtoolなし・strict json_schema・max_tokens上限で1回fetch → **stop_reason分岐を明示実装**(`refusal`/`max_tokens`/不正JSONは無条件破棄・再抽選最大3回・全滅はfail-closed停止=許容損失)→ 合格genomeをcanonical JSON化しplayer.htmlの穴へ文字列挿入 → 穴以外バイト等価を自己確認 → 既存smoke.mjs+interaction-smoke.mjsを**品質ゲート**(安全ゲートではない)として実行 → immutable artifact(genome.json+toy.html+site/+sha256)をupload |
 | 5 | release検証script | pinned ajv+pinned templateでschema検証とサンドイッチ・バイト等価を**再実行**、sha256一致確認、works/24作カタログ+Factory単一slotを1つのPagesサイトに合成してdeploy |
 | 6 | `signals.mjs`+`ledger/` | AI不在の決定論script。itch公式server APIの累積値(views_count/downloads_count/purchases_count)を定期スナップショットし、差分を`ledger/signals.json`へ追記(**数値+enum作品IDのみ。自由文なし=World→prompt注入の構造的遮断**。欠損はVOID扱いでFAIL学習しない)。あわせて公開済みgenome(Forge artifact経由・ajv再検証済み)を`ledger/genomes/`へアーカイブ。公開日時・itch反映日時を共変量として必ず記録(将来の淘汰の交絡対策を初日から仕込む)。非公開のsession認証エンドポイントは使用禁止 |
@@ -139,16 +139,33 @@ World(itch累積統計・支払) → Signals(スナップショット差分) →
 1. AIはrunner上のプロセスとして存在しない。toolなしMessages API 1回のHTTPS呼出のみで、AIから見える世界はプロンプト文字列だけ。Secret・シェル・ファイルシステム・repo write・deployへの経路が構造上不存在(土曜メモ実証の事故クラスの消滅)。
 2. モデルSecretはForge workflowの`ANTHROPIC_API_KEY` 1個のみ。専用workspaceにConsole側spend hard capを設定。モデルkeyはrunner側fetchに使われるだけで、AI出力から到達経路がない。
 3. AI出力の唯一の強制点は**runner側ajv**: 境界値・文字クラス・固定長配列・危険キー・`additionalProperties:false`を全て検証。Structured Outputsのサーバー側強制(enum/const/additionalProperties:falseのみ)には依存しないと文書化。`stop_reason ≠ end_turn`と不正JSONは無条件破棄、再抽選最大3回、全滅はfail-closed停止。
-4. genome schemaに自由文字列型ゼロ(CIメタテストで恒久断言)。表示され得る文字列の全集合=人間全数レビュー済み語彙bank×固定UIラベルという有限集合。不適切・違法コンテンツは検査対象ではなく表現不能。
-5. AI出力はeval・実行・展開されない: genomeは固定player.htmlの非実行data island 1穴へのcanonical JSON文字列挿入のみ。検証は「ajv+穴以外バイト等価」の2等式。meta CSPでブラウザ層を含む三重防御。
-6. AIループ(Forge/Release)にcontents:write・persist-credentials・git credentialは存在しない。公開はdeploy-pages+OIDCによる単一Pages枠の全置換のみ。mainはAIループからread-only。rollback=前回artifactの再デプロイ。
-7. contents:writeを持つのはAI不在のSignals/Ledger workflowただ1本: モデル呼出なし・固定script・固定append-onlyパスのみ・schema検証後commit・AIから起動不能。Secretは2ドメイン間で相互不可視。
+4. genome schemaに自由文字列型ゼロ(再帰的ホワイトリスト構造のCIメタテストで恒久断言)。表示され得る文字列の全集合=人間レビュー済み語彙bank×固定UIラベルという有限集合。不適切・違法コンテンツの表現能力を**実務上無視できる水準に制限**する(監査反映: 「完全に表現不能」は過大主張 — 語の組合せ空間とラスタ解釈の残余があるため、bank採録基準の明文化(固有名詞・ブランド・人名除外)+タイトル語数上限+bank長=schema上限のCI一致+ラスタ/サンプル列解釈禁止で担保し、残余はplayer.htmlレビューが受け持つ)。
+5. AI出力はeval・実行・展開されない: 挿入は**ajv検証済みオブジェクトの再直列化のみ**(モデル生応答テキストの挿入は禁止 — 生テキストはajv検証をすり抜ける)。挿入直前に穴バイト列へ`<`と`&`の不在を断言。検証は「ajv+穴以外バイト等価」の2等式。meta CSP(base-uri/form-action含む)でブラウザ層を含む三重防御。
+6. AIループ(Forge/Release)にcontents:write・persist-credentials・git credentialは存在しない。公開はdeploy-pages+OIDCによる単一Pages枠の全置換のみ。mainはAIループからread-only。rollback=前回artifactの再デプロイ。実装条件(監査反映): workflowトップレベル`permissions: {}`+repoデフォルトtoken read-only+全checkoutで`persist-credentials: false`を明示(デフォルトはtrue)+Pages environmentのdeploy branch制限+`pull_request_target`全面禁止。
+7. contents:writeを持つのはAI不在のSignals/Ledger workflowただ1本: モデル呼出なし・固定script・schema検証後commit・AIから起動不能。監査反映: 「ledger/配下のみ」はプラットフォーム非強制(contents:writeは全パスに及ぶ)ため、**(a) ledgerの書き込み先を専用ブランチ(または専用リポジトリ)に分離し、mainにbranch protectionを設定**(public repo前提を確認)、**(b) Domain Bを信頼境界の外に置き、Forgeがledgerを読む直前に消費側再検証(ledger.schema.json・同一ホワイトリスト規律)を必須化**する。itch API応答は固定パスの数値抽出+上下限断言のみで生応答を保存しない。Secretの相互不可視は**GitHub Environments(forge / signals / pages)による分離で実装**する(repo secretsは全workflowから参照可能なため、置くだけでは不成立)。
 8. World→AIの入力はledgerの数値+enumのみで自由文が構造的に不存在(itch上のコメント等がprompt注入経路になることを遮断)。欠損はVOIDでありFAILとして学習しない。
-9. Workflow・player.html・genome schema・語彙bank・thresholds・予算上限・モデルID・公開先はAI不可触。変更は人間PR+ヒロmergeのみ。player.html変更時はAST静的検査必須。
+9. Workflow・player.html・genome schema・語彙bank・thresholds・予算上限・モデルID・公開先はAI不可触。変更は人間PR+ヒロmergeのみ。player.html変更時はAST静的検査必須。監査反映: **template・schema・ajvの期待SHA-256はrepo内ファイルでなくworkflowファイル内定数に置く**(GITHUB_TOKENがworkflowファイルを変更できないというプラットフォーム保証を構造的な錨として使う)。PR上のCIは助言であり、enforcementはヒロのmergeである(単一人間レビューがroot of trust)。保護ファイルと検査スクリプトを同時に変更するPRは警告対象。
 10. 選別・淘汰・予算・公開先割当はAIの動詞に含まれない。淘汰は事前登録閾値到達後にAI不在の決定論コードのみが実行。審判が存在しないため「AIによる審判・予算・Publisherの自己改変」は構造的に不可能。
-11. 外部hard cap: Console workspace spend limit・timeout 15分・concurrency:1・週1 cadence・使用actionsのfull SHA pin。公開枠は単一・上書き型で増殖経路なし。
-12. itchへの書込(公開・差替え)は全てヒロの手動動作。`ITCH_API_KEY`は読み取り専用でSignals workflowのみに存在。
+11. 外部hard cap: Console workspace spend limit(**通知でなく遮断型設定であることを確認**)・timeout 15分・concurrency:1・週1 cadence・使用actionsのfull SHA pin。公開枠は単一・上書き型で増殖経路なし。監査反映: npm経由のサプライチェーン経路を封鎖 — lockfile commit+`npm ci --ignore-scripts`、推奨はajv単一ファイルバンドルのrepo commit(Domain Aはthird-party actionゼロ・cache不使用・Secretはstep単位envのみ・key非ログ)。
+12. itchへの書込(公開・差替え)は全てヒロの手動動作。`ITCH_API_KEY`はSignals workflowのみに存在。監査反映: **itch.ioに読み取り専用スコープのAPI keyが存在するかは実態調査が必要**(存在しない場合、keyはbutler push可能な全権keyとなり「itch公開は手動のみ」がkey漏えいで崩れるため、計測専用のitchアカウント分離で対処)。
 13. 重大事故リスト6項目と許容リスト(退屈・低品質・売上ゼロ・失敗run・一時的表示不具合・上限内少額損失)は原案のまま不変。
+
+### 3.1 防御的安全監査の判定(2026-08-07実施)
+
+独立の防御的監査を実施した。総評: **アーキテクチャの核(AI出力を検証済み有界データ1本に限定)は健全。現行factory.ymlの主要リスク(runner上エージェント・contents:write・persist-credentials)を正しく除去している。** ただし「構造的成立」を主張するには上記本文へ反映済みの条件が必須である。
+
+重大事故リスト対応の判定:
+
+| 重大事故 | 判定 |
+|---|---|
+| Credential流出なし | 条件付き成立(npm封鎖・step単位secret・Environments分離・ITCH keyスコープ確認) |
+| 許可外repo/account/公開先への永続変更なし | 条件付き成立(他repo/accountへは構造的成立。自repo内はDomain B書込先の分離+branch protectionが条件。itchはkeyスコープ次第) |
+| malware/phishing/依存実行なし | 条件付き成立(data island挿入条件+ピンのworkflow内定数化で構造的成立) |
+| AIによる審判・予算・Publisher自己改変なし | 成立(権限設定5項目が条件) |
+| 上限のない支出・増殖なし | 成立(Console cap=遮断型設定が条件) |
+| 個人情報収集・無許諾素材・違法公開なし | 条件付き成立(収集は構造的成立。表現はbank採録基準+ラスタ解釈禁止が条件) |
+
+実装時の優先順(監査の裁定どおり): ①消費側再検証(Domain Bを信頼境界の外へ) ②メタテストのホワイトリスト化 ③期待ハッシュのworkflow内定数化 ④Environments分離+permissions最小化 ⑤npm経路封鎖 ⑥Domain B書込先の分離+branch protection ⑦ITCH keyスコープ調査 ⑧genome設計規則(ラスタ禁止・bank基準) ⑨forge.mjs堅牢化(fail-closed・応答サイズ上限・定数化) ⑩ガバナンス文書修正 ⑪運用(停止通知・artifact保持短縮・トリガー限定)。
 
 ---
 
@@ -160,7 +177,7 @@ World(itch累積統計・支払) → Signals(スナップショット差分) →
 | 2 | E2E canary 1本: (a)敵対的genomeでのartifact拒否/バイト等価 (b)Release job環境のenv全キー列挙によるモデルSecret不在断言 (c)GITHUB_TOKENでのrepo write試行が403になることの断言 (d)単一枠上書き確認と前回artifact再デプロイによるrollback実地訓練1回 | dry-run→初回実run |
 | 3 | spend cap確認: Console支出上限の存在確認+超過時APIエラーのfail-closed処理確認 | 1回 |
 | 4 | itch API粒度canary: 公式API累積値の更新頻度・ブラウザプレイのviews_count計上・purchases反映遅延を実測し、Signalsの差分設計と閾値初期値を較正(旧gh-aw適合canaryの完全置換。未証明度が最も高い点に検証を振り替える) | 8/11-16(Lane A公開物を利用) |
-| 5 | schemaメタテスト(常設CI): 「制約なきstring型ゼロ」「全数値に境界あり」「additionalProperties:false全域」「危険キー拒否」を断言 | 毎PR |
+| 5 | schemaメタテスト(常設CI・ホワイトリスト型): 許可形状(有界整数/有界数値/安全文字クラスenum/boolean/固定オブジェクト/固定長配列)以外の一切をFAIL。全文字列リテラル`^[a-z0-9_]{1,32}$`断言・最大直列化サイズ断言・危険キー拒否・draft/ajvバージョン固定(strict:true)。挿入直前の穴バイト`<`/`&`不在断言も常設 | 毎PR |
 | 6 | player.html AST検査+CSP hash再計算 | 変更PR時のみ |
 | 7 | Ledger append-only検査(常設CI): commitが固定path以外に触れないことの断言+ledger schema検証 | 毎run |
 | 8 | stop_reason分岐の決定論テスト: refusal/max_tokens/不正JSON/3連続失敗→fail-closed停止で正しく終わることを確認 | 毎PR |
