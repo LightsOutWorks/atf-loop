@@ -1,37 +1,45 @@
-# atf-loop — 無人生成ブラウザトイ集
+# atf-loop — Human Desire → Reality Factory
 
-ルートの `index.html` は全作品を一覧できるカタログ(英語表記)です。
-各作品は `works/seed-<連番>/` に 1 ファイルずつ収録された、ブラウザ FPS 風の 60 秒トイです。
-すべて外部通信・外部ライブラリ・外部素材ゼロ、単一 `index.html` で完結します(ルールは [CONSTRAINTS.md](CONSTRAINTS.md) 参照)。
+> **This repository is not currently a game factory.**
+>
+> Its current mission is to improve a system that transforms Human Desire into Reality using the best available external intelligence, capabilities, tools, services, humans, and execution routes. Games, browser toys, and previous routes are historical experiments unless explicitly reactivated by a current approved decision.
 
-新作は無人パイプライン([.github/workflows/factory.yml](.github/workflows/factory.yml))が生成・検証・公開します(トリガー: `workflow_dispatch` + 毎週土曜 10:00 JST の schedule)。
+本リポジトリは、Human Desireを世界で現在利用可能な最良の知能・Capability・Tool・Service・Human・Execution RouteでRealityへ変換し、その変換能力自体をWorld Signalから自己改善する機関のCanonical Repositoryである（2026-08-08 D-001で移行。`DECISIONS.md` 参照）。
 
-## 遊び方
+## 新しいセッションの起動手順（Boot Protocol）
 
-1. ルートの `index.html`(カタログ)をブラウザで開く、または GitHub Pages の公開先を開く
-2. 遊びたい作品の **Play** リンクから各作品の `index.html` を開く(ダブルクリックでも OK。サーバー不要)
-3. 各作品とも: **START** を押す(Enter / Space / 画面タップでも開始)→ 60 秒プレイ → TIME UP 後に **REPLAY** で再挑戦
+以下の順で読む。過去のGame成果物・古いbranch・commit messageからMissionを推測しない。
 
-最初の作品 **SEED 001 — NEON RANGE** は `works/seed-001/index.html` です(以前はルートの `index.html` でした。カタログ上部に導線があります)。
+1. [`CONSTRAINTS.md`](CONSTRAINTS.md) — Boundary / Hard Constraints / Human Gates（最優先）
+2. [`OS.md`](OS.md) — Identity / Mission / Operating Philosophy / Source of Truth Priority
+3. [`DESIRES.md`](DESIRES.md) — North Star / Major Desire Portfolio
+4. [`CURRENT_STATE.md`](CURRENT_STATE.md) — 現在の実測状態
+5. 今回のTask Contract
+6. 必要な場合のみ [`ROADMAP.md`](ROADMAP.md) / [`DECISIONS.md`](DECISIONS.md) / [`experiments/INDEX.md`](experiments/INDEX.md) / [`JOURNAL.md`](JOURNAL.md)
 
-## 動作検証
+## リポジトリ構成
 
-Node.js があれば、各作品ディレクトリを引数にして固定 6 項目のスモークテストを実行できます。
+| Path | 責務 |
+|---|---|
+| `CONSTRAINTS.md` | Boundary / Budget / Risk Tiers / Human Gates（+ 旧Browser-Toy契約をPart IIに保存） |
+| `OS.md` | Factory Identity / Mission / Operating Philosophy（IOS） |
+| `DESIRES.md` | North Star / Major Desire Portfolio |
+| `CURRENT_STATE.md` | 実測状態のみ（canonical control block + 本文） |
+| `ROADMAP.md` | Direction / Current Horizons / evidence-gated roadmap |
+| `DECISIONS.md` | Direction変更のDecision Records |
+| `JOURNAL.md` | Capability Evolution Log（証拠の層） |
+| `experiments/INDEX.md` | 全Reality Experimentのstatus台帳 |
+| `works/`, `factory.yml`, `smoke.mjs`, `index.html` | **Historical Experiment（HOLD）**: Browser-Toy Production Route |
 
-```sh
-node smoke.mjs works/seed-001
-```
+---
 
-引数を省略するとルートの `index.html`(カタログページ)を対象にします。カタログは JavaScript を持たない静的ページのため、6 項目のうち③〜⑥(script・読み込み・開始操作・再プレイ)は該当せず FAIL になります。個々の作品を検証する際は、対象ディレクトリを必ず指定してください。
+## Historical: 無人生成ブラウザトイ集（2026-07 〜 2026-08、status: HOLD）
 
-検証項目: ①`index.html` の存在 ②外部参照なし ③構文エラーなし ④読み込み成功 ⑤開始操作あり ⑥再プレイ可。
+以下は旧Mission（Game Factory）の成果物である。Decision Historyとして保存されており、現在の指示ではない。
 
-## ファイル構成
-
-- `index.html` — 作品カタログ(英語表記。各作品の SEED 番号・タイトル・一行概要・公開日・Play リンクのみを掲載)
-- `works/seed-<連番>/index.html` — 各作品本体(HTML/CSS/JS すべて内包)
-- `works/seed-<連番>/devlog.md` — 各作品の開発ログ(判断・失敗・未解決事項)
-- `CONSTRAINTS.md` — 最優先の制約ルール
-- `smoke.mjs` — 機械検証スクリプト(対象ディレクトリ引数対応。Node.js 標準モジュールのみ使用)
-- `.github/workflows/factory.yml` — 無人生成パイプライン
-- `scripts/gate-prompt.txt` — 公開内容ゲートの固定プロンプト
+- ルートの `index.html` は全作品（SEED 001〜024）を一覧できるカタログ（英語表記）。GitHub Pagesで公開。
+- 各作品は `works/seed-<連番>/` に単一 `index.html` で完結（外部通信・外部ライブラリ・外部素材ゼロ）。ルールは `CONSTRAINTS.md` Part II。
+- 生成パイプライン: [.github/workflows/factory.yml](.github/workflows/factory.yml)（生成→smoke→interaction smoke→Codex gate→公開）。
+- 遊び方: カタログの **Play** リンクから各作品を開く → **START** → 60秒プレイ → **REPLAY**。
+- 動作検証: `node smoke.mjs works/seed-001`（固定6項目。カタログ自体は静的ページのため対象ディレクトリ指定が必要）。
+- `works/seed-<連番>/devlog.md` に各作品の開発ログ、`JOURNAL.md` にFactory能力進化の記録がある。seed-009は既知のVerification Failureとして意図的に未修正で保存。

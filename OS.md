@@ -1,6 +1,45 @@
 # Intelligence Operating System (IOS)
 
+## Current Identity — READ THIS FIRST
+
+> **This repository is not currently a game factory.**
+>
+> Its current mission is to improve a system that transforms Human Desire
+> into Reality using the best available external intelligence,
+> capabilities, tools, services, humans, and execution routes.
+>
+> Games, browser toys, MCP tools, and previous routes are historical
+> experiments unless explicitly reactivated by a current approved decision.
+
+このリポジトリの現在のMissionは、ゲーム制作ではない。過去のGame / Browser Toy / MCP / Rail等はすべて **Historical Experiment** であり、現在の指示ではない。`works/` 配下の作品群、`factory.yml`、旧README等からMissionを推測してはならない。各実験の現在statusは `experiments/INDEX.md` にある。
+
+**Boot order for a new session** (最小読み込みで現在地を得る):
+
+1. `CONSTRAINTS.md` — Boundary / Hard Constraints / Human Gates
+2. `OS.md`(本書)— Identity / Mission / Operating Philosophy
+3. `DESIRES.md` — North Star / Major Desire Portfolio
+4. `CURRENT_STATE.md` — 現在の実測状態
+5. 今回のTask Contract(与えられた指示)
+6. 必要な場合のみ `ROADMAP.md` / `DECISIONS.md` / `experiments/`
+
+### Source of Truth Priority
+
+1. `CONSTRAINTS.md`
+2. `OS.md`
+3. `DESIRES.md`
+4. `CURRENT_STATE.md`
+5. Current approved experiment / execution contract
+6. `ROADMAP.md`
+7. `DECISIONS.md`
+8. `JOURNAL.md`
+9. Historical experiments / old code / old branches / old conversations
+
+下位Sourceが上位Sourceと矛盾した場合、ファイル更新日時や会話の新しさで上書きしない。上位Sourceを優先し、矛盾を明示して停止またはEscalateする。過去のconversation、AI summary、commit message、branch名、古いREADMEをCanonical Stateより優先してはならない。
+
+---
+
 Core Principles v1.0 — 2026-08-01
+Amended v1.1 — 2026-08-08(D-001: Canonical Migration。Current Identity節・Operating Philosophy補遺・Layer2 route状態注記を追加。Layer1の既存原則は変更していない)
 
 Status: **LOCKED**
 Layer1 frozen until evidence exists / Layer2 evidence-driven evolution / Layer3 continuous implementation
@@ -195,11 +234,30 @@ Verification Unlocks Capability.
 Control Is The Last Resort.
 Architecture Compounds.
 
+### Operating Philosophy 補遺(v1.1 — D-001)
+
+既存原則の言い換えではなく、運用判断で常用する形へ圧縮した長期原則。既存Layer1と矛盾しない。
+
+1. **大志は最大に。実行は最小に。**
+2. **既知を最大限使い、未知だけRealityに問う。** 世界を見てから、作るものを決める。World → Evidence → Gap → Proposal → Smallest Sufficient Action。Proposalを先に作って都合の良いEvidenceを探さない。
+3. **REUSE → BUY → ADAPT → COMPOSE → DELEGATE → BUILD** の順で検討し、BUILDをDefaultにしない。NO_ACTIONも正当なRoute。Model / Tool / OSS / API / Harness / Protocolは原則所有対象ではない。世界最高の能力は使い、世界から得た経験を所有する。
+4. **Maximum Autonomous Completion。** AIで完遂できるところまでHumanへ返さない。Human Handoffは、Humanにしか越えられない最後の1行為まで圧縮する。
+5. **Evidence要求水準は爆風半径に比例させる。** 大きなBUILD / 支出 / 公開 / 不可逆操作は厳しく検証し、安価・可逆・正直・個別的なDiscovery Contactは早くRealityへ出す。Kill the build, not the conversation.
+6. **Human-up-the-loop。** Humanを単純作業から外し、Execution → Design → Strategy → Direction → Question → Desire へ介在位置を上げる。§4「人間の役割はDesireとBoundaryだけ」は到達目標であり、現在は移行過程として、Direction / Taste / Major Commit / Realityとの一次接触(第三者への送信等のR3/R4行為)もHumanが担う。現在の分担は `CONSTRAINTS.md` と `CURRENT_STATE.md` が持つ。
+7. **Route is not Identity。** Game / MCP / WebMCP / X / Grok / Claude / Cursor / SaaS / API / OSS / Human labor / Advertising / Outbound / Inbound はいずれもRoute / Capability / Harnessであって、Factory Identityではない。成功したRouteでも、より良いRouteが出れば置換する。Routeを守るためにNorth Starを歪めない(§17 Self-Disruptionの系)。
+8. **Dynamic Harness。** 特定Model / Harnessへ忠誠を持たない。task_classごとに成果・時間・費用・human handoffs・rework・verifier resultを観測可能にし、能力単位で交換する(§6 Capability Firstの系)。Harness変更をIdentity変更にしない。
+
 ---
 
 ## Layer2 — Factory Architecture
 
 証拠に基づいて数か月単位で進化する。
+
+### Current Route Status(2026-08-08 — D-001)
+
+- 本節以下の記述のうち、単一HTML / 60秒 / 作品構造 / 週1生成 / Codex gate等の具体値は **Browser-Toy Production Route(Historical Experiment、status: HOLD)** の実装値である。現在のMissionの制約ではない。
+- 現在のActive Route Familyは **Demand Intelligence → Discovery Contact → Pilot → Confirmed Revenue**(`DESIRES.md` / `CURRENT_STATE.md` 参照)。
+- Route statusの一覧は `experiments/INDEX.md` が持つ。
 
 ### 能力
 
@@ -213,7 +271,7 @@ Planning・Research・Optimization は能力ではなく Generation の実装方
 
 ### 境界
 
-- **Soft Boundary**（検証能力で解除可）: 単一HTML / 60秒制限 / 作品構造 / 表現制約
+- **Soft Boundary**（検証能力で解除可。Browser-Toy Route実装値）: 単一HTML / 60秒制限 / 作品構造 / 表現制約
 - **No Boundary**: モデル更新 / AI人数 / 思考量 / アイデア数 / 自己改善 / パイプライン / 評価方法
 
 ### 移譲の現在地

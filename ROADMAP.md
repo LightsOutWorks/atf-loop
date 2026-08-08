@@ -156,13 +156,30 @@
 }
 ```
 
-# Lights Out Factory Roadmap
+# Factory Roadmap
 
 Status: **LAYER2 ROADMAP HYPOTHESIS — evidence gates, not a calendar promise**  
-Created: **2026-08-05 JST**  
+Created: **2026-08-05 JST**（Browser-Toy Route期）  
+Updated: **2026-08-08 JST**（D-001 Canonical Migration — route scope注記とCurrent Horizonsを追加。gate graph本体とcanonical blockは不変）  
 Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 
 この文書は、IOSを実装へ変換する長期ロードマップである。Layer1を追加・変更しない。各段階は日付ではなく、事前登録した証拠gateで進む。
+
+**Route scope注記（2026-08-08 / D-001）**: 本文書のgate graph、特にWorld Learning Lane（W0〜W5）は、Browser-Toy Production Route（現在Historical Experiment / HOLD — `experiments/INDEX.md`）を検証基質として設計された。Foundation lane（F）とCapability lane（C）はroute非依存の基盤として有効なまま。現在のActive Route Family（Demand Intelligence → Discovery Contact → Pilot → Confirmed Revenue）の当面の進行は、gate graphの拡張ではなく§0 Current Horizonsが記述する。新Route用のgate体系は、Batch 1のWorld Signal回収後に証拠ベースで再設計する（先回りで作らない）。
+
+---
+
+## 0. Current Horizons（2026-08-08）
+
+North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CURRENT_STATE.md`。ここは「次に何を証明するか」だけを持つ。
+
+1. **Batch 1 Discovery Contact完了**（MD-1）: 残り13件をHUMAN_SHORTで送る（送信行為はHuman Gate）。20件のreply / genuine pain / continued conversation / pilot candidateを記録し、World Signalとして回収する。
+2. **Reply学習の最小記録**: Contactごとの最小記録（source / cluster / freshness / message_style / reply / pain / pilot / payment）をrepo内へ機械可読で残す形式を、Batch 1の実データが揃った時点で最小実装する。巨大なschemaを先に作らない。
+3. **Pilot → Confirmed Revenue**（MD-1 Terminal Signal）: 返金・取消可能期間を経過した確定実収益1件。これが現在の最重要未証明区間である。
+4. **Distribution Asset**（MD-2）: Reality活動から自然に発生するInsightを、他人に価値がある場合だけPublic Content化する。SNS automation / Content Factoryは作らない。
+5. **月次Direction Review**: Major Desire Portfolioが最小十分集合かを再導出し、変更はD-recordへ。
+
+やらないこと（証拠が出るまで）: 新規M&Aシステム実装 / WebMCP常時Radar / SNS自動化 / 新gate体系の先行実装 / Premature Automation（反復がボトルネックとして観測されるまで、conversation → documented procedure → Skill → Hook → Automationの昇格をしない）。
 
 ---
 
@@ -180,15 +197,9 @@ Factoryは3つの軸で進化する。
 
 ### Precedence
 
-1. Layer0の現行実行可能性とHard Boundary（実行を制約する。OSを改定はしない）
-2. `OS.md`（Shouldを統治する）
-3. default branch / recorded run / world observationの証拠
-4. `CURRENT_STATE.md`
-5. `ROADMAP.md`
-6. `JOURNAL.md`の過去判断
-7. 会話、外部提案、leaderboard
+正本の優先順位は `OS.md` の **Source of Truth Priority** に一本化した（D-001。CONSTRAINTS → OS → DESIRES → CURRENT_STATE → approved contract → ROADMAP → DECISIONS → JOURNAL → historical）。本節に別系統の順位表を重複保持しない。
 
-下位が上位と矛盾したら停止し、矛盾を記録する。会話や添付だけでgateを通過扱いにしない。
+下位が上位と矛盾したら停止し、矛盾を記録する。会話や添付だけでgateを通過扱いにしない。証拠（default branch / recorded run / world observation）は主張の根拠であり、優先順位表の代替ではない。
 
 ---
 
@@ -201,6 +212,8 @@ Factoryは3つの軸で進化する。
 Factoryは高価な基盤モデルや汎用部品を自前で再開発しない。世界中の研究所・企業・OSSが加速させる部品を候補として観測し、能力単位で比較し、ATF自身の仕事で勝った構成だけを採用する。
 
 **North Star: 世界で進化する外部知能と機構をHuman Desireへ変換する速度と確度そのものを自己改善し続ける、個人所有の自律進化機関。**
+
+（North StarとMajor Desire Portfolioの正本は2026-08-08より `DESIRES.md`。本節の記述はそれと同一であり、乖離した場合はDESIRES.mdを優先する。）
 
 到達形は、固定された単一のFactoryではない。Objectiveごとに、その時点の最良のモデル、機構、道具、役割、検証、配信を一時的なFactoryとして編成し、運用し、証拠が失われれば交換・解散する **Factory Compiler** である。ブラウザトイは最初の検証基質であり、永続する中心ではない。
 
@@ -437,6 +450,8 @@ PASS:
 ---
 
 ### World Learning Lane
+
+**（2026-08-08 / D-001: 本laneはBrowser-Toy Routeのworld learning設計であり、routeのHOLDに伴い事実上凍結。gate定義は将来の再利用のため保存する。現MissionのWorld Signal回収は§0 Current Horizonsが担う）**
 
 #### W0 — Comparable distribution canary
 
