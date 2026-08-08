@@ -213,7 +213,7 @@ Factoryは高価な基盤モデルや汎用部品を自前で再開発しない�
 
 **North Star: 世界で進化する外部知能と機構をHuman Desireへ変換する速度と確度そのものを自己改善し続ける、個人所有の自律進化機関。**
 
-（North StarとMajor Desire Portfolioの正本は2026-08-08より `DESIRES.md`。本節の記述はそれと同一であり、乖離した場合はDESIRES.mdを優先する。）
+（North StarとMajor Desire Portfolioの正本は2026-08-08より `DESIRES.md`。上のNorth Star文はDESIRES.mdと同一であり、本節のその他の記述を含め乖離した場合はDESIRES.mdを優先する。）
 
 到達形は、固定された単一のFactoryではない。Objectiveごとに、その時点の最良のモデル、機構、道具、役割、検証、配信を一時的なFactoryとして編成し、運用し、証拠が失われれば交換・解散する **Factory Compiler** である。ブラウザトイは最初の検証基質であり、永続する中心ではない。
 

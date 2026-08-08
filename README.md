@@ -39,7 +39,7 @@
 
 - ルートの `index.html` は全作品（SEED 001〜024）を一覧できるカタログ（英語表記）。GitHub Pagesで公開。
 - 各作品は `works/seed-<連番>/` に単一 `index.html` で完結（外部通信・外部ライブラリ・外部素材ゼロ）。ルールは `CONSTRAINTS.md` Part II。
-- 生成パイプライン: [.github/workflows/factory.yml](.github/workflows/factory.yml)（生成→smoke→interaction smoke→Codex gate→公開）。
+- 生成パイプライン: [.github/workflows/factory.yml](.github/workflows/factory.yml)（生成→smoke→interaction smoke→Codex gate→公開）。⚠ **schedule trigger（毎週土曜10:00 JST）は現在も稼働中** — 停止はHuman Gate（`CURRENT_STATE.md` §1参照）。
 - 遊び方: カタログの **Play** リンクから各作品を開く → **START** → 60秒プレイ → **REPLAY**。
 - 動作検証: `node smoke.mjs works/seed-001`（固定6項目。カタログ自体は静的ページのため対象ディレクトリ指定が必要）。
 - `works/seed-<連番>/devlog.md` に各作品の開発ログ、`JOURNAL.md` にFactory能力進化の記録がある。seed-009は既知のVerification Failureとして意図的に未修正で保存。

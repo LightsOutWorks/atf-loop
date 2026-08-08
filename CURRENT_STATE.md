@@ -7,7 +7,7 @@
       "id": "F0",
       "status": "PASS",
       "evidence": [
-        "PR #22 merged as merge commit 6bef0f7e001d6ecebddcea4f9904b9dc47cc0343; OS.md blob a6e207202f78a00029b75f33a82f7005e671d429 on main; SHA-256 match with approved source recorded in CURRENT_STATE.md section 11. OS.md amended to v1.1 by D-001 (2026-08-08) via reviewed PR; amendment recorded in DECISIONS.md"
+        "PR #22 merged as merge commit 6bef0f7e001d6ecebddcea4f9904b9dc47cc0343; OS.md blob a6e207202f78a00029b75f33a82f7005e671d429 on main; SHA-256 match with approved source recorded in CURRENT_STATE.md section 11. OS.md v1.1 amendment proposed by D-001 (2026-08-08) in draft PR #32; adoption occurs at human merge; amendment recorded in DECISIONS.md"
       ]
     },
     {
