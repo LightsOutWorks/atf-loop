@@ -6,8 +6,8 @@
 - **chosen_route**: X（第一Distribution Channel候補。固定ではない。Realityで劣るなら変更可能）
 - **budget_cap**: JPY 0（本Canaryは既存契約内の生成のみ。広告費0。投稿自体のAPI費用も発生しない=手動投稿前提）
 - **world_signal**: genuine replies / bookmarks / inbound conversations / relevant followers（すべてShaping Signal。§Eで定義）
-- **verdict**: PENDING — 投稿はHuman Gate（R3）。本文書はHuman Commit直前の停止点
-- **learning**: （投稿後に記録）
+- **verdict**: PENDING — **C-1はHuman Commitで投稿済み（2026-08-08、Human-reported。§H参照）**。C-2/C-3は未投稿。World Signal観測中
+- **learning**: （World Signal回収後に記録）
 
 本文書はLane B Task Contract（2026-08-08）のRequired Output A〜G。**第三者への投稿・公開は行っていない。** 投稿文はすべて候補であり、送信はヒロのHuman Commitを要する。
 
@@ -203,5 +203,21 @@ JOURNAL 0006の原則（Observe → Learn → Automate。「何を書くと世�
 6. **INDEX登録（軽微）**: 下記のE-011行を `experiments/INDEX.md` へ追加（canonical file編集のため本セッションでは実施していない）。
 
 ```
-| E-011 | MD-2 Distribution Canary（Public Content候補生成） | PROPOSED（投稿はHuman Gate待ち） | MD-2 | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md` |
+| E-011 | MD-2 Distribution Canary（Public Content候補生成） | ACTIVE（C-1投稿済み・観測中） | MD-2 | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md` |
 ```
+
+---
+
+## H. World Signal Log（§Eの記録先。追記式）
+
+### 2026-08-08 — C-1をRealityへ投稿（Human Commit）
+
+Source: ヒロ報告（本セッション会話。**Human-reported** — リポジトリ外の実測。CURRENT_STATE.mdのEvidence scope慣行に準拠して明示）。
+
+- **事実**: C-1（TETHER LOCK事故）を**LightsOutWorks**アカウントからHuman Commitで投稿した。C-2 / C-3は未投稿——C-1の反応を観測してから次を判断する（3本を一気に出さない方針どおり）。
+- **投稿主体の位置づけ**: LightsOutWorksを「Current Factory Public Identity」として使えるかのReality検証を兼ねる。**Canonical変更なし** — JOURNAL 0006の「ATF専用アカウント」想定は改定せず、Reality結果を見てから扱いを決める（ヒロ指示 2026-08-08）。
+- **UNKNOWN（ヒロ提供待ち）**:
+  - 投稿URL
+  - 実際に投稿した最終文面（提供され次第ここへ追記し、C-1ドラフトとの差分を§G-1の文体仮説の精度データとして記録する）
+- **KPI観測（§E）**: 投稿URL確定後に開始。genuine replies / bookmarks / inbound conversations / relevant followersを手動記録。
+- **観測体制**: AIはXを直接観測できないため、自動check-in・観測自動化は行わない。World SignalはHuman経由で受領する（ヒロ指示 2026-08-08）。投稿自動化は禁止のまま。
