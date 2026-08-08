@@ -22,26 +22,30 @@ Owner: Lane A（Reality / Economic Engine）セッション
 - 目的は返信率最大化ではない。Terminal Goal = 返金・取消可能期間を経過した確定実収益。
 - `KILLED` / `NO_REPLY_TIMEOUT` は失敗記録として保持（FAILを消さない）。
 
-## Ledger（2026-08-08時点 / 送信済み7件、全件REPLY_WAIT）
+## Ledger（初回7件 + 追加分。REACHABLE確認済みで分母を数える）
 
 | id | platform | sent_at | url | cluster | freshness_at_send | message_style | stage | last_signal | next_action |
 |---|---|---|---|---|---|---|---|---|---|
-| C01 | Hacker News | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | reply監視（URL受領後はR0で確認可） |
-| C02 | Hacker News | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | 同上 |
-| C04 | Hacker News | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | 同上 |
-| C09 | Software Recommendations SE | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | 同上（SE APIはR0で確認可・quota注意） |
-| C14 | Bluesky | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | reply監視（getProfile系のみR0可。検索はHARNESS_BLOCKED） |
-| LN-58 | X | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | reply監視（X読取は本環境から不可 — Human報告待ち） |
-| LN-62 | X | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT | — | 同上 |
+| C01 | Hacker News | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | **SENT_BUT_NOT_PUBLICLY_VISIBLE**（VOID — Delivery Layer failure） | 2026-08-08 Human実測（`LEARNINGS.md` 訂正1 C-1） | NO_REPLY分母に入れない。再送・別スレッドはHuman Gate |
+| C02 | Hacker News | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | **SENT_BUT_NOT_PUBLICLY_VISIBLE**（VOID — Delivery Layer failure） | 同上 | 同上 |
+| C04 | Hacker News | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | **SENT_BUT_NOT_PUBLICLY_VISIBLE**（VOID — Delivery Layer failure） | 同上 | 同上 |
+| C09 | Software Recommendations SE | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT（可視性UNKNOWN） | — | reply監視（SE APIはR0で確認可・quota注意）。可視性確認 |
+| C14 | Bluesky | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT（可視性UNKNOWN） | — | reply監視（getProfile系のみR0可。検索はHARNESS_BLOCKED）。可視性確認 |
+| LN-58 | X | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT（可視性UNKNOWN） | — | reply監視（X読取は本環境から不可 — Human報告待ち）。可視性確認 |
+| LN-62 | X | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | BASELINE | SENT / REPLY_WAIT（可視性UNKNOWN） | — | 同上 |
 
-`UNKNOWN` 列（sent_at / url / cluster / freshness）は送信実務を行ったHuman / Demandセッションからの受領待ち。受領後に本表を更新する（送信文面の書き換えはしない）。
+- `UNKNOWN` 列（sent_at / url / cluster / freshness）は送信実務を行ったHuman / Demandセッションからの受領待ち。受領後に本表を更新する（送信文面の書き換えはしない）。
+- **追加Contactあり（2026-08-08 Human-reported / `LEARNINGS.md` 訂正1 C-2）**: 初回7件の後にHuman Contactが追加送信されており、実効母数は上表だけではない。追加分の id / platform / 詳細は受領待ち（受領次第、行を追加する）。上表を「現在の全数」と読まないこと。
+- 分母規律: REPLY率等の分母は**REACHABLE確認済み接触**で数える（`LEARNINGS.md` L1 / C-1。SENT_BUT_NOT_PUBLICLY_VISIBLE = VOIDは分母外）。
+- 送信前チェック（次回から適用。`LEARNINGS.md` L1）: 送信主体と対象スレッドの公開可視性を送信前に確認する。
 
-## Pending — 残り13件（Target 20）
+## Pending — 残り枠（Target 20）
 
-未送信。HUMAN_SHORT Default（1〜3文・質問1つ・売らない）。候補生成はDemand側の責務、送信はHuman Gate。送信され次第、本Ledgerへ行を追加する。
+HUMAN_SHORT Default（1〜3文・質問1つ・売らない）。候補生成はDemand側の責務、送信はHuman Gate。送信され次第、本Ledgerへ行を追加する。
 
 ## Conversation Log
 
 （返信発生時にここへ追記: id / 受信日時 / reply verbatim / signal分類 / 生成した次の1問 / Human送信結果）
 
-まだ返信なし（2026-08-08時点）。
+- 2026-08-08: 返信なし（初回抽出時点）。
+- 2026-08-08: C01 / C02 / C04へ `SENT_BUT_NOT_PUBLICLY_VISIBLE`（Delivery Layer failure / VOID）を転記。Provenance: Human実測 → `LEARNINGS.md` 訂正1 C-1（Lane C経由のHuman裁定）。これによりL1の「要転記（Human Handoff）」は完了し、当該FACTの一次記録は本台帳へ移る。機構的詳細（shadowban / dead等）は引き続き `UNKNOWN`。
