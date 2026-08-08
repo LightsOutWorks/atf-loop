@@ -75,3 +75,20 @@ Scope: E-005（Large-N Demand Intelligence）/ E-006（Batch 1 Discovery Contact
 
 1. L1 / L3 / L4 / L5 の各「再利用先」「検証」をそのまま観測項目とする（ここへ重複列挙しない）。
 2. 接触1件あたりのHuman判断回数（MD-3 Human Handoff逓減のWorld Signal — `DESIRES.md` MD-3）: Loop 1のbaselineは `UNKNOWN`（未計測）。Loop 2で計測を開始し、Loop間比較はLoop 3から行う。
+
+---
+
+## 2026-08-08 — 訂正 1（Human Reality同期。対象: L1 / L4 / L5）
+
+Provenance: 2026-08-08 Human裁定（Lane C Task返信）。運用規則1に従い上記エントリ本文は書き換えない。本訂正が対象箇所に優先する。
+
+### C-1 — L1のFACT / INFERENCEをHuman実測で確定
+
+- FACT（Human実測）: `LEDGER.md` のC01 / C02 / C04（HN 3件）は **SENT_BUT_NOT_PUBLICLY_VISIBLE**。L1初稿の「対応すると解される」というINFERENCEは実測で確定した。機構的詳細は引き続き `UNKNOWN`。
+- 分類（Human裁定）: この3件は **Delivery Layer failure** として扱い、`NO_REPLY_TIMEOUT` の分母に含めない。`VOID` ≠ `FAIL` の適用（L1）は不変。
+- L1の要転記（Human Handoff）は未完了のまま継続。Lane Aによる `LEDGER.md` C01 / C02 / C04行への転記は本status（SENT_BUT_NOT_PUBLICLY_VISIBLE / Delivery Layer failure）で行う。
+
+### C-2 — 「実効≤4・返信0件」を現在状態として読まない（stale-N固定の解除）
+
+- FACT（Human-reported 2026-08-08）: Batch 1はその後Human Contactが追加されており、実効母数は≤4ではない。L1 / L4の「実効到達は最大4」「送信7件・返信0件」および§見出しの「返信0件時点」は、いずれも**2026-08-08抽出時点のsnapshot**であり、現在状態でも恒久パラメータでもない（現在値の正本は `LEDGER.md` / `CURRENT_STATE.md`）。
+- Durable Learningの確定形（特定の古いNに依存させない）: **初期の極小N観測だけから率ベースのcluster / message_style判断をしない。十分なReachable母数とWorld Signalが蓄積するまで、HUMAN_SHORT優位・Freshness効果等を確定しない。** L4のINFERENCE、L5制約の「現在のN（返信0件）」、L5検証方法の「このN」は、すべてこの形で読む。分母はREACHABLE確認済み接触で数える（C-1）。
