@@ -11,7 +11,7 @@ Status語彙: `ACTIVE` / `HOLD` / `NO-GO` / `RETIRED` / `HISTORICAL` / `PROPOSED
 | E-003 | Control Plane（C0 provenance / F3 precursor reader） | **ACTIVE**（route非依存基盤） | MD-3 | `scripts/c0-provenance.mjs`, `scripts/control-plane-canary.mjs`, canonical blocks |
 | E-004 | W0 Distribution Precursor（X / itch.io計測可能性） | **HOLD** | 旧Mission→MD-2関連 | draft PR #24 `experiments/w0/` |
 | E-005 | Large-N Demand Intelligence Canary（Grok x_search） | **HISTORICAL — verdict: PASS**（Sensorとして実証。2026-08-08実施） | MD-1 | Human-reported。cost ≈ $1.815 / 48+5 queries / raw 75 / unique 72 / Genuine Need ≈60 / clusters 7。repo内raw artifactなし（`CURRENT_STATE.md` §3） |
-| E-006 | Batch 1 Discovery Contact（Target 20 / Sent 7） | **ACTIVE** | MD-1 | `CURRENT_STATE.md` §2。送信行為はHuman Gate。message style: 既送信7=Baseline、以後HUMAN_SHORT |
+| E-006 | Batch 1 Discovery Contact（Target 20 / Sent 7） | **ACTIVE** | MD-1 | `experiments/batch-1/LEDGER.md`（Contact台帳・正本）、`CURRENT_STATE.md` §2。送信行為はHuman Gate。message style: 既送信7=Baseline、以後HUMAN_SHORT |
 | E-007 | Genome Factory v1（Dual-Clock Pure Genome Factory） | **PROPOSED**（2026-08-08 Override以前の提案。競合あり・ヒロ裁可待ち） | 旧Mission延長 | draft PR #30 `GENOME_FACTORY.md` |
 | E-008 | Environment Preflight 2026-08-08（Sensor到達性） | **HISTORICAL**（実測記録） | MD-3 | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
 | E-009 | Public Succession Signal Sensor | **OPPORTUNITY NOTE**（実装しない。Data Boundary: `CONSTRAINTS.md` Part I §5） | 候補 | 公開Web情報のみのRanking構想。会話レベル |
