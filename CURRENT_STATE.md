@@ -1,20 +1,20 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "ee85650749912018daa02b58e111017dda09acfe",
+  "base_sha": "5e31133e09c8c6dfb0bf4bb3298441fda7a4c103",
   "gates": [
     {
       "id": "F0",
       "status": "PASS",
       "evidence": [
-        "PR #22 merged as merge commit 6bef0f7e001d6ecebddcea4f9904b9dc47cc0343; OS.md blob a6e207202f78a00029b75f33a82f7005e671d429 on main; SHA-256 match with approved source recorded in CURRENT_STATE.md section 11"
+        "PR #22 merged as merge commit 6bef0f7e001d6ecebddcea4f9904b9dc47cc0343; OS.md blob a6e207202f78a00029b75f33a82f7005e671d429 on main; SHA-256 match with approved source recorded in CURRENT_STATE.md section 11. OS.md v1.1 amendment proposed by D-001 (2026-08-08) in draft PR #32; adoption occurs at human merge; amendment recorded in DECISIONS.md"
       ]
     },
     {
       "id": "F1",
       "status": "PASS",
       "evidence": [
-        "CURRENT_STATE.md on main at 2420fae05435c84602efbaaae5de83457f36311e (blob a92c9643cea1fcec8cca9d113e55f872b1a4f452) with observed_at, base SHA, evidence scope, implemented/unproven separation, single bottleneck and smallest next gate"
+        "CURRENT_STATE.md on main at 2420fae05435c84602efbaaae5de83457f36311e (blob a92c9643cea1fcec8cca9d113e55f872b1a4f452) with observed_at, base SHA, evidence scope, implemented/unproven separation, single bottleneck and smallest next gate; body re-based to 2026-08-08 observation by D-001"
       ]
     },
     {
@@ -136,255 +136,107 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-06 JST**
+Observed at: **2026-08-08 JST**
 
 Default branch: `main`
 
-Base SHA: `ee85650749912018daa02b58e111017dda09acfe`
+Base SHA: `5e31133e09c8c6dfb0bf4bb3298441fda7a4c103`
 
-Evidence scope: **the default branch at the SHA above, plus recorded GitHub Actions runs cited in the canonical block; repo-external policy or Pending items are labeled explicitly**
+Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs cited in the canonical block, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override（会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
-この文書は、Factory が「今できること」と「まだできないこと」を区別するための現在地である。
-
-- `OS.md` は Should(何を目指し、どう判断するか)を持つ。
-- `CURRENT_STATE.md` は Is(何が証明済みか)だけを持つ。
-- `ROADMAP.md` は Next / Target(次に何を証明し、最終的に何になるか)を持つ。
-- `JOURNAL.md` は Why / History(能力が変わった理由と結果)を持つ。
-
-会話、予定、提案を実装済みの事実として書かない。確認できないことは `UNKNOWN` とする。
+この文書は、Factoryが「今できること」と「まだできないこと」を区別するための現在地である。会話、予定、提案を実装済みの事実として書かない。確認できないことは `UNKNOWN` とする。文書の責務分担とSource of Truth Priorityは `OS.md` が持つ。
 
 ---
 
-## 1. Summary
+## 1. Mission State Summary
 
-Lights Out Factory は、単一HTMLのブラウザトイを生成し、機械検証と独立ゲートを通し、GitHub Pagesへ公開するProduction Loopを持つ。観測時点でSEED 001〜024がmainにある(`factory.yml`と`index.html`のblobは前回観測から不変)。
+2026-08-08、D-001（`DECISIONS.md`）により本リポジトリはCanonical Migrationを実施した。
 
-前回観測以降にmainへ加わったのは制御平面の実装である。
-
-- `CURRENT_STATE.md` / `ROADMAP.md` の1行目にversioned canonical JSON blockが置かれ、機械routing入力の正本になった。
-- C0(Configuration Provenance): `config/champion-baseline.json`のbaseline宣言と、read-only canary(`.github/workflows/c0-provenance.yml` + `scripts/c0-provenance.mjs`)がmainにあり、run 31075997147でPASS。
-- F3前段(precursor): 構造reader(`scripts/control-plane-canary.mjs` + `.github/workflows/evolution-control-plane-canary.yml`)がmainにあり、run 31088621095でPRECURSOR。readerはPASSを出さず、意味的順位付けは未実装。
-
-一方、世界への到達、プレイ開始、継続・再プレイ等のProduct Engagementをリポへ取り込み、その信号で作品選定や能力構成を更新する閉ループはまだない。高価な外部モデル・ツール・ハーネスを継続比較し、能力別Championを自動更新する仕組みもまだない。
-
-したがって現在のFactoryは、**生産と公開は自動化され、制御平面の構造読取は証明されたが、意味的順位付け・世界学習・能力構成の自己進化は未接続**である。
+- 本リポジトリは**ゲーム工場ではない**。現在のMissionは `OS.md` 冒頭のCurrent Identity、North Star / Major Desireは `DESIRES.md` を参照。
+- Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。ただし後述§4のとおり、mainの `factory.yml` には毎週土曜10:00 JSTのschedule triggerが**まだ残っている**（無効化はHuman Gate）。
+- 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2）。
+- Confirmed terminal revenue = **JPY 0**（§5）。Factoryは「成功した」と表現してはならない。
 
 ---
 
-## 2. Capability Map
+## 2. Active Experiment — Batch 1 Discovery Contact（MD-1接続）
 
-| Capability | Current implementation | Evidence status | Main gap |
-|---|---|---|---|
-| Generation | Claude Code CLIが候補生成、類似統合、採点、上位比較、1案実装を行う | Implemented | 実効model ID、reasoning、prompt/context構成はC0 baselineとして宣言・照合されるが、factory run自身のartifactには記録されない |
-| Selection | C1〜C7採点と上位3案比較、1案選定 | Implemented but not reliably auditable | Selection Record v1は自由文と数値の整合を検証せず、phase2で消えた候補の経路も再構成不能 |
-| Verification | 固定Smoke、Playwright Interaction Smoke、Codexの独立content gate、integrity check | Implemented with known limits | 新しい実欠陥の検出実績、検査基盤失敗の分類、公開後到達確認が不足 |
-| Distribution | mainへのpushとGitHub Pagesのカタログ公開 | Publication implemented | Reach、attributable play start、Product Engagement、チャンネル比較が未実装 |
-| Learning | `JOURNAL.md`に能力変化を記録 | Internal capability log implemented | 世界信号と外部Capability Radarを使うChampion/Challenger更新が未実装 |
+Source: 2026-08-08 Current State Override（Human-reported。default branch上の機械記録はまだない）。
 
-この表の能力名はIOS Layer2の現行仮説であり、将来固定ではない。
+- Target: **20 Genuine Discovery Contacts**
+- Sent: **7**（C01 / C04 / C02 = Hacker News、C14 = Bluesky、C09 = Software Recommendations Stack Exchange、LN-58 / LN-62 = X）。現在REPLY_WAIT。
+- 残り13件を準備中。数を満たすために品質を落とさない。同時に、過剰KILLでReality試行数が不足することも失敗と扱う。
+- Message style: 既送信7件はBaselineとして保持（事後的に書き換えない）。今後の13件は **HUMAN_SHORT** をDefaultとする（1〜3文・質問1つ・売らない・自己説明過剰なし。詳細ポリシーは実行契約側）。
+- DiscoveryとSalesを分離する。初回Discoveryの目的は「相手が自分の現実についてもう一言話したくなる状態を作る」こと。
+- Freshness ranking（Hard Boundaryではない）: <24h HIGH / <48h PRIORITY / <72h acceptable / >72h は継続Pain等の追加Evidence要。
+- Contactごとの最小記録項目: source / cluster / freshness / message_style / reply / genuine pain confirmed / continued conversation / pilot candidate / payment / confirmed revenue。学習主体はGrokではなくFactory。
 
----
+## 3. Proven Sensor Capability — Large-N Demand Intelligence
 
-## 3. Production Loop — Implemented
+Source: 2026-08-08実行のCanary（Human-reported + 実行セッション記録。リポジトリ内artifactはまだない）。
 
-Source: `.github/workflows/factory.yml` at blob `49314d2d531704485064fa1995922f19b8418870`(前回観測から不変)。
+- xAI API接続成功、Grok x_search実行成功。cost ≈ $1.815。48 collection + 5 verification queries。
+- raw rows 75 / unique 72 / Genuine Need ≈60 / semantic clusters 7 / top clusters 3。Reality Contact候補生成成功。
+- 結論: **Public Real-time Human DesireをXから機械探索するRouteはSensorとしてPASS**。市場全体を理解したとは主張しない。
+- Large-N（AI観測）とSmall-N（Human個別Contact）を分離する。Demand収集条件に「AIで解けるか」を入れない。
+- Gap分類: A. Capability / B. Productization / C. Distribution / D. Adoption。Existing Solutionの存在は自動KILL条件ではない。現在はB/C/D重視。
 
-1. `workflow_dispatch` または土曜10:00 JSTのscheduleで起動する。
-2. `concurrency: factory` により通常runを直列化する。
-3. Claude Codeが既存作品を読み、候補を生成・統合・採点し、1案だけ実装する。
-4. `index.html`、`devlog.md`、`funnel.json`、`meta.json`を出力する。
-5. 固定6項目の`smoke.mjs`を実行する。
-6. Playwright Interaction Smokeが実ポインタ入力を使って主要インタラクションを検証する。
-7. 不合格時、生成側による修正を最大3回行う。
-8. 対象作品外の変更をintegrity checkで拒否する。
-9. Codex CLIをread-only sandboxで一度だけ走らせ、先頭行が完全一致`PUBLISH`の場合だけ通す。判定不能・認証失敗もfail-closedで停止する。
-10. metaからカタログを再生成し、作品とカタログをcommitしてmainへpushする。
-11. `dry_run=true`ではローカルcommitまで進み、pushしない。
-12. run artifactを保存する。
+## 4. Historical Route — Browser-Toy Production Loop（HOLD）
 
-Pinned harness versions observed:
+Default branch上の実装事実（前回観測から不変。詳細な運用実績・既知欠陥は git history上の本ファイル旧版 blob `a92c9643cea1fcec8cca9d113e55f872b1a4f452` および `JOURNAL.md` 参照）:
 
-- Claude Code `2.1.220`
-- Codex CLI `0.146.0`
-- Playwright `1.62.1`
+- `factory.yml`（blob `49314d2d531704485064fa1995922f19b8418870`）: 生成→smoke→interaction smoke→Codex gate→公開の無人ループ。**schedule trigger（毎週土曜01:00 UTC）が現存**。停止はHuman Gate（Actions UIでのworkflow disable、またはPR）。
+- SEED 001〜024が `works/` にあり、GitHub Pagesのカタログ（`index.html`）で公開済み。
+- seed-009 TETHER LOCKは既知のVerification Failureとして意図的に未修正で保存。
+- JOURNAL 0005 / 0007の訂正、Selection Record v2は未実装のまま（record debt。凍結中も債務として保持）。
+- Control plane: C0 provenance canary PASS（run 31075997147）、F3 precursor reader PRECURSOR（run 31088621095）。canonical blockのbase_shaは本観測で `5e31133` へ更新した。
+- `eval.json` はseed-001〜009のみ・全て `world: null` のまま（歴史的証拠として保存）。
 
-Runtime provenance: `config/champion-baseline.json`は、operatorが制御しrepoから決定論的に抽出できる項目(prompt source、output schema、CLI version、allowed tools、verdict contract、workflow permissions等の31項目)を**OBSERVED**として宣言し、C0 canaryが照合する。一方、effective model ID / provider model revision、reasoning構成、実際に読まれたcontext、provider routing、token usage、cost、latency等の25項目は**UNKNOWN**のまま宣言されている。factory runが自身のrun artifactへこれらの実測値を記録する実装はまだなく、baseline宣言はrun時点の実測記録の代替ではない。
+## 5. Economic / Budget State
 
----
+Source: 2026-08-08 Current State Override（Human-reported）。
 
-## 4. Published Output
+- **Confirmed terminal revenue = JPY 0**。Need→Paid Value→Confirmed Revenueは未証明。
+- 証明済みはここまで: Public Demandの機械探索 / Grok x_searchのSensor機能 / Contact候補生成 / HumanのReality接触。
+- Factory monthly hard cap: JPY 50,000（`CONSTRAINTS.md` Part I）。
+- Claude Max 20x契約中。ChatGPTは2026-08-13から$20 plan予定。xAI Prototype $5購入済み・Auto top-up OFF。
 
-Catalog: `index.html` at blob `babcae3a7308fe3042af3f4b8ff967c69896aba8`(前回観測から不変)。
+## 6. Open PRs and Session Ownership（観測 2026-08-08）
 
-- SEED 001〜024の24作品を列挙する。
-- 最新はSEED 024 — RING RUNNER。
-- 現行制約は単一HTML、約60秒、1画面、英語UI、PC+mobile、外部通信・外部素材なし等。
-- これらは現行Implementation / Soft Boundaryであり、永久原則ではない。
+- **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。canonical fileと競合しない。
+- **PR #30**（`GENOME_FACTORY.md` / `RESEARCH.md` 追加のみ）: 2026-08-07作成のRoute提案（Browser-Toy収益化 / itch.io）。**2026-08-08 Override以前の提案であり、現Mission優先順位と競合し得る。処置はヒロ裁可。** canonical fileへの変更は含まない。
+- **PR #31**（`ops/ENV_PREFLIGHT_2026-08-08.md` 追加のみ）: 環境preflight実測。Sensor到達性（Bluesky検索・Reddit APIはHARNESS_BLOCKED等）とExecution Readinessの証拠。
+- 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
 
-Current public site publication is evidence that the Pages path has worked. It is not evidence that every future push has reached Pages correctly.
+## 7. Current Bottleneck
 
----
+**Need→Paid Value→Confirmed Revenueが未証明であること。** 具体的な最小の次の一歩は、Batch 1の完了（残り13 contacts、HUMAN_SHORT）とreply/World Signalの回収・記録である。
 
-## 5. Verification — Proven Scope and Gaps
+Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。新Routeでの律速は証拠不足でUNKNOWN。
 
-### Proven
+## 8. Routing Facts
 
-- 静的Smokeが固定6項目を実行できる。
-- Interaction Smokeはrun #17〜#20で起動し、検証経路を完走した。
-- Codex gateは生成担当とは別系統でfail-closed判定する。
-- integrity checkは対象外変更を停止する。
-- 改名後の`dry_run`カナリア factory #22は、公開直前まで完走し、mainを変更しなかった。
-- C0 canary(run 31075997147)は、決定論テスト68/68と、baseline OBSERVED 31/31 fieldの照合をread-onlyで完走した。
-- F3 precursor reader(run 31088621095)は、origin/mainのcanonical blockを読み、構造検証を通し、dependency-ready集合を確定してPRECURSORを返した。start/endのinspected headは一致し、materially stale=false。
+判定入力はcanonical block（status / prerequisites）であり、本文はこれを上書きしない。
 
-### Not yet proven
+- Control-plane gates（F/W/C/X）はBrowser-Toy Route時代に定義されたもの。F3（runtime reads control plane）はroute非依存の基盤として IN_PROGRESS のまま。W lane はBrowser-Toy Routeのworld learning laneであり、routeのHOLDに伴い事実上凍結（blockのstatusは実測どおり保持）。
+- 直近のrouting結論（run 31088621095ベース）: **NO_ACTION — INSUFFICIENT_EVIDENCE**（C1 / C2いずれか1件を提案するには証拠不足）。この結論は現在も有効。
+- Mission-levelの現在の実行はcontrol-plane gateではなく、Human-committedのActive Experiment（§2 Batch 1）が担う。
+- 新しいMajor Desire構造の下でのgate体系の再設計は、Batch 1のWorld Signal回収後に証拠ベースで行う（`ROADMAP.md` Current Horizons参照）。先回りで作らない。
 
-- Interaction Smokeが導入後の新作で実欠陥を実際に捕捉した実績は0件。検査が動くことは確認済みだが、予測した欠陥検出能力は未証明。
-- Interaction Smokeは既存作に遡及適用されない。
-- push後にPages URLのHTTP 200、新作掲載、実プレイ到達を確認するstepがない。
-- 作品不合格と検査基盤の実行不能を同じ非0終了として扱うため、後者でも生成修正ループへ入る。
-- content gateの直接対象は`index.html`であり、`funnel.json`の数値と採用理由の矛盾は検証しない。
-- OS基準(IOS §15 / ROADMAP §3)による意味的順位付けは未実装・未証明。F3 PASSも未証明。
-
----
-
-## 6. Known Failures and Record Debt
-
-### SEED 009 — TETHER LOCK
-
-pointer入力でhold開始不能のまま公開されている。修正せず、Verification Failureの証拠として保存している。
-
-### Selection Record v1
-
-seed-011では1位同点にもかかわらず、存在しないC1/C4/C6差を採用理由として記述した。Selection Record v2と決定論validatorは未実装。
-
-現行`funnel.json`はphase2生存候補を記録するが、統合・削除された候補と`merged_into`を保存しないため、phase2の判断経路を再構成できない。
-
-### JOURNAL 0005 / 0007
-
-mainには確定済みの訂正が未反映である。PR #18は、生存候補のscoreを追加すると同時に、phase2で消えた候補のtitle/descriptionを記録対象から除いた。0005のCapabilityを`Added`、変更を観測の純増とする記述は不正確で、正しくは`Modified`。0007も、phase2 dispositionの従来からの欠落と、PR #18で発生した候補内容の消失を分離して記録する必要がある。
-
-訂正文はSelection Record v2変更へ相乗りする方針だが、Selection Record v2を実装するopen PRは観測時点で確認できない。
-
----
-
-## 7. World Signal and Distribution
-
-`eval.json` at blob `5ccf159975aecc74ca60b7813ce5e144b23c58dd`(前回観測から不変) contains:
-
-- seed-001〜009の9作のみ
-- 9作すべて`world: null`
-- seed-010〜024は行自体がない
-
-GitHub Pagesへのpublicationはある。しかしdefault branchには次がない。
-
-- `signals.json`
-- `.github/workflows/distribution.yml`
-- attributable play-start measurement
-- distribution signalとproduct engagementの分離保存
-- world feedbackをSelection / Generationへ還流する実装
-- sufficient world feedbackの具体的閾値
-
-X等での外部活動は存在しても、リポの学習信号として統合されていない限り、FactoryのProduct Learningとはみなさない。impression/viewはDistributionの信号であり、作品価値の証拠とはみなさない。
-
----
-
-## 8. Capability Evolution
-
-Implemented:
-
-- `JOURNAL.md`によるCapability Evolution Log
-- 生成と独立ゲートの分離
-- 失敗を残し、次の検証能力へ変える運用
-- configuration provenance baseline(`config/champion-baseline.json`)とC0 read-only照合canary
-- 3正本のcanonical blockをruntimeが読み、構造検証とdependency-ready集合確定を行うF3 precursor reader(read-only、提案なし)
-
-Not implemented:
-
-- factory run自身によるruntime provenance記録
-- ATF固有の代表タスクbenchmark
-- External Model / Tool / Harness Radar
-- capability別Champion / Challenger
-- 同一base・同一contractでのbounded configuration canary
-- 構成の自動adopt / rollback
-- OS基準による意味的順位付けと、最小の未通過gateの自律起票(F3後半)
-
-Arena系、人間選好ランキング、Artificial Analysis、vendor release等は候補発見のpriorとして利用できるが、ATFでの採用証拠にはまだ接続されていない。
-
----
-
-## 9. Observed Operating Policy — Pending Repository Codification
-
-Source: `ATF再設計裁定v2 2026-08-04.md`; not present on the default branch at the Base SHA above. This section records the currently agreed operating policy, not a default-branch implementation fact.
-
-### Current, but not permanent
-
-- Factory/OS変更はPRを作り、ヒロがmergeする。
-- identity、credentials、Secrets、cost、kill switchはヒロが管理する。
-- 週1 cadence。
-- 単一HTML、約60秒、作品構造、表現制約。
-- GitHubを唯一の正本とhandoffにし、会話やコンテナを状態バスにしない。
-
-通常の作品runは、Verificationを通れば人手なしでmainへ直接pushする。Factory変更のhuman mergeもIOS上の永久Hard Boundaryではなく、高水準のVerificationによって退役可能な暫定能力契約である。
-
-### Canonical Hard Boundaries in OS.md
-
-- 人間の尊厳
-- 法令
-- 第三者の権利
-- 重大な実害
-
----
-
-## 10. Current Bottleneck
-
-現在、default branchで確認できる最大の能力欠落は、**世界価値を観測し、作品選定と能力構成へ戻すための、健全で帰属可能な信号がないこと**である。
-
-ただし、現在のproduction bottleneckは未証明である。律速候補はGeneration / Distribution / Feedbackのままで、どこが律速かを判定するリポ証拠はまだない。agent間通信を律速とするリポ証拠もない。
-
-生産量を増やせば学習速度が比例して上がる証拠もない。新しいorchestrator、A2A、会話relayを先に足す根拠は現在のdefault branchにはない。
-
----
-
-## 11. Canonical OS
-
-`OS.md` is canonical on main at blob `a6e207202f78a00029b75f33a82f7005e671d429`(前回観測から不変), SHA-256 `1de1d9620fab4ceace056b5bdd635ee5276e3a5cf96a721419080f98a7acc0ab`. F0の成立証拠(merge PRとSHA照合)はcanonical blockのF0 evidenceに記録済みである。
-
-### Selection Record v2
-
-仕様と訂正文は会話上で確定しているが、default branchにもopen PRにも実装は確認できない。
-
----
-
-## 12. Routing Facts — Next Gate Not Canonicalized
-
-本観測時点のrouting事実。判定入力はcanonical block(status / prerequisites)とrun 31088621095のreader出力であり、本文はこれを上書きしない。
-
-- 機械的なdependency-ready集合(構造上のprerequisite充足のみ)は F3 / W0 / C1 / C2 / C6。ROADMAP §8のとおり、dependency-readyはcandidate-eligibleでも実行権限でもない。
-- **F3**: 現在実行中のmeta-gate(IN_PROGRESS)。制御平面を実行系へ接続する当のgateであり、次gate候補にはしない。
-- **W0**: HOLD中のblocked candidate(draft PR #24のprecursorはEL裁定で停止中)。
-- **C6**: 条件付きgateであり、発火証拠(実測ボトルネック)がないため候補化しない。
-- **C1 / C2**: 構造上はready。ただし両者を比較するための律速・情報利得・可逆性・費用・人間時間・総複雑性の証拠が不足している。
-- 現在のproduction bottleneckは未証明(§10)。
-- **Routing conclusion: NO_ACTION — INSUFFICIENT_EVIDENCE.** 現在の証拠は、意味的stepが`NO_ACTION`を決定するには十分だが、C1 / C2のどちらか1件を提案するには不十分である。したがって現行F3の「1件だけ提案」というPASS条件は未充足のままである。
-
----
-
-## 13. Evidence Index
+## 9. Evidence Index
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `ee85650749912018daa02b58e111017dda09acfe` |
-| canonical `OS.md` | blob `a6e207202f78a00029b75f33a82f7005e671d429` |
+| default branch snapshot | `5e31133e09c8c6dfb0bf4bb3298441fda7a4c103` |
+| canonical `OS.md`（v1.1へ本PRでamend） | 本PR参照（旧: blob `a6e207202f78a00029b75f33a82f7005e671d429`） |
+| 旧CURRENT_STATE本文（Browser-Toy期詳細） | blob `a92c9643cea1fcec8cca9d113e55f872b1a4f452` ほかgit history |
 | `.github/workflows/factory.yml` | blob `49314d2d531704485064fa1995922f19b8418870` |
 | `index.html` catalog | blob `babcae3a7308fe3042af3f4b8ff967c69896aba8` |
-| `CONSTRAINTS.md` | blob `b4ab85cfe1f5babbd6256ef02bd2f72098abcd1e` |
 | `JOURNAL.md` | blob `4d6327a9271d25b67c9faf7c48237e5e17a6ec8f` |
-| `eval.json` | blob `5ccf159975aecc74ca60b7813ce5e144b23c58dd` |
-| seed-011 `funnel.json` | blob `56afd4ff8f085761a3e5889e75be7975f853e485` |
-| PR #18 | commit `1620e4bc58a583e9ef1b1f4ded546397adb83d3d` |
 | C0 canary run | run 31075997147; artifact 8957508638 |
-| F3 precursor reader run | run 31088621095; artifact 8962454105; artifact SHA-256 `3aa87b53d3f256ceee5edf3d885aafadc903d5d6bdb04d093da149392f47ebe6` |
+| F3 precursor reader run | run 31088621095; artifact 8962454105 |
 | W0 precursor (HOLD) | draft PR #24 head `0aa39664404aabf9214f8da96401e325b0d12308` |
+| 2026-08-08 Demand Intelligence Canary | Human-reported（`experiments/INDEX.md` 参照。repo内raw artifactなし） |
+| 2026-08-08 Environment Preflight | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
 
-When this file is updated, `Observed at`, `Base SHA`, affected evidence revisions, bottleneck, and the routing facts in section 12 must be updated together.
+When this file is updated, `Observed at`, `Base SHA`, affected evidence revisions, bottleneck, and the routing facts in section 8 must be updated together.
