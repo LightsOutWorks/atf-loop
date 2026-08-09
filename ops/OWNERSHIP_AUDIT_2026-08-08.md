@@ -67,7 +67,7 @@ Red-Teamが元リスト外から追加した実質的候補（全analystの盲�
 
 | 資産 | 注記 |
 |---|---|
-| Browser-Toy route成果物（works/ 24作品・factory.yml・gate-prompt・eval.json） | INDEX.md規則「過去実験の成果物は削除しない」により**恒久保存 = OWN（凍結）**。当初のTEMPORARY分類は「捨てる予定」の定義と矛盾（Red-Team訂正）。**例外: factory.ymlの生きたcron trigger（`0 1 * * 6`・実測確認済み）だけは凍結資産ではなく能動的liability** — Human Gateでの停止待ち（D-001既知） |
+| Browser-Toy route成果物（works/ 24作品・factory.yml・gate-prompt・eval.json） | INDEX.md規則「過去実験の成果物は削除しない」により**恒久保存 = OWN（凍結）**。当初のTEMPORARY分類は「捨てる予定」の定義と矛盾（Red-Team訂正）。factory.ymlのcron定義（`0 1 * * 6`）はファイル内にHistorical定義として残存するが、**GitHub Actions workflow自体はdisabled_manually（2026-08-07 10:39 JST・Actions API read-only実測 — 再検証記録参照）であり、運用scheduleは停止済み**。残存riskはre-enable時（Human Gate）のみ |
 
 ### RENT（対価を払い、蓄積しない）
 
@@ -223,7 +223,7 @@ MD-2支出は「MD-1のReality活動から自然発生したものだけをpubli
 
 ### H-5. Red-Team（統合matrixへの攻撃）と採択
 
-Red-Teamの評価: 「matrixと4裁定の重心 — capture規律 > データhoarding、contract > code、RENT+exit、community/brand/法人/productのDO_NOT_BUILD — は正しく、事実基盤は検証に耐えた（cron・pinned CLI・hidden_system_prompt UNKNOWN・world:null・N=20喪失、すべてrepo内で確認）。ただし系統的欠陥が3つある」。全て本文へ採択済み:
+Red-Teamの評価: 「matrixと4裁定の重心 — capture規律 > データhoarding、contract > code、RENT+exit、community/brand/法人/productのDO_NOT_BUILD — は正しく、事実基盤は検証に耐えた（cron定義・pinned CLI・hidden_system_prompt UNKNOWN・world:null・N=20喪失、すべてrepo内で確認。ただしcronは**ファイル内定義**の確認であり、workflowの運用stateは後日の再検証記録で訂正）。ただし系統的欠陥が3つある」。全て本文へ採択済み:
 
 1. **OWN-inflation** → OWN-A（実在）/ OWN-B（目標クラス）/ OWN-C（凍結）へ分離。重複2組（Payment history=収益証拠、audience-list=owned channel）を統合
 2. **Defensibility-theater** → HIGH 5件を棄却し、次元を「Factoryにとっての代替不能性」へ読み替え（D-3）
@@ -247,6 +247,26 @@ Red-Teamの評価: 「matrixと4裁定の重心 — capture規律 > データhoa
 4. **「moat」枠組みを棄てる**: North Starが要求するのは対競合defensibilityではなく、自分のrouting判断を毎loop改善する私有priorである。moat語はdataset infraの過剰建設への入口（「When in doubt, do not add」違反の誘導）。
 5. **Model非所有・Code最小所有・Audience非追求は維持**。ただし各1行級の宿題: model支出構成の記録・contact-record schemaのHorizon 2実装（reply到着後）・follower KPIの証拠gate梯子化（Direction Review裁定）。
 6. **時間軸の優先**: 次のbatchを守る前に、既に支払った17 threadの回収路（F-1）を確立する。最初のreplyが「Factory初のworld-validated datum」になるか「2度目の帰属不能喪失」になるかの分岐が、prose commit 1回の距離にある。
+
+---
+
+## 再検証記録（2026-08-09 — Human指示によるmain HEAD実測。訂正は訂正として残す）
+
+Human指示（PR #38レビュー）に基づき、報告末尾のCurrent Reality 2点をmain HEADで再確認した。
+
+### 再検証1 — CURRENT_STATE / INDEX の「Sent 7」: **指摘は現存（staleではない）**
+
+- FACT（2026-08-09実測）: origin/main HEADは監査時と同一の `f40155e`。`CURRENT_STATE.md` L167 = 「Sent: **7**」、`experiments/INDEX.md` E-006行 = 「Target 20 / Sent 7」のまま。正本 `LEDGER.md` = SENT 20 / VOID 3 / REACHABLE 17。
+- 判定: Lane A PR #33がsyncしたのは**LEDGERのみ**であり、CURRENT_STATE §2 / INDEX E-006への反映はmain上にまだ存在しない。したがってH-5 (7)の同期崩れ指摘は訂正不要（修正自体はcanonical変更 = Human Gate。本監査は変更しない）。
+
+### 再検証2 — factory.yml: **当初記述を事実訂正**
+
+- FACT（2026-08-09 Actions API read-only実測）: workflow `factory`（id 322145639）の state = **`disabled_manually`**、updated_at = **2026-08-07T10:39:28+09:00**。
+- 訂正: 当初のB（OWN-C）は「生きたcron trigger・能動的liability・Human Gateでの停止待ち」と記述したが、これは誤り。正: **Historical cron definition remains in file (`0 1 * * 6`), but the operational schedule is disabled**（Humanが2026-08-07に停止済み）。「次回土曜発火」リスクは現存しない。残存riskはre-enable（Human Gate）時のみ。本文B・H-5該当箇所は訂正済み。
+- 誤りの根本原因（本監査自身のfailure recordとして）: `CURRENT_STATE.md` §1/§4・D-001の「schedule triggerがまだ残っている（無効化はHuman Gate・停止判断が必要）」というprose記述に依拠し、**GitHub Actions stateを実測しなかった**。ファイル内のcron定義とworkflowのenabled/disabled stateは別のfactである。
+- 派生的発見（報告のみ・canonical変更はHuman Gate）: 上記canonical記述（D-001「Explicitly NOT decided」・CURRENT_STATE §4）は、Actions実測（8/7停止）に対して**2026-08-08の制定時点から既にstale**だった可能性が高い。再検証1と合わせ、「prose-onlyの状態規律は自明なNでも失敗する」というH-3のexecutable-contract論の3例目にあたる。
+
+上記2点以外の監査結論（所有4種への収束・not-a-moat裁定・Audience 10,000のvanity proxy裁定・World Signal回収路の欠落・Model/Sensor/Harness/Platform非所有方針）は本再検証で変更していない。
 
 ---
 
