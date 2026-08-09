@@ -194,21 +194,23 @@ def analyze(text: str, kind: str = "note") -> dict:
     para_sent = [len(sentences(p)) for p in paras]
 
     fails = []
-    if density < 32:
-        fails.append(f"C23 節接続密度 {density} < 32（人間帯 37〜48）")
-    if zero_rate > 0.40:
-        fails.append(f"C23 接0率 {zero_rate} > 0.40")
-    if front < 1:
-        fails.append("C23 ゲート2 従属節前置が0文")
     warns = []
-    if maxrun >= 3:
-        # C23 ゲート3 は第2トリガであり「ゲート2の書き換え1回で同時に解消する」と
-        # 規則本文が定めている。ゲート2が余裕で通っている場合は書き換える対象が
-        # 存在しないため FAIL にしない（2026-08-10 実文検証で確認）。
-        if front >= 2:
-            warns.append(f"C23 ゲート3 読点なし{maxrun}連続（ゲート2が前置{front}文で通過のため差し戻し）")
-        else:
-            fails.append(f"C23 ゲート3 読点なし{maxrun}連続")
+    # C23 ゲート1〜3 は 2026-08-10 に停止した。判定には使わず参考値として表示する。
+    # 根拠: direction/WRITING_SYSTEM_JA_FALSIFICATION_2026-08-10.md
+    #   - 閾値 32/0.40 は人間12文への当てはめであり、同一書き手の272文・7,073字の
+    #     自然文を弾く（接0率 0.52）。
+    #   - ゲート合格のnote記事2本をHumanが却下し、ゲート不合格のチャット文を採用した。
+    #     ゲート判定とHuman判定が逆相関している。
+    #   - ゲート3が読点を機械的に増やし、却下稿の読点は1文0.95個（自然文0.26個）に達した。
+    # 閾値の再設定では回復しない（測っている軸が「AI検出されないか」であり
+    # 「読む価値があるか」ではないため）。数値の観測自体は継続する。
+    info = [
+        f"[停止中] 節接続密度 {density}（旧閾値 32以上／Human自然文 33.5・実投稿 48.2）",
+        f"[停止中] 接0率 {zero_rate}（旧閾値 0.40以下／Human自然文 0.52）",
+        f"[停止中] 従属節前置 {front}文（旧閾値 1文以上／Human自然文の率 0.30）",
+        f"[停止中] 読点なし最長連続 {maxrun}（旧閾値 3未満）",
+        f"[参考] 読点/文 {round(sum(s.count('、') for s in sents) / len(sents), 2)}（Human自然文 0.26）",
+    ]
     if tri:
         fails.append("C1 同一語尾3連続")
     if max_sent > lim["max_sentence"]:
@@ -250,6 +252,7 @@ def analyze(text: str, kind: str = "note") -> dict:
         "sentence_end_4": ends,
         "FAIL": fails,
         "WARN": warns,
+        "INFO_SUSPENDED": info,
         "PASS": not fails,
         "UNCHECKED": [
             "C15 鉤括弧が実発話か（代弁でないか）",
@@ -258,7 +261,10 @@ def analyze(text: str, kind: str = "note") -> dict:
             "C50 導入1文目の代弁",
             "事実の正確さ・盛りの有無",
         ],
-        "HUMAN_BAND": {"clause_density": "37.0〜48.2", "zero_conj_rate": "≦0.40"},
+        "HUMAN_BAND": "撤回（2026-08-10）。旧値は人間3サンプル・計12文への当てはめ。"
+        "同一書き手の272文・7,073字では 密度 33.5 / 接0率 0.52 であり、"
+        "旧帯 37.0〜48.2・接0率≦0.40 は自然文を弾く。"
+        "direction/WRITING_SYSTEM_JA_FALSIFICATION_2026-08-10.md を参照。",
     }
 
 
