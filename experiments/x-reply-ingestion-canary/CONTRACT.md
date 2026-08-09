@@ -2,7 +2,7 @@
 
 Status: **PROPOSED**（D-003 Decision 6。採択 = ヒロの本契約merge。実施 = merge後のヒロの明示Go（Human Gate）。本契約の存在は実施を約束しない）
 制定: 2026-08-09（D-003 UPPER-LAYER INTEGRATION）
-Experiment ID候補: E-011（`experiments/INDEX.md` への登録は実施Goと同時に行う）
+Experiment ID候補: E-012（draft PR #34がE-011をMD-2 Content Canaryとして先に採番提案済みのため衝突回避。確定採番は `experiments/INDEX.md` への登録時 = 実施Goと同時に行う）
 Major Desire接続: MD-2（inbound World Signal Intake）/ MD-1（Batch 1 outcome帰属の保全）/ MD-3（義務的Human Handoff削減の最初の実測点）
 関連evidence: Human Leverage Rederivation G-1・I（2番手候補）/ Ownership Audit F節（World Signal回収路の欠落）/ E-005（Grok x_search Sensor PASS）/ E-008（このharnessからX直接読取はHARNESS_BLOCKED）
 
