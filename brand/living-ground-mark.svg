@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 44.4" width="600" height="444" role="img" aria-label="Living Ground">
+  <title>Living Ground</title>
+  <g fill="#111111">
+    <rect x="0" y="0" width="60" height="10"/>
+    <rect x="0" y="17" width="60" height="10"/>
+    <path d="M0,34 H23.5 Q25,34 25,35.5 V42.9 Q25,44.4 23.5,44.4 H0 Z"/>
+    <path d="M60,34 H36.5 Q35,34 35,35.5 V42.9 Q35,44.4 36.5,44.4 H60 Z"/>
+  </g>
+</svg>
