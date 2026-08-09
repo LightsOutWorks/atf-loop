@@ -161,7 +161,8 @@
 Status: **LAYER2 ROADMAP HYPOTHESIS — evidence gates, not a calendar promise**  
 Created: **2026-08-05 JST**（Browser-Toy Route期）  
 Updated: **2026-08-08 JST**（D-001 Canonical Migration — route scope注記とCurrent Horizonsを追加。gate graph本体とcanonical blockは不変）  
-Updated: **2026-08-09 JST**（D-002 North Star REPLACE — §2のNorth Star文のみ差し替え。gate graph・canonical block不変）  
+Updated: **2026-08-09 JST**（D-002 North Star REPLACE — §2のNorth Star文のみ差し替え。gate graph・canonical block不変）
+Updated: **2026-08-09 JST**（D-003 Four-Audit Integration — §0 Current Horizonsの実測同期とNext Factory Evolution Theme追記のみ。gate graph・canonical block不変）  
 Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 
 この文書は、IOSを実装へ変換する長期ロードマップである。Layer1を追加・変更しない。各段階は日付ではなく、事前登録した証拠gateで進む。
@@ -170,17 +171,23 @@ Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 
 ---
 
-## 0. Current Horizons（2026-08-08）
+## 0. Current Horizons（2026-08-09更新 / D-003）
 
 North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CURRENT_STATE.md`。ここは「次に何を証明するか」だけを持つ。
 
-1. **Batch 1 Discovery Contact完了**（MD-1）: 残り13件をHUMAN_SHORTで送る（送信行為はHuman Gate）。20件のreply / genuine pain / continued conversation / pilot candidateを記録し、World Signalとして回収する。
+1. **Batch 1 World Signal回収**（MD-1）: 送信枠は消化済み（SENT 20 / VOID 3 / REACHABLE 17 — 正本 `experiments/batch-1/LEDGER.md`）。残る仕事はreply / reactionの回収・元Contactへの帰属・記録のみ。追加送信・候補準備は本Batchにない。
 2. **Reply学習の最小記録**: Contactごとの最小記録（source / cluster / freshness / message_style / reply / pain / pilot / payment）をrepo内へ機械可読で残す形式を、Batch 1の実データが揃った時点で最小実装する。巨大なschemaを先に作らない。
 3. **Pilot → Confirmed Revenue**（MD-1 Terminal Signal）: 返金・取消可能期間を経過した確定実収益1件。これが現在の最重要未証明区間である。
 4. **Distribution Asset**（MD-2）: Reality活動から自然に発生するInsightを、他人に価値がある場合だけPublic Content化する。SNS automation / Content Factoryは作らない。
-5. **月次Direction Review**: Major Desire Portfolioが最小十分集合かを再導出し、変更はD-recordへ。
+5. **Direction Review**: 発火点はBatch 1 signal回収クローズ / 初回Confirmed Revenue、月次はfallback（`DESIRES.md` §3 / D-003）。Major Desire Portfolioが最小十分集合かを再導出し、変更はD-recordへ。
 
-やらないこと（証拠が出るまで）: 新規M&Aシステム実装 / WebMCP常時Radar / SNS自動化 / 新gate体系の先行実装 / Premature Automation（反復がボトルネックとして観測されるまで、conversation → documented procedure → Skill → Hook → Automationの昇格をしない）。
+**Next Factory Evolution Theme（D-003）**:
+
+> **Realityとの接続を強くしつつ、ヒロをmessage-busから外す。**
+
+次のExperiment候補は **X World Signal / Reply Ingestion Canary**（contract: `experiments/x-reply-ingestion-canary/CONTRACT.md`）。一回限りのCanaryであり、成功しても即Automation化しない。常時監視システムの実装を約束しない。実施は契約merge後のヒロの明示Go（Human Gate）。
+
+やらないこと（証拠が出るまで）: 新規M&Aシステム実装 / WebMCP常時Radar / 常時Capability・Demand Radar / SNS自動化 / 返信前のProduct構築 / 新gate体系の先行実装 / Premature Automation（反復がボトルネックとして観測されるまで、conversation → documented procedure → Skill → Hook → Automationの昇格をしない）。
 
 ---
 
