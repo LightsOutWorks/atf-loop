@@ -21,7 +21,7 @@ Status: **DRAFT — 公開はHuman Gate**（identityの新規使用。ヒロが�
 | **X ヘッダー** | `brand/png/header-x-1500x500.png` | ⬜ **旧名 `LIGHTS OUT FACTORY` が残存。要差し替え** |
 | **note 表示名** | `Living Ground` | ✅ |
 | **note アイコン** | 黒地マーク | ✅ |
-| **note ID** | — | `UNKNOWN`（未確認。`note.com/◯◯` を確認して記録する） |
+| **note ID** | **`livinggroundjp`** → `https://note.com/livinggroundjp` | ✅ **確定（2026-08-10 Human報告）。Xハンドル `@livinggroundjp` と完全一致** |
 | **note 自己紹介** | §3.0 | ⬜ 空欄。要設定 |
 | **note ヘッダー** | `brand/png/header-note-1920x1006.png` | ⬜ 未設定 |
 | **note メール認証** | — | ✅ **完了（2026-08-10 Human-confirmed）。投稿可能な状態になった** |
@@ -282,6 +282,6 @@ Living Ground
 ## 7. 未確定
 
 - ~~ハンドル名~~ → **`@livinggroundjp` で確定**（2026-08-10）
-- **note ID** — `UNKNOWN`。harnessから note.com が観測できない（egress遮断）ため、ヒロの報告でのみ確定する
+- ~~note ID~~ → **`livinggroundjp` で確定**（2026-08-10）。Xハンドルと一致
 - **書体**（`brand/BRAND_SPEC.md` §5）。ヘッダーは文字なしで作成済みのため、プロフィール完成をブロックしない
 - **無料レビューの受付上限**（1件あたりの所要時間が未測定のため、実測1件目の後に決める。上限を書くなら実数で守る）
