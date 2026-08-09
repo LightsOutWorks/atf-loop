@@ -1,7 +1,7 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "340875820bb5f876ebd8b1858fe84fcd130815dd",
+  "base_sha": "97b6c63d6db3309601704a6ddfb01aa3b65b49ba",
   "gates": [
     {
       "id": "F0",
@@ -136,11 +136,11 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-09 22:30 JST**
+Observed at: **2026-08-09 23:13 JST**
 
 Default branch: `main`
 
-Base SHA: `340875820bb5f876ebd8b1858fe84fcd130815dd`（PR #43 merge後）
+Base SHA: `97b6c63d6db3309601704a6ddfb01aa3b65b49ba`（PR #45 merge後）
 
 Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC + 同日 D-004 Public Identity決定（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
@@ -156,7 +156,7 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 - Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。`factory.yml` ファイル内にはhistorical cron定義が残るが、GitHub Actions workflow `factory` 自体は **disabled_manually**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。**cron定義の残存とworkflow enabled stateは別のfact**であり、残存riskはre-enable（Human Gate）時のみ（§4）。
 - 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2。現在Phase = World Signal回収）。
 - 上位Direction統合はD-003（`DECISIONS.md`）。現在の律速は§7。
-- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**identityの新規使用はHuman Gateであり、note / X等での実使用は2026-08-09 22:30時点で未実施 = `UNKNOWN`**（repository外・Human操作）。
+- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**identityの新規使用はHuman Gateであり、note / X等での実使用は2026-08-09 23:13時点で未実施 = `UNKNOWN`**（repository外・Human操作）。
 - Confirmed terminal revenue = **JPY 0**（§5）。Factoryは「成功した」と表現してはならない。
 
 ---
@@ -208,12 +208,15 @@ Source: 2026-08-08 Current State Override および 2026-08-09 D-003 AMENDMENT�
 
 ## 6. Open PRs and Session Ownership（観測 2026-08-09）
 
-Open PRは以下の2件（いずれもdraft。GitHub API / git実測 2026-08-09 22:30 JST）:
+Open PRは以下の**1件のみ**（draft。GitHub API / git実測 2026-08-09 23:13 JST）:
 
 - **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。W laneはBrowser-Toy Route凍結に伴い事実上凍結（§8）。canonical fileと競合しない。
-- **PR #44**（`claude/el-function-handoff-938vet`）: 本セッションの成果。LLMO実行計画 / SALES OS（§12 自己分析→有償の接合部を含む）/ JPコンプラ・ブリーフ / E-012評価と3次改訂 / Desire→Reality 3層設計 / Desire Engine長期構造 / 自己分析プロトコル v1.0 / note記事draft 2本 / **brand一式（D-004）** / `OS.md` v1.2（Human Interface節）/ `CURRENT_STATE.md` 同期。**merge = Human Gate**。
 
-- **PR #43 = merge済み**（main `3408758`）: `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（8領域並列調査）がmainに着地。
+2026-08-09夜のmerge（いずれもヒロがmerge。実測確認済み）:
+
+- **PR #43 = merge済み**（main `3408758`）: `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（8領域並列調査）。
+- **PR #44 = merge済み**（main `e42763b`）: LLMO実行計画 / SALES OS（§12 自己分析→有償の接合部）/ JPコンプラ・ブリーフ / E-012評価と3次改訂 / Desire→Reality 3層設計 / Desire Engine長期構造 / **自己分析プロトコル v1.0**（Direction Card v2のL0–L6分離）/ note記事draft 2本 / **brand一式（D-004）** / `OS.md` v1.2（Human Interface — Operator Priors）/ **E-013 Day 1台帳**。
+- **PR #45 = merge済み**（main `97b6c63`）: `OS.md` HI-8（Humanの上位優先順位・**本業がFactoryより上**）/ `JOURNAL.md` 0008（視覚判定能力の追加。0001 TETHER LOCKと同根）。
 
 2026-08-09午前のヒロ裁定（実測確認済み）:
 
@@ -254,7 +257,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `340875820bb5f876ebd8b1858fe84fcd130815dd` |
+| default branch snapshot | `97b6c63d6db3309601704a6ddfb01aa3b65b49ba`（PR #43 / #44 / #45 merge済み） |
 | Public Identity決定（D-004） | `DECISIONS.md` D-004（本PR内）。アセットは `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**外部での実使用は未実施 = `UNKNOWN`** |
 | Web Marketing Intelligence | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（main。PR #43 merge済み 2026-08-09） |
 | Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |
