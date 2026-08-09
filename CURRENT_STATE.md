@@ -1,7 +1,7 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "0003e2ca3e9f5741202d73ca9c8e88c76c625670",
+  "base_sha": "4e690d3c15bb968597a58a53729e3f3d81b0f27b",
   "gates": [
     {
       "id": "F0",
@@ -140,7 +140,7 @@ Observed at: **2026-08-09 JST**
 
 Default branch: `main`
 
-Base SHA: `0003e2ca3e9f5741202d73ca9c8e88c76c625670`
+Base SHA: `4e690d3c15bb968597a58a53729e3f3d81b0f27b`
 
 Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
@@ -216,7 +216,7 @@ Open PRは以下の1件のみ（draft。GitHub API / git実測 2026-08-09午前�
 - **PR #34 = merge済み**（main `0003e2c`）: MD-2 Canaryのcontent候補・**C-1実投稿文と文体差分分析**がmainに着地。E-011の採番が確定（`experiments/INDEX.md`）。C-1公開はHuman Commit 2026-08-08（Human-reported）、X上の反応は引き続き `UNKNOWN`。
 - **PR #30 = merge無しでclose**（不採択。branch `claude/genome-factory-design-538h9e` に保存・reopen可逆）: Override以前のBrowser-Toy収益化Route提案。E-007はNO-GOへ（`experiments/INDEX.md`）。
 - Merge済み（2026-08-08〜09）: #32 / #33 / #35 / #36（D-001 / LEDGER / LEARNINGS）、#37（Human Leverage Rederivation）、#38（Ownership / Compounding Audit）、#39（D-002 North Star REPLACE）、#40（D-003 Four-Audit Integration）。
-- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary / E-011）= **waiting**（C-1のWorld Signal観測中。C-2/C-3は反応観測後に判断）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **SCHEDULED_NOT_YET_EXECUTED**（Human-confirmed / repo-unverified。§7）。
+- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary / E-011）= **active-observing**（C-1 2026-08-08・C-2 2026-08-09投稿済み。初のimpression実測: C-1 ≈20 imp/15h・reply 0 — reachほぼゼロが実測され、Encounter Queue reply→profile訪問を主動線とする仮説を観測対象に追加。§H参照）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **SCHEDULED_NOT_YET_EXECUTED**（Human-confirmed / repo-unverified。§7）。
 - 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration / Integration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
 
 ## 7. Structural Bottleneck / Current Operational Priority
@@ -249,7 +249,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `0003e2ca3e9f5741202d73ca9c8e88c76c625670` |
+| default branch snapshot | `4e690d3c15bb968597a58a53729e3f3d81b0f27b` |
 | Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |
 | Loop 1 Learning抽出 | `experiments/batch-1/LEARNINGS.md`（main上。訂正1含む） |
 | 4監査（D-003 Inputs） | D-002 record（`DECISIONS.md`）/ `direction/HUMAN_LEVERAGE_REDERIVATION_2026-08-08.md` / `ops/OWNERSHIP_AUDIT_2026-08-08.md` / Portfolio Rederivation（repo内artifactなし — 採択結論は2026-08-09 Task Contract経由 = D-003） |
