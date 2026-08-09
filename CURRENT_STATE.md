@@ -1,7 +1,7 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "4e690d3c15bb968597a58a53729e3f3d81b0f27b",
+  "base_sha": "340875820bb5f876ebd8b1858fe84fcd130815dd",
   "gates": [
     {
       "id": "F0",
@@ -136,13 +136,13 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-09 JST**
+Observed at: **2026-08-09 22:30 JST**
 
 Default branch: `main`
 
-Base SHA: `4e690d3c15bb968597a58a53729e3f3d81b0f27b`
+Base SHA: `340875820bb5f876ebd8b1858fe84fcd130815dd`（PR #43 merge後）
 
-Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
+Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC + 同日 D-004 Public Identity決定（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
 この文書は、Factoryが「今できること」と「まだできないこと」を区別するための現在地である。会話、予定、提案を実装済みの事実として書かない。確認できないことは `UNKNOWN` とする。文書の責務分担とSource of Truth Priorityは `OS.md` が持つ。
 
@@ -156,6 +156,7 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 - Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。`factory.yml` ファイル内にはhistorical cron定義が残るが、GitHub Actions workflow `factory` 自体は **disabled_manually**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。**cron定義の残存とworkflow enabled stateは別のfact**であり、残存riskはre-enable（Human Gate）時のみ（§4）。
 - 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2。現在Phase = World Signal回収）。
 - 上位Direction統合はD-003（`DECISIONS.md`）。現在の律速は§7。
+- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**identityの新規使用はHuman Gateであり、note / X等での実使用は2026-08-09 22:30時点で未実施 = `UNKNOWN`**（repository外・Human操作）。
 - Confirmed terminal revenue = **JPY 0**（§5）。Factoryは「成功した」と表現してはならない。
 
 ---
@@ -190,7 +191,7 @@ Default branch上の実装事実（前回観測から不変。詳細な運用実
 - SEED 001〜024が `works/` にあり、GitHub Pagesのカタログ（`index.html`）で公開済み。
 - seed-009 TETHER LOCKは既知のVerification Failureとして意図的に未修正で保存。
 - JOURNAL 0005 / 0007の訂正、Selection Record v2は未実装のまま（record debt。凍結中も債務として保持）。
-- Control plane: C0 provenance canary PASS（run 31075997147）、F3 precursor reader PRECURSOR（run 31088621095）。canonical blockのbase_shaは2026-08-09観測で `af26fd0` へ更新した（gate statusは新runがないため不変）。
+- Control plane: C0 provenance canary PASS（run 31075997147）、F3 precursor reader PRECURSOR（run 31088621095）。canonical blockのbase_shaは2026-08-09 22:30観測で `3408758` へ更新した（同日中に `af26fd0` → `4e690d3` → `3408758` と3回同期。**gate statusは新runがないためいずれの同期でも不変**）。
 - `eval.json` はseed-001〜009のみ・全て `world: null` のまま（歴史的証拠として保存）。
 
 ## 5. Economic / Budget State
@@ -206,9 +207,12 @@ Source: 2026-08-08 Current State Override および 2026-08-09 D-003 AMENDMENT�
 
 ## 6. Open PRs and Session Ownership（観測 2026-08-09）
 
-Open PRは以下の1件のみ（draft。GitHub API / git実測 2026-08-09午前）:
+Open PRは以下の2件（いずれもdraft。GitHub API / git実測 2026-08-09 22:30 JST）:
 
 - **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。W laneはBrowser-Toy Route凍結に伴い事実上凍結（§8）。canonical fileと競合しない。
+- **PR #44**（`claude/el-function-handoff-938vet`）: 本セッションの成果。LLMO実行計画 / SALES OS（§12 自己分析→有償の接合部を含む）/ JPコンプラ・ブリーフ / E-012評価と3次改訂 / Desire→Reality 3層設計 / Desire Engine長期構造 / 自己分析プロトコル v1.0 / note記事draft 2本 / **brand一式（D-004）** / `OS.md` v1.2（Human Interface節）/ `CURRENT_STATE.md` 同期。**merge = Human Gate**。
+
+- **PR #43 = merge済み**（main `3408758`）: `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（8領域並列調査）がmainに着地。
 
 2026-08-09午前のヒロ裁定（実測確認済み）:
 
@@ -231,7 +235,7 @@ Open PRは以下の1件のみ（draft。GitHub API / git実測 2026-08-09午前�
 
 > **世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。**
 
-- **Current approved experiment: Daily Encounter Queue Canary** — status **SCHEDULED_NOT_YET_EXECUTED**（2026-08-09 PR #40 FINAL REALITY SYNC・**Human-confirmed / repo-unverified** — 非公開Claude Codeセッション内のprivate session stateでありrepositoryから独立検証不能）。Humanが3-Day Canaryの実行を承認済みで、one-shot triggerが3本設定済み: **Day 1 = 2026-08-09 18:30 JST / Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST**。現時点でDay 1未実行。恒久recurring scheduleではなく、**Day 3後の自動継続なし**。仕様（Human裁定）: 3日間限定 / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery（非公開供給）/ **Human manual send（ヒロが候補を目視して手動送信。自動送信なし）** / Adaptive query learning。常時Radarではない。Budget capは§5。
+- **Current approved experiment: Daily Encounter Queue Canary** — status **DAY_1_SCHEDULED_TIME_ELAPSED / OUTCOME_UNKNOWN**（2026-08-09 22:30 JST観測）。Humanが3-Day Canaryの実行を承認済みで、one-shot triggerが3本設定済み: **Day 1 = 2026-08-09 18:30 JST / Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST**（設定自体が**Human-confirmed / repo-unverified** — 非公開Claude Codeセッション内のprivate session stateでありrepositoryから独立検証不能）。**Day 1の予定時刻は経過したが、①triggerが発火したか ②候補が生成・配信されたか ③候補の品質 ④ヒロが送信したか のいずれもrepositoryから検証不能 = `UNKNOWN`。Humanの報告があるまで実行済みと書いてはならない。** 恒久recurring scheduleではなく、**Day 3後の自動継続なし**。仕様（Human裁定）: 3日間限定 / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery（非公開供給）/ **Human manual send（ヒロが候補を目視して手動送信。自動送信なし）** / Adaptive query learning。常時Radarではない。Budget capは§5。
 - **X World Signal / Reply Ingestion Canary** — status **HOLD**（execution_authority = **NOT_GRANTED**）。理由（2026-08-09 Human裁定）: 実direct reply未発生でpositive ground truthがなく、outbound mappingしか検証できず情報価値が低い / ヒロはスマホのX通知を容易に確認できる / 現在は返信監視の自動化より良質な接点の増加が優先。**再評価trigger**: ①最初の実replyが1件以上発生した時 ②Humanの返信確認・転記負担が実測上のボトルネックになった時。budget = **UNAPPROVED**（旧案cap USD 3.00は現残高 ≈ USD 0.649で成立しない — §5）。起草済み契約fileは本PRから除外した（branch履歴 `9c1e9d7` 以前に残存。trigger発火時に再作成する）。「次にRealityへ問う1件」ではない。
 
 Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。
@@ -249,7 +253,9 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `4e690d3c15bb968597a58a53729e3f3d81b0f27b` |
+| default branch snapshot | `340875820bb5f876ebd8b1858fe84fcd130815dd` |
+| Public Identity決定（D-004） | `DECISIONS.md` D-004（本PR内）。アセットは `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**外部での実使用は未実施 = `UNKNOWN`** |
+| Web Marketing Intelligence | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（main。PR #43 merge済み 2026-08-09） |
 | Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |
 | Loop 1 Learning抽出 | `experiments/batch-1/LEARNINGS.md`（main上。訂正1含む） |
 | 4監査（D-003 Inputs） | D-002 record（`DECISIONS.md`）/ `direction/HUMAN_LEVERAGE_REDERIVATION_2026-08-08.md` / `ops/OWNERSHIP_AUDIT_2026-08-08.md` / Portfolio Rederivation（repo内artifactなし — 採択結論は2026-08-09 Task Contract経由 = D-003） |
