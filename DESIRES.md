@@ -1,6 +1,6 @@
 # DESIRES.md — North Star / Major Desire Portfolio
 
-制定: 2026-08-08（D-001）。§1 North Star改定: 2026-08-09（D-002）。本ファイルはNorth StarとMajor Desire Portfolioの正本である（Source of Truth Priority第3位。`OS.md` 参照）。
+制定: 2026-08-08（D-001）。§1 North Star改定: 2026-08-09（D-002）。§2〜§3明確化: 2026-08-09（D-003）。本ファイルはNorth StarとMajor Desire Portfolioの正本である（Source of Truth Priority第3位。`OS.md` 参照）。
 
 ---
 
@@ -18,7 +18,7 @@ North Starは原則1つ。RouteやProductはNorth Starではない。
 
 ## 2. Major Desire Portfolio（2026-08-08時点）
 
-Major Desireの本数は固定しない。現時点の有力な最小十分集合は3つ。
+Major Desireの本数は固定しない。現時点の有力な最小十分集合は3つ。この3本は定理ではなく**Current Hypothesis**であり、反証・統合・降格可能である（再審理条件は§3。D-003）。
 
 ### MD-1 — Economic Engine（現在最優先）
 
@@ -26,12 +26,14 @@ Major Desireの本数は固定しない。現時点の有力な最小十分集�
 
 - 確定実収益がまだ発生していないため、他Major Desireと競合した場合は原則MD-1を優先する。
 - Terminal World Signal: **返金・取消可能期間を経過した確定実収益**。
+- Bootstrap Phase読み（D-003）: 現在PhaseのMD-1は巨大なEconomic System構築を意味しない。最初の焦点は**1本のPaid Value LoopをRealityで証明すること**。Confirmed Revenue > 0が現在Phaseの最初のTerminal Reality Signal（§1のD-002解釈と同一）。
 
-### MD-2 — Distribution Engine
+### MD-2 — Distribution / Encounter Engine
 
 > 広告費や毎回のcold outreachだけに依存せず、Genuine Needを持つ人とのEncounterが継続的に発生するDistribution Assetを構築する。
 
-- X等でのRelevant Audience 10,000人は一つのKPI候補。ただしFollower数そのものをTerminal Goalにしない。
+- MD-2は**outbound Demand Sensing**（Large-N需要探索・Discovery Contact候補生成）と**inbound World Signal Intake**（reply / reaction / inbound needの受信・帰属・Humanへの必要最小Handoff）の**両方を所有する**（D-003）。Encounterは双方向であり、受信経路の欠如はMD-2の欠陥として扱う。
+- X等でのRelevant Audience 10,000人は一つのKPI候補。ただしFollower数そのものをTerminal Goalにしない。（D-003: Audience 10,000は現時点ではAssetではなく**Proxy**。Inbound Need / Trust / Revenueへ接続して初めて資産性を持つ。）
 - 観測対象: relevant followers / genuine replies / inbound conversations / inbound needs / pilot leads / confirmed revenue。
 - FactoryのReality活動（Discovery / Experiment / Failure / Insight）を、他人に価値がある場合だけPublic Contentへ変換する。独立したSNS事業ではなく、MD-1とMD-3を強化するEngine。
 
@@ -40,7 +42,8 @@ Major Desireの本数は固定しない。現時点の有力な最小十分集�
 > Human Desireから最適なCapability / Routeを選び、Realityまで実行するFactory自体の速度・確度・Human Interventionを継続改善する。
 
 - Factory改善を自己目的化しない。MD-1またはMD-2のRealityで観測された摩擦を解消する改善を優先する。
-- World Signal例: Human Handoff逓減 / Execution成功 / Reality適合。
+- MD-3が削減するのは**義務的・機械的Human Handoff**（Human-as-message-bus / lane間の手動コピペ / AI出力の機械的転記 / 重複監視 / AIができる情報収集）であり、HumanのDesire / Taste / Boundary / Direction / 独立したReality Contactは削減対象ではない（D-003。Human Positionの正本はD-003 Decision 4）。Handoff integrity（Human経由で入る現実観測の無損失記録）もMD-3が所有する。
+- 観測例: Human Handoff逓減 / Execution成功 / Reality適合。ただしHandoff逓減等はMD-1 / MD-2の実Reality loop上で計測された場合のみ前進として数える。internal shaping signal単独でMD-3の前進を宣言しない（§1のD-002解釈）。
 
 ---
 
@@ -56,7 +59,13 @@ Major Desire数は固定しない。「3」という数字自体をConstraint化
 4. 下位Goalとして置くと重要な目的が埋没する
 5. Human Attentionを増やす以上の価値がある
 
-統合可能なら統合する。月次Direction Review等で「現在のMajor Desire PortfolioはNorth Starに対する最小十分集合か？」を再導出する。変更はD-record（`DECISIONS.md`）として残す。
+統合可能なら統合する。「現在のMajor Desire PortfolioはNorth Starに対する最小十分集合か？」の再導出（Direction Review）の発火点は（D-003）:
+
+1. **Batch 1（E-006）のWorld Signal回収クローズ**
+2. **初回Confirmed Revenue発生**
+3. 月次は上記が発火しない場合の**fallback**
+
+再審理は現職Major Desireにも対称的に適用する: 昇格5条件を満たさなくなったMDは、現職であることを維持理由とせず、統合・降格・退役の候補として再審理する。変更はD-record（`DECISIONS.md`）として残す。
 
 ---
 

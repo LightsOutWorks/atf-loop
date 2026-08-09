@@ -1,7 +1,7 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "5e31133e09c8c6dfb0bf4bb3298441fda7a4c103",
+  "base_sha": "af26fd0d87e48ee34d888fd5bcbcbbce93f64380",
   "gates": [
     {
       "id": "F0",
@@ -136,13 +136,13 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-08 JST**
+Observed at: **2026-08-09 JST**
 
 Default branch: `main`
 
-Base SHA: `5e31133e09c8c6dfb0bf4bb3298441fda7a4c103`
+Base SHA: `af26fd0d87e48ee34d888fd5bcbcbbce93f64380`
 
-Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs cited in the canonical block, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override（会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
+Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
 この文書は、Factoryが「今できること」と「まだできないこと」を区別するための現在地である。会話、予定、提案を実装済みの事実として書かない。確認できないことは `UNKNOWN` とする。文書の責務分担とSource of Truth Priorityは `OS.md` が持つ。
 
@@ -153,22 +153,23 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 2026-08-08、D-001（`DECISIONS.md`）により本リポジトリはCanonical Migrationを実施した。
 
 - 本リポジトリは**ゲーム工場ではない**。現在のMissionは `OS.md` 冒頭のCurrent Identity、North Star / Major Desireは `DESIRES.md` を参照。
-- Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。ただし後述§4のとおり、mainの `factory.yml` には毎週土曜10:00 JSTのschedule triggerが**まだ残っている**（無効化はHuman Gate）。
-- 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2）。
+- Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。`factory.yml` ファイル内にはhistorical cron定義が残るが、GitHub Actions workflow `factory` 自体は **disabled_manually**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。**cron定義の残存とworkflow enabled stateは別のfact**であり、残存riskはre-enable（Human Gate）時のみ（§4）。
+- 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2。現在Phase = World Signal回収）。
+- 上位Direction統合はD-003（`DECISIONS.md`）。現在の律速は§7。
 - Confirmed terminal revenue = **JPY 0**（§5）。Factoryは「成功した」と表現してはならない。
 
 ---
 
-## 2. Active Experiment — Batch 1 Discovery Contact（MD-1接続）
+## 2. Active Experiment — Batch 1 Discovery Contact（E-006 / MD-1接続）
 
-Source: 2026-08-08 Current State Override（Human-reported。default branch上の機械記録はまだない）。
+Source: `experiments/batch-1/LEDGER.md`（Contact台帳・正本。2026-08-08 Human-confirmed syncとしてmain上に機械記録あり）。
 
-- Target: **20 Genuine Discovery Contacts**
-- Sent: **7**（C01 / C04 / C02 = Hacker News、C14 = Bluesky、C09 = Software Recommendations Stack Exchange、LN-58 / LN-62 = X）。現在REPLY_WAIT。
-- 残り13件を準備中。数を満たすために品質を落とさない。同時に、過剰KILLでReality試行数が不足することも失敗と扱う。
-- Message style: 既送信7件はBaselineとして保持（事後的に書き換えない）。今後の13件は **HUMAN_SHORT** をDefaultとする（1〜3文・質問1つ・売らない・自己説明過剰なし。詳細ポリシーは実行契約側）。
+- Target: **20 Genuine Discovery Contacts** — **送信枠は消化済み**。
+- Funnel実測（LEDGER正本）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ SENT_BUT_NOT_PUBLICLY_VISIBLE **3**（HN。VOID — Delivery Layer failure・分母外）/ REACHABLE **17** / REPLY_WAIT **17** / REPLY **0**（2026-08-08 last repo sync。2026-08-09 D-003 AMENDMENTでHumanが「実direct reply未発生」を確認。以後の変化はHuman-confirmedがない限りrepositoryから確認不能 = `UNKNOWN`）。
+- 現在Phase: **World Signal回収**。送信・候補準備の仕事は本Batchに残っていない。Lane Aの定期self check-inは2026-08-08に停止済み（X読取がharnessから不可のため。Humanがreply / reactionを共有した時のみ再起動 — LEDGER Conversation Log）。
+- Message style実測: 初期7件（C01 / C02 / C04 / C09 / C14 / LN-58 / LN-62）= BASELINE確定。X 13件 = `UNKNOWN`（HUMAN_SHORT Defaultの期間だが実文面が未回収 — LEDGER凡例）。cluster / 文面 / freshness_at_send は大半が `UNKNOWN`（Demandセッション成果物の非着地による恒久喪失）。
 - DiscoveryとSalesを分離する。初回Discoveryの目的は「相手が自分の現実についてもう一言話したくなる状態を作る」こと。
-- Freshness ranking（Hard Boundaryではない）: <24h HIGH / <48h PRIORITY / <72h acceptable / >72h は継続Pain等の追加Evidence要。
+- Freshness ranking（Hard Boundaryではない）: <24h HIGH / <48h PRIORITY / <72h acceptable / >72h は継続Pain等の追加Evidence要。次Batch向けの未検証prior（`experiments/batch-1/LEARNINGS.md` Rejected Generalizations 2）。
 - Contactごとの最小記録項目: source / cluster / freshness / message_style / reply / genuine pain confirmed / continued conversation / pilot candidate / payment / confirmed revenue。学習主体はGrokではなくFactory。
 
 ## 3. Proven Sensor Capability — Large-N Demand Intelligence
@@ -185,34 +186,52 @@ Source: 2026-08-08実行のCanary（Human-reported + 実行セッション記録
 
 Default branch上の実装事実（前回観測から不変。詳細な運用実績・既知欠陥は git history上の本ファイル旧版 blob `a92c9643cea1fcec8cca9d113e55f872b1a4f452` および `JOURNAL.md` 参照）:
 
-- `factory.yml`（blob `49314d2d531704485064fa1995922f19b8418870`）: 生成→smoke→interaction smoke→Codex gate→公開の無人ループ。**schedule trigger（毎週土曜01:00 UTC）が現存**。停止はHuman Gate（Actions UIでのworkflow disable、またはPR）。
+- `factory.yml`（blob `49314d2d531704485064fa1995922f19b8418870`）: 生成→smoke→interaction smoke→Codex gate→公開の無人ループ。ファイル内にhistorical cron定義（`0 1 * * 6` = 毎週土曜01:00 UTC）が残るが、workflow `factory`（id 322145639）は **disabled_manually**（2026-08-07 10:39 JST。2026-08-09 Actions API read-only実測）であり運用scheduleは停止済み。再enableはHuman Gate。
 - SEED 001〜024が `works/` にあり、GitHub Pagesのカタログ（`index.html`）で公開済み。
 - seed-009 TETHER LOCKは既知のVerification Failureとして意図的に未修正で保存。
 - JOURNAL 0005 / 0007の訂正、Selection Record v2は未実装のまま（record debt。凍結中も債務として保持）。
-- Control plane: C0 provenance canary PASS（run 31075997147）、F3 precursor reader PRECURSOR（run 31088621095）。canonical blockのbase_shaは本観測で `5e31133` へ更新した。
+- Control plane: C0 provenance canary PASS（run 31075997147）、F3 precursor reader PRECURSOR（run 31088621095）。canonical blockのbase_shaは2026-08-09観測で `af26fd0` へ更新した（gate statusは新runがないため不変）。
 - `eval.json` はseed-001〜009のみ・全て `world: null` のまま（歴史的証拠として保存）。
 
 ## 5. Economic / Budget State
 
-Source: 2026-08-08 Current State Override（Human-reported）。
+Source: 2026-08-08 Current State Override および 2026-08-09 D-003 AMENDMENT（いずれもHuman-reported / Human-confirmed）。
 
 - **Confirmed terminal revenue = JPY 0**。Need→Paid Value→Confirmed Revenueは未証明。
 - 証明済みはここまで: Public Demandの機械探索 / Grok x_searchのSensor機能 / Contact候補生成 / HumanのReality接触。
 - Factory monthly hard cap: JPY 50,000（`CONSTRAINTS.md` Part I）。
-- Claude Max 20x契約中。ChatGPTは2026-08-13から$20 plan予定。xAI Prototype $5購入済み・Auto top-up OFF。
+- Claude Max 20x契約中。ChatGPTは2026-08-13から$20 plan予定。
+- **xAI credit実測**（2026-08-09 Human-confirmed）: initial **USD 5.00** / cumulative consumption **USD 4.351** / remaining **≈ USD 0.649**。Auto top-up **OFF**。**追加購入は未承認（forbidden）**。
+- **Daily Encounter Queue Canaryの暫定Budget**（2026-08-09 Human裁定）: daily hard cap **USD 0.18** / 3-day cumulative hard cap **USD 0.50** / reserve最低 **≈ USD 0.10** / 追加top-up禁止。
 
-## 6. Open PRs and Session Ownership（観測 2026-08-08）
+## 6. Open PRs and Session Ownership（観測 2026-08-09）
 
-- **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。canonical fileと競合しない。
+Open PRは以下の4件（すべてdraft。GitHub API実測）:
+
+- **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。W laneはBrowser-Toy Route凍結に伴い事実上凍結（§8）。canonical fileと競合しない。
 - **PR #30**（`GENOME_FACTORY.md` / `RESEARCH.md` 追加のみ）: 2026-08-07作成のRoute提案（Browser-Toy収益化 / itch.io）。**2026-08-08 Override以前の提案であり、現Mission優先順位と競合し得る。処置はヒロ裁可。** canonical fileへの変更は含まない。
-- **PR #31**（`ops/ENV_PREFLIGHT_2026-08-08.md` 追加のみ）: 環境preflight実測。Sensor到達性（Bluesky検索・Reddit APIはHARNESS_BLOCKED等）とExecution Readinessの証拠。
-- 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
+- **PR #31**（`ops/ENV_PREFLIGHT_2026-08-08.md` 追加のみ）: 環境preflight実測（E-008）。Sensor到達性（Bluesky検索・Reddit APIはHARNESS_BLOCKED等）とExecution Readinessの証拠。main外にのみ存在するdraft-PR滞留evidence（Ownership Audit A-5）。
+- **PR #34**（`experiments/md2-distribution/*` 追加のみ）: MD-2 Distribution Engine Canaryのcontent候補（GO上位3）。投稿はHuman Gate。**うちC-1候補（TETHER LOCK事故post）はPUBLISHED（Human Commit 2026-08-08 — Human-reported）。公開記録・実投稿文の差分分析はdraft PR #34 branch上にのみ存在し、main上にはない（draft-PR滞留evidence — Ownership Audit A-5と同型）。X上の反応はrepositoryから確認不能 = `UNKNOWN`。** 同branchはE-011（MD-2 Content Canary）のID採番も提案済み。
+- Merge済み（2026-08-08〜09）: #32 / #33 / #35 / #36（D-001 / LEDGER / LEARNINGS）、#37（Human Leverage Rederivation）、#38（Ownership / Compounding Audit）、#39（D-002 North Star REPLACE）。
+- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary）= **waiting**（PR #34 Human Gate待ち）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **SCHEDULED_NOT_YET_EXECUTED**（Human-confirmed / repo-unverified。§7）。
+- 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration / Integration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
 
-## 7. Current Bottleneck
+## 7. Structural Bottleneck / Current Operational Priority
 
-**Need→Paid Value→Confirmed Revenueが未証明であること。** 具体的な最小の次の一歩は、Batch 1の完了（残り13 contacts、HUMAN_SHORT）とreply/World Signalの回収・記録である。
+最重要未証明区間は不変: **Need→Paid Value→Confirmed Revenue**（MD-1 Terminal Signal。現在JPY 0）。
 
-Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。新Routeでの律速は証拠不足でUNKNOWN。
+**Structural Bottleneck**（長期の構造欠落。独立した複数監査 — D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit — の収束点。D-003）:
+
+> **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
+
+**Current Operational Priority**（現在Bootstrap Phaseの最優先。D-003 AMENDMENT 2026-08-09 — 構造的な律速と現在の最優先実験は同一である必要はない: D-003 Decision 7）:
+
+> **世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。**
+
+- **Current approved experiment: Daily Encounter Queue Canary** — status **SCHEDULED_NOT_YET_EXECUTED**（2026-08-09 PR #40 FINAL REALITY SYNC・**Human-confirmed / repo-unverified** — 非公開Claude Codeセッション内のprivate session stateでありrepositoryから独立検証不能）。Humanが3-Day Canaryの実行を承認済みで、one-shot triggerが3本設定済み: **Day 1 = 2026-08-09 18:30 JST / Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST**。現時点でDay 1未実行。恒久recurring scheduleではなく、**Day 3後の自動継続なし**。仕様（Human裁定）: 3日間限定 / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery（非公開供給）/ **Human manual send（ヒロが候補を目視して手動送信。自動送信なし）** / Adaptive query learning。常時Radarではない。Budget capは§5。
+- **X World Signal / Reply Ingestion Canary** — status **HOLD**（execution_authority = **NOT_GRANTED**）。理由（2026-08-09 Human裁定）: 実direct reply未発生でpositive ground truthがなく、outbound mappingしか検証できず情報価値が低い / ヒロはスマホのX通知を容易に確認できる / 現在は返信監視の自動化より良質な接点の増加が優先。**再評価trigger**: ①最初の実replyが1件以上発生した時 ②Humanの返信確認・転記負担が実測上のボトルネックになった時。budget = **UNAPPROVED**（旧案cap USD 3.00は現残高 ≈ USD 0.649で成立しない — §5）。起草済み契約fileは本PRから除外した（branch履歴 `9c1e9d7` 以前に残存。trigger発火時に再作成する）。「次にRealityへ問う1件」ではない。
+
+Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。
 
 ## 8. Routing Facts
 
@@ -227,16 +246,24 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `5e31133e09c8c6dfb0bf4bb3298441fda7a4c103` |
-| canonical `OS.md`（v1.1へ本PRでamend） | 本PR参照（旧: blob `a6e207202f78a00029b75f33a82f7005e671d429`） |
+| default branch snapshot | `af26fd0d87e48ee34d888fd5bcbcbbce93f64380` |
+| Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |
+| Loop 1 Learning抽出 | `experiments/batch-1/LEARNINGS.md`（main上。訂正1含む） |
+| 4監査（D-003 Inputs） | D-002 record（`DECISIONS.md`）/ `direction/HUMAN_LEVERAGE_REDERIVATION_2026-08-08.md` / `ops/OWNERSHIP_AUDIT_2026-08-08.md` / Portfolio Rederivation（repo内artifactなし — 採択結論は2026-08-09 Task Contract経由 = D-003） |
+| factory workflow state | workflow id 322145639 = `disabled_manually`（updated 2026-08-07 10:39 JST。2026-08-09 Actions API read-only実測） |
+| `.github/workflows/factory.yml`（historical cron定義） | blob `49314d2d531704485064fa1995922f19b8418870` |
 | 旧CURRENT_STATE本文（Browser-Toy期詳細） | blob `a92c9643cea1fcec8cca9d113e55f872b1a4f452` ほかgit history |
-| `.github/workflows/factory.yml` | blob `49314d2d531704485064fa1995922f19b8418870` |
 | `index.html` catalog | blob `babcae3a7308fe3042af3f4b8ff967c69896aba8` |
 | `JOURNAL.md` | blob `4d6327a9271d25b67c9faf7c48237e5e17a6ec8f` |
 | C0 canary run | run 31075997147; artifact 8957508638 |
 | F3 precursor reader run | run 31088621095; artifact 8962454105 |
 | W0 precursor (HOLD) | draft PR #24 head `0aa39664404aabf9214f8da96401e325b0d12308` |
-| 2026-08-08 Demand Intelligence Canary | Human-reported（`experiments/INDEX.md` 参照。repo内raw artifactなし） |
-| 2026-08-08 Environment Preflight | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
+| 2026-08-08 Demand Intelligence Canary（E-005） | Human-reported（`experiments/INDEX.md` 参照。repo内raw artifactなし） |
+| 2026-08-08 Environment Preflight（E-008） | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
+| MD-2 Content Canary候補 | draft PR #34（C-1公開はHuman-reported・repositoryから検証不能 = `UNKNOWN`） |
+| xAI credit実測 | Human-confirmed 2026-08-09（D-003 AMENDMENT）: consumed USD 4.351 / remaining ≈ USD 0.649 |
+| Daily Encounter Queue trigger設定（one-shot×3） | Human-confirmed 2026-08-09（PR #40 FINAL REALITY SYNC）。private session state・**repo-unverified** |
+
+`experiments/INDEX.md` のstale 2行（E-006「Sent 7」/ E-001「⚠ schedule trigger残存」）は、2026-08-09 PR #40 FINAL REALITY SYNCの裁定に基づき本PR内で修正済み（main上の確定事実 — LEDGER正本・Actions実測 — のみによる機械的修正。open PR 4本のいずれもINDEX.mdを変更しないことをbranch diff実測で確認済み・競合なし）。
 
 When this file is updated, `Observed at`, `Base SHA`, affected evidence revisions, bottleneck, and the routing facts in section 8 must be updated together.
