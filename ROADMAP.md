@@ -161,6 +161,7 @@
 Status: **LAYER2 ROADMAP HYPOTHESIS — evidence gates, not a calendar promise**  
 Created: **2026-08-05 JST**（Browser-Toy Route期）  
 Updated: **2026-08-08 JST**（D-001 Canonical Migration — route scope注記とCurrent Horizonsを追加。gate graph本体とcanonical blockは不変）  
+Updated: **2026-08-09 JST**（D-002 North Star REPLACE — §2のNorth Star文のみ差し替え。gate graph・canonical block不変）  
 Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 
 この文書は、IOSを実装へ変換する長期ロードマップである。Layer1を追加・変更しない。各段階は日付ではなく、事前登録した証拠gateで進む。
@@ -211,7 +212,7 @@ Factoryは3つの軸で進化する。
 
 Factoryは高価な基盤モデルや汎用部品を自前で再開発しない。世界中の研究所・企業・OSSが加速させる部品を候補として観測し、能力単位で比較し、ATF自身の仕事で勝った構成だけを採用する。
 
-**North Star: 世界で進化する外部知能と機構をHuman Desireへ変換する速度と確度そのものを自己改善し続ける、個人所有の自律進化機関。**
+**North Star: Human Desireをその時々の最良の手段でRealityへ変換し、その変換能力自体をWorld Signalで改善し続ける、個人所有の機関。**
 
 （North StarとMajor Desire Portfolioの正本は2026-08-08より `DESIRES.md`。上のNorth Star文はDESIRES.mdと同一であり、本節のその他の記述を含め乖離した場合はDESIRES.mdを優先する。）
 

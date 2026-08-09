@@ -1,14 +1,16 @@
 # DESIRES.md — North Star / Major Desire Portfolio
 
-制定: 2026-08-08（D-001）。本ファイルはNorth StarとMajor Desire Portfolioの正本である（Source of Truth Priority第3位。`OS.md` 参照）。
+制定: 2026-08-08（D-001）。§1 North Star改定: 2026-08-09（D-002）。本ファイルはNorth StarとMajor Desire Portfolioの正本である（Source of Truth Priority第3位。`OS.md` 参照）。
 
 ---
 
 ## 1. North Star
 
-> **世界で進化する外部知能と機構をHuman Desireへ変換する速度と確度そのものを自己改善し続ける、個人所有の自律進化機関。**
+> **Human Desireをその時々の最良の手段でRealityへ変換し、その変換能力自体をWorld Signalで改善し続ける、個人所有の機関。**
 
 North Starは原則1つ。RouteやProductはNorth Starではない。
+
+（D-002解釈: ここでの「World Signal」はRealityで発生する外部観測可能な結果を指す（§5の階層参照）。Gate PASS / agent数 / cycle time / token効率等のinternal shaping signalはWorld Signalではなく、それらのみでNorth Star前進を宣言してはならない。Bootstrap Phaseの最初のTerminal Reality SignalはConfirmed Revenue > 0（MD-1 Terminal。現在未達）。これは永久的達成条件ではなく最初の通過点であり、非経済的Human DesireをNorth Starから除外しない。）
 
 （この文は `ROADMAP.md` §2のNorth Starと同一である。矛盾が生じた場合は本ファイルを優先し、矛盾をD-recordに記録する。）
 
