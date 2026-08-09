@@ -24,7 +24,7 @@ Status: **DRAFT — 公開はHuman Gate**（identityの新規使用。ヒロが�
 | **note ID** | — | `UNKNOWN`（未確認。`note.com/◯◯` を確認して記録する） |
 | **note 自己紹介** | §3.0 | ⬜ 空欄。要設定 |
 | **note ヘッダー** | `brand/png/header-note-1920x1006.png` | ⬜ 未設定 |
-| **note メール認証** | — | ⬜ **未完了。投稿にはこれが必要** |
+| **note メール認証** | — | ✅ **完了（2026-08-10 Human-confirmed）。投稿可能な状態になった** |
 | **Google アカウント** | `lightsoutworks@gmail.com`（表示名 `Living Ground` / 黒地アイコン） | ✅ 新規作成は電話番号上限で不可。既存を改名して対応 |
 | **GitHub** | org `LightsOutWorks` 不変更 | D-004どおり。表示名のみ Living Ground へ変更可（未実施） |
 
