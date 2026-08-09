@@ -142,7 +142,7 @@ Default branch: `main`
 
 Base SHA: `af26fd0d87e48ee34d888fd5bcbcbbce93f64380`
 
-Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION。いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
+Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC。いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
 この文書は、Factoryが「今できること」と「まだできないこと」を区別するための現在地である。会話、予定、提案を実装済みの事実として書かない。確認できないことは `UNKNOWN` とする。文書の責務分担とSource of Truth Priorityは `OS.md` が持つ。
 
@@ -165,7 +165,7 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 Source: `experiments/batch-1/LEDGER.md`（Contact台帳・正本。2026-08-08 Human-confirmed syncとしてmain上に機械記録あり）。
 
 - Target: **20 Genuine Discovery Contacts** — **送信枠は消化済み**。
-- Funnel実測（LEDGER正本）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ SENT_BUT_NOT_PUBLICLY_VISIBLE **3**（HN。VOID — Delivery Layer failure・分母外）/ REACHABLE **17** / REPLY_WAIT **17** / REPLY **0**（last sync時点。以後の返信状態はrepositoryから確認不能 = `UNKNOWN`）。
+- Funnel実測（LEDGER正本）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ SENT_BUT_NOT_PUBLICLY_VISIBLE **3**（HN。VOID — Delivery Layer failure・分母外）/ REACHABLE **17** / REPLY_WAIT **17** / REPLY **0**（2026-08-08 last repo sync。2026-08-09 D-003 AMENDMENTでHumanが「実direct reply未発生」を確認。以後の変化はHuman-confirmedがない限りrepositoryから確認不能 = `UNKNOWN`）。
 - 現在Phase: **World Signal回収**。送信・候補準備の仕事は本Batchに残っていない。Lane Aの定期self check-inは2026-08-08に停止済み（X読取がharnessから不可のため。Humanがreply / reactionを共有した時のみ再起動 — LEDGER Conversation Log）。
 - Message style実測: 初期7件（C01 / C02 / C04 / C09 / C14 / LN-58 / LN-62）= BASELINE確定。X 13件 = `UNKNOWN`（HUMAN_SHORT Defaultの期間だが実文面が未回収 — LEDGER凡例）。cluster / 文面 / freshness_at_send は大半が `UNKNOWN`（Demandセッション成果物の非着地による恒久喪失）。
 - DiscoveryとSalesを分離する。初回Discoveryの目的は「相手が自分の現実についてもう一言話したくなる状態を作る」こと。
@@ -195,12 +195,14 @@ Default branch上の実装事実（前回観測から不変。詳細な運用実
 
 ## 5. Economic / Budget State
 
-Source: 2026-08-08 Current State Override（Human-reported）。
+Source: 2026-08-08 Current State Override および 2026-08-09 D-003 AMENDMENT（いずれもHuman-reported / Human-confirmed）。
 
 - **Confirmed terminal revenue = JPY 0**。Need→Paid Value→Confirmed Revenueは未証明。
 - 証明済みはここまで: Public Demandの機械探索 / Grok x_searchのSensor機能 / Contact候補生成 / HumanのReality接触。
 - Factory monthly hard cap: JPY 50,000（`CONSTRAINTS.md` Part I）。
-- Claude Max 20x契約中。ChatGPTは2026-08-13から$20 plan予定。xAI Prototype $5購入済み・Auto top-up OFF。
+- Claude Max 20x契約中。ChatGPTは2026-08-13から$20 plan予定。
+- **xAI credit実測**（2026-08-09 Human-confirmed）: initial **USD 5.00** / cumulative consumption **USD 4.351** / remaining **≈ USD 0.649**。Auto top-up **OFF**。**追加購入は未承認（forbidden）**。
+- **Daily Encounter Queue Canaryの暫定Budget**（2026-08-09 Human裁定）: daily hard cap **USD 0.18** / 3-day cumulative hard cap **USD 0.50** / reserve最低 **≈ USD 0.10** / 追加top-up禁止。
 
 ## 6. Open PRs and Session Ownership（観測 2026-08-09）
 
@@ -211,18 +213,23 @@ Open PRは以下の4件（すべてdraft。GitHub API実測）:
 - **PR #31**（`ops/ENV_PREFLIGHT_2026-08-08.md` 追加のみ）: 環境preflight実測（E-008）。Sensor到達性（Bluesky検索・Reddit APIはHARNESS_BLOCKED等）とExecution Readinessの証拠。main外にのみ存在するdraft-PR滞留evidence（Ownership Audit A-5）。
 - **PR #34**（`experiments/md2-distribution/*` 追加のみ）: MD-2 Distribution Engine Canaryのcontent候補（GO上位3）。投稿はHuman Gate。**うちC-1候補（TETHER LOCK事故post）はPUBLISHED（Human Commit 2026-08-08 — Human-reported）。公開記録・実投稿文の差分分析はdraft PR #34 branch上にのみ存在し、main上にはない（draft-PR滞留evidence — Ownership Audit A-5と同型）。X上の反応はrepositoryから確認不能 = `UNKNOWN`。** 同branchはE-011（MD-2 Content Canary）のID採番も提案済み。
 - Merge済み（2026-08-08〜09）: #32 / #33 / #35 / #36（D-001 / LEDGER / LEARNINGS）、#37（Human Leverage Rederivation）、#38（Ownership / Compounding Audit）、#39（D-002 North Star REPLACE）。
-- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary）= **waiting**（PR #34 Human Gate待ち）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）。
+- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary）= **waiting**（PR #34 Human Gate待ち）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **APPROVED_NOT_STARTED**（§7）。
 - 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration / Integration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
 
-## 7. Current Bottleneck
+## 7. Structural Bottleneck / Current Operational Priority
 
 最重要未証明区間は不変: **Need→Paid Value→Confirmed Revenue**（MD-1 Terminal Signal。現在JPY 0）。
 
-その内側の現在の律速は、独立した複数監査（D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit）が以下へ収束した（D-003）:
+**Structural Bottleneck**（長期の構造欠落。独立した複数監査 — D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit — の収束点。D-003）:
 
-> **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路の欠如。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
+> **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
 
-次にRealityへ問う1件は **X World Signal / Reply Ingestion Canary**（`experiments/x-reply-ingestion-canary/CONTRACT.md`。一回限りのCanary。実施は本契約merge後のヒロの明示Go = Human Gate。常時監視システムは約束しない）。
+**Current Operational Priority**（現在Bootstrap Phaseの最優先。D-003 AMENDMENT 2026-08-09 — 構造的な律速と現在の最優先実験は同一である必要はない: D-003 Decision 7）:
+
+> **世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。**
+
+- **Current approved experiment: Daily Encounter Queue Canary** — status **APPROVED_NOT_STARTED**（2026-08-09 Human裁定。repo内・全remote branchに開始証跡がないためACTIVEとしない）。仕様（Human裁定）: **3日間限定** / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery / Human manual send / Adaptive query learning / **自動送信なし**。3日間限定のCanaryであり常時Radarではない。Budget capは§5。
+- **X World Signal / Reply Ingestion Canary** — status **HOLD**（execution_authority = **NOT_GRANTED**）。理由（2026-08-09 Human裁定）: 実direct reply未発生でpositive ground truthがなく、outbound mappingしか検証できず情報価値が低い / ヒロはスマホのX通知を容易に確認できる / 現在は返信監視の自動化より良質な接点の増加が優先。**再評価trigger**: ①最初の実replyが1件以上発生した時 ②Humanの返信確認・転記負担が実測上のボトルネックになった時。budget = **UNAPPROVED**（旧案cap USD 3.00は現残高 ≈ USD 0.649で成立しない — §5）。起草済み契約fileは本PRから除外した（branch履歴 `9c1e9d7` 以前に残存。trigger発火時に再作成する）。「次にRealityへ問う1件」ではない。
 
 Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。
 
@@ -254,6 +261,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 | 2026-08-08 Demand Intelligence Canary（E-005） | Human-reported（`experiments/INDEX.md` 参照。repo内raw artifactなし） |
 | 2026-08-08 Environment Preflight（E-008） | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
 | MD-2 Content Canary候補 | draft PR #34（C-1公開はHuman-reported・repositoryから検証不能 = `UNKNOWN`） |
+| xAI credit実測 | Human-confirmed 2026-08-09（D-003 AMENDMENT）: consumed USD 4.351 / remaining ≈ USD 0.649 |
 
 既知のstale（本観測で明示。修正は未実施）: `experiments/INDEX.md` の E-006行「Target 20 / Sent 7」（正: SENT 20・送信枠消化済み — LEDGER正本）および E-001行「⚠ schedule trigger残存」（正: workflow `factory` はdisabled_manually。ファイル内historical cron定義のみ残存）。D-003 Task Contractの変更対象は CURRENT_STATE / DESIRES / ROADMAP / DECISIONS の4ファイルに限定されているため、INDEXの2行修正は別の軽微なfollow-up（Human Gate = merge 1回）として残す。
 

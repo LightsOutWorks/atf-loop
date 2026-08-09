@@ -163,6 +163,7 @@ Created: **2026-08-05 JST**（Browser-Toy Route期）
 Updated: **2026-08-08 JST**（D-001 Canonical Migration — route scope注記とCurrent Horizonsを追加。gate graph本体とcanonical blockは不変）  
 Updated: **2026-08-09 JST**（D-002 North Star REPLACE — §2のNorth Star文のみ差し替え。gate graph・canonical block不変）  
 Updated: **2026-08-09 JST**（D-003 Four-Audit Integration — §0 Current Horizonsの実測同期とNext Factory Evolution Theme追記のみ。gate graph・canonical block不変）  
+Updated: **2026-08-09 JST**（D-003 AMENDMENT — §0の現在実験順序をHuman裁定へ同期（Daily Encounter Queue優先 / Reply Ingestion HOLD）。gate graph・canonical block不変）  
 Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 
 この文書は、IOSを実装へ変換する長期ロードマップである。Layer1を追加・変更しない。各段階は日付ではなく、事前登録した証拠gateで進む。
@@ -185,7 +186,12 @@ North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CUR
 
 > **Realityとの接続を強くしつつ、ヒロをmessage-busから外す。**
 
-次のExperiment候補は **X World Signal / Reply Ingestion Canary**（contract: `experiments/x-reply-ingestion-canary/CONTRACT.md`）。一回限りのCanaryであり、成功しても即Automation化しない。常時監視システムの実装を約束しない。実施は契約merge後のヒロの明示Go（Human Gate）。
+これは長期Theme（Structural Bottleneck = World Signal ingestion / attribution経路の弱さへの対処方向）であり、**現在の最優先実験と同一ではない**（D-003 Decision 7 — 構造的な律速と現在の最優先実験は同一である必要はない）。
+
+現在の実験順序（D-003 AMENDMENT 2026-08-09 / Human裁定）:
+
+1. **Current approved experiment: Daily Encounter Queue Canary**（status = **APPROVED_NOT_STARTED** — 開始証跡がrepoにないためACTIVEとしない）: 3日間限定 / xAI Grok x_searchで毎日最大10件のEncounter候補を供給 / HUMAN_SHORT / Private delivery / **Human manual send（自動送信なし）** / Adaptive query learning。3日間限定のCanaryであり常時Radarではない。Budget capは `CURRENT_STATE.md` §5（daily USD 0.18 / 3-day USD 0.50 / 追加top-up禁止）。
+2. **X World Signal / Reply Ingestion Canary** = **HOLD**（trigger: 最初の実reply発生、またはHuman返信監視負担の実測ボトルネック化。budget未承認。それまで実行しない — `CURRENT_STATE.md` §7）。
 
 やらないこと（証拠が出るまで）: 新規M&Aシステム実装 / WebMCP常時Radar / 常時Capability・Demand Radar / SNS自動化 / 返信前のProduct構築 / 新gate体系の先行実装 / Premature Automation（反復がボトルネックとして観測されるまで、conversation → documented procedure → Skill → Hook → Automationの昇格をしない）。
 
