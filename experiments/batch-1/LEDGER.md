@@ -24,7 +24,7 @@ Owner: Lane A（Reality / Economic Engine）セッション
 - 目的は返信率最大化ではない。Terminal Goal = 返金・取消可能期間を経過した確定実収益。
 - `KILLED` / `NO_REPLY_TIMEOUT` / `VOID` は失敗・評価不能の記録として保持（FAILを消さない。VOIDをFAILとして学習しない）。
 
-## Funnel Totals（2026-08-09 23:20 JST 更新 — Human-confirmed）
+## Funnel Totals（2026-08-10 08:32 JST 更新 — Human-confirmed）
 
 | SENT | SENT_BUT_NOT_PUBLICLY_VISIBLE（VOID） | PUBLICLY_VISIBLE / REACHABLE | REPLY_WAIT | REPLY | GENUINE_PAIN_CONFIRMED |
 |---|---|---|---|---|---|
@@ -48,7 +48,7 @@ Owner: Lane A（Reality / Economic Engine）セッション
 | LN-58 | X @MinoruOffice | 2026-08-08 (HC) | https://x.com/MinoruOffice/status/2085606586463268990 | UNKNOWN | UNKNOWN | BASELINE | REACHABLE / REPLY_WAIT | 2026-08-08 Human送信完了確認（公開reply） | reply監視（X読取不可 — Human報告経路） |
 | LN-62 | X @toro_etoile | 2026-08-08 (HC) | https://x.com/toro_etoile/status/2085156769622548531 | UNKNOWN | UNKNOWN | BASELINE | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@ys_aimini | X @ys_aimini | 2026-08-08 (HC) | https://x.com/ys_aimini/status/2085697604189626502 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
-| X-@HatoNozomu | X @HatoNozomu | 2026-08-08 (HC) | https://x.com/HatoNozomu/status/2085687351939051632 | 反復事務（シフト/マニュアル/対応表作成）※返信により事後確定 | UNKNOWN | HUMAN_SHORT（**文面を2026-08-09に回収** — 下記Reply Log 001） | **REPLY**（2026-08-09 Human画像確認） | 2026-08-09 実返信1件（Batch 1初） | Reply Log 001 参照。次の1通は起草済み・**送信はHuman Gate（未送信）** |
+| X-@HatoNozomu | X @HatoNozomu | 2026-08-08 (HC) | https://x.com/HatoNozomu/status/2085687351939051632 | 反復事務（シフト/マニュアル/対応表作成）※返信により事後確定 | UNKNOWN | HUMAN_SHORT（**文面を2026-08-09に回収** — 下記Reply Log 001） | **REPLY**（2026-08-09 Human画像確認） | 2026-08-09 実返信1件（Batch 1初） | Reply Log 001 / 002 参照。2通目を2026-08-09にHuman Commitで送信済み。72h無応答なら `NO_REPLY_TIMEOUT`（期限 2026-08-12 23:32 JST） |
 | X-@Frecciarossa956 | X @Frecciarossa956 | 2026-08-08 (HC) | https://x.com/Frecciarossa956/status/2085697486853919001 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@shinchan731 | X @shinchan731 | 2026-08-08 (HC) | https://x.com/shinchan731/status/2085361070777291124 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@KIITYAN_YouTube | X @KIITYAN_YouTube | 2026-08-08 (HC) | https://x.com/KIITYAN_YouTube/status/2085376088939929684 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
@@ -133,3 +133,51 @@ impressions **7**（Human画像実測）。C-1 ≈20 imp と同水準で、reach
 - 2026-08-08: C01 / C02 / C04へ `SENT_BUT_NOT_PUBLICLY_VISIBLE`（Delivery Layer failure / VOID）を転記。Provenance: Human実測 → `LEARNINGS.md` 訂正1 C-1（Lane C経由のHuman裁定）。これによりL1の「要転記（Human Handoff）」は完了し、当該FACTの一次記録は本台帳へ移る。機構的詳細（shadowban / dead等）は引き続き `UNKNOWN`。
 - 2026-08-08: **Human-confirmed full sync**（Lane A Task返信）。SENT=20（HN 3 / Bluesky 1 / SE 1 / X 15）へ台帳を同期。X 15件の元投稿URL受領・記録。C14 / C09はHuman画像確認によりREACHABLE確定。旧「追加Contactあり・詳細受領待ち」注記（C-2）は本syncで解消。cluster / 文面 / freshnessはrepo内に回収可能なDemand成果物が存在しないため `UNKNOWN` のまま（全remote branch検索済み）。
 - 2026-08-08: 定期self check-inを停止（X読取不可環境では主要World Signalを取得できないため）。Humanからreply / reactionが共有された時のみLane Aを再起動する（Human裁定）。
+
+## Reply Log 002 — X-@HatoNozomu（2通目を送信 / 2026-08-09）
+
+Source: 2026-08-10 08:32 JST Human画像確認（スレッド全体）。
+
+### 送信文面（2026-08-09 23:32頃 JST / Human Commit / verbatim）
+
+> 詳しくありがとうございます。完全に時間の話だと思い込んでいました、すみません。
+>
+> 最後の「言いたいことは対応表に追記してよね」が引っかかっていて、あれって直接は言ってこない感じなんでしょうか？
+
+起草はAI、送信はHuman（Human Gate = 第三者への送信）。文面は起草どおりで改変なし。
+
+### 実測
+
+| 対象 | 時刻 | impressions | 返信 | いいね |
+|---|---|---|---|---|
+| 相手の返信（否認の投稿） | 19:01 2026-08-09 | **32** | 1（＝こちらの2通目のみ） | 0 |
+| こちらの2通目 | 23:32頃 2026-08-09 | **7** | 0 | 0 |
+
+**2通ともimpressions 7で一致した**（Reply Log 001の1通目も7）。C-1投稿 ≈20 と合わせ、reachが極めて小さいことの3件目の実測。相手の投稿32に対しこちらの返信は7で、親の約22%しか露出しない。
+
+2026-08-10 08:32 時点、送信から約9時間で応答なし。
+
+### Stage: 変化なし（**REPLY のまま**）
+
+2通目の送信は前進ではない。`GENUINE_PAIN_CONFIRMED` は 0 のままで、Pain仮説はREFUTEDのまま維持する。台帳の規律どおり、**送信数の増加をファネルの前進として読み替えない**。
+
+### この2通目が賭けているもの
+
+1通目は元投稿の「作成するのはいいけどさ」（＝Painの明示的否認）を読み飛ばして時間を聞き、否認された。
+2通目は、その1節後ろにある「言いたいことは対応表に追記してよね！」を対象にした。**仮説は「Painは作業量ではなく、要望が直接は言われず自分が書いた文書へ投げ込まれること」。**
+
+判定条件（事前登録）:
+- 応答があり、間接的な伝達についての具体が返る → 仮説を支持（ただしGENUINE_PAIN_CONFIRMEDには不十分。**相手がそれを問題と呼んだ場合のみ**確定）
+- 応答があり、それも否定される → 仮説REFUTED。この相手は打ち止めとし、3通目は送らない
+- 72時間（2026-08-12 23:32 JST）応答なし → `NO_REPLY_TIMEOUT`。追撃しない
+
+### 観測経路の更新（2026-08-10）
+
+egressの許可ドメイン拡張により `x.com` が到達可能になった。ただし**取得できる範囲は限定的**であることを実測した。
+
+| 取得可否 | 対象 |
+|---|---|
+| **可** | 単一ポストの本文（URL既知の場合。`og:description` に載る）／アカウントのbio |
+| **不可** | スレッドの2投目以降（返信）／impressions・いいね・返信数／フォロワー数／タイムライン |
+
+`WebFetch` は `x.com` を別途拒否する（`EGRESS_BLOCKED`）が、`curl` は通る。返信の検知とimpressionsは静的HTMLに載らないため、**Encounter Queueの返信監視は引き続きHuman報告経路（E-008）に依存する**。この制約は解消していない。
