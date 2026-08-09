@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 50" width="1050" height="150" role="img" aria-label="Living Ground">
+  <title>Living Ground horizontal lockup (provisional wordmark)</title>
+  <!--
+    PROVISIONAL: 文字はシステムフォント指定のまま。最終アセット化の前に
+    採用書体でアウトライン化すること（BRAND_SPEC.md §5）。
+    シンボルの幾何は確定（BRAND_SPEC.md §2）。
+  -->
+  <g transform="translate(0,2.8)" fill="#111111">
+    <rect x="0" y="0" width="60" height="10"/>
+    <rect x="0" y="17" width="60" height="10"/>
+    <path d="M0,34 H23.5 Q25,34 25,35.5 V42.9 Q25,44.4 23.5,44.4 H0 Z"/>
+    <path d="M60,34 H36.5 Q35,34 35,35.5 V42.9 Q35,44.4 36.5,44.4 H60 Z"/>
+  </g>
+  <text x="78" y="34" font-family="Jost, Poppins, Futura, Century Gothic, Helvetica Neue, Arial, sans-serif"
+        font-size="26" letter-spacing="4.2" fill="#111111">Living Ground</text>
+</svg>
