@@ -156,7 +156,9 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 - Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。`factory.yml` ファイル内にはhistorical cron定義が残るが、GitHub Actions workflow `factory` 自体は **disabled_manually**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。**cron定義の残存とworkflow enabled stateは別のfact**であり、残存riskはre-enable（Human Gate）時のみ（§4）。
 - 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2。現在Phase = World Signal回収）。
 - 上位Direction統合はD-003（`DECISIONS.md`）。現在の律速は§7。
-- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**identityの新規使用はHuman Gateであり、note / X等での実使用は2026-08-09 23:13時点で未実施 = `UNKNOWN`**（repository外・Human操作）。
+- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。
+- **Identity rollout = 部分実施済み**（2026-08-10 00:59 Human実施・画像実測）: X表示名 / **Xハンドル `@livinggroundjp`** / Xアイコン / X bio / noteアカウント（表示名・アイコン）は切替済み。Googleアカウントは新規作成が電話番号上限で不可のため、既存 `lightsoutworks@gmail.com` の表示名・アイコンを Living Ground へ変更して対応。**未完了**: Xヘッダー（**旧名 `LIGHTS OUT FACTORY` が公開面に残存**）/ note自己紹介 / noteヘッダー / **noteメール認証（投稿の前提条件）** / note ID の記録（`UNKNOWN`）。詳細と貼付用の実文は `experiments/md2-distribution/PROFILE_COPY_LIVING_GROUND.md` §0。
+- **公開面の実測**: Xフォロワー **3**（2026-08-10 00:59）。note記事 **0本**。
 - Confirmed terminal revenue = **JPY 0**（§5）。Factoryは「成功した」と表現してはならない。
 
 ---
