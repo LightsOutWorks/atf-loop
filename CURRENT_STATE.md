@@ -241,6 +241,13 @@ Open PRは以下の**1件のみ**（draft。GitHub API / git実測 2026-08-09 23
 
 > **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
 
+**2026-08-10 追加実測 — 律速は当初の記録より広い**: egress proxyにより `x.com` に加えて **`note.com` / `zenn.dev` も遮断されている**（本日WebFetch実測。EGRESS_BLOCKED）。つまり **Living Groundが立つ公開面は現時点で1つも harness から観測できない**。帰結:
+
+- 記事が公開されたか、読まれたか、反応があったかを **AIは一切検証できない**。すべてHuman報告経路（`UNKNOWN` 既定）
+- `direction/LLMO_EXECUTION_PLAN_2026-08.md` の20クエリ基準パネル（AI引用シェアの定点観測）は、**測定手段の実在が未確認**。着手前に測定可能性を先に確かめる
+- 観測可能な唯一の公開面は **GitHub**（API / Pages）
+- したがって「World Signalの受信経路が弱い」は X 固有の問題ではなく、**Distribution stack全体の性質**である。自動化で解く前に、Humanが低摩擦で報告できる形（スクリーンショット1枚）を維持することが実務上の最適解になっている
+
 **Current Operational Priority**（現在Bootstrap Phaseの最優先。D-003 AMENDMENT 2026-08-09 — 構造的な律速と現在の最優先実験は同一である必要はない: D-003 Decision 7）:
 
 > **世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。**
