@@ -16,7 +16,7 @@ Status語彙: `ACTIVE` / `HOLD` / `NO-GO` / `RETIRED` / `HISTORICAL` / `PROPOSED
 | E-008 | Environment Preflight 2026-08-08（Sensor到達性） | **HISTORICAL**（実測記録） | MD-3 | `ops/ENV_PREFLIGHT_2026-08-08.md`（main。PR #31 merge済み 2026-08-09） |
 | E-009 | Public Succession Signal Sensor | **OPPORTUNITY NOTE**（実装しない。Data Boundary: `CONSTRAINTS.md` Part I §5） | 候補 | 公開Web情報のみのRanking構想。会話レベル |
 | E-010 | WebMCP / Capability Frontier Radar | **OPPORTUNITY NOTE**（常時Radarは実装しない） | 候補 | 会話レベル |
-| E-011 | MD-2 Distribution Canary（Public Content候補生成・C-1投稿） | **ACTIVE**（C-1投稿済み 2026-08-08 Human Commit・World Signal観測中。C-2/C-3は反応観測後に判断） | MD-2 | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md`（main。PR #34 merge済み 2026-08-09） |
+| E-011 | MD-2 Distribution Canary（Public Content候補生成・C-1/C-2投稿） | **ACTIVE**（C-1投稿 2026-08-08・C-2投稿 2026-08-09 いずれもHuman Commit・World Signal観測中。判定は事前登録ルール「3本×2週間」。C-3タイミングはヒロ判断） | MD-2 | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md`（main。§H World Signal Logに実投稿文・文体差分・impression実測を記録） |
 
 運用規則:
 
