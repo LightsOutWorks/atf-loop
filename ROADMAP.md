@@ -161,7 +161,7 @@
 Status: **LAYER2 ROADMAP HYPOTHESIS — evidence gates, not a calendar promise**  
 Created: **2026-08-05 JST**（Browser-Toy Route期）  
 Updated: **2026-08-08 JST**（D-001 Canonical Migration — route scope注記とCurrent Horizonsを追加。gate graph本体とcanonical blockは不変）  
-Updated: **2026-08-09 JST**（D-002 North Star REPLACE — §2のNorth Star文のみ差し替え。gate graph・canonical block不変）
+Updated: **2026-08-09 JST**（D-002 North Star REPLACE — §2のNorth Star文のみ差し替え。gate graph・canonical block不変）  
 Updated: **2026-08-09 JST**（D-003 Four-Audit Integration — §0 Current Horizonsの実測同期とNext Factory Evolution Theme追記のみ。gate graph・canonical block不変）  
 Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 

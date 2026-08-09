@@ -64,7 +64,7 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
   - OS.md Layer2のBrowser-Toy固有値のMission制約としての読み。
   - ROADMAP.mdの旧Precedence表（OS.mdのSource of Truth Priorityへ一本化）。
 - **Explicitly NOT decided here**（ヒロ裁可待ち / 別決定）:
-  - `factory.yml` のschedule trigger（毎週土曜10:00 JST）の無効化。**mainには残存しており、次回発火前にHuman Gateでの停止判断が必要。**
+  - `factory.yml` のschedule trigger（毎週土曜10:00 JST）の無効化。**mainには残存しており、次回発火前にHuman Gateでの停止判断が必要。**（※2026-08-09訂正追記: Actions API read-only実測により、workflow `factory` は2026-08-07 10:39 JSTに停止済み = `disabled_manually` と判明。ファイル内のhistorical cron定義のみ残存。本文は歴史記録として不変更 — `ops/OWNERSHIP_AUDIT_2026-08-08.md` 再検証記録2 / D-003）
   - PR #30（Genome Factory — Override以前のBrowser-Toy収益化Route提案）の採否。
   - PR #24（W0 precursor、HOLD）の扱い。
   - JOURNAL 0005 / 0007訂正とSelection Record v2（record debtとして保持）。
