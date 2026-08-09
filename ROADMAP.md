@@ -190,7 +190,7 @@ North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CUR
 
 現在の実験順序（D-003 AMENDMENT 2026-08-09 / Human裁定）:
 
-1. **Current approved experiment: Daily Encounter Queue Canary**（status = **APPROVED_NOT_STARTED** — 開始証跡がrepoにないためACTIVEとしない）: 3日間限定 / xAI Grok x_searchで毎日最大10件のEncounter候補を供給 / HUMAN_SHORT / Private delivery / **Human manual send（自動送信なし）** / Adaptive query learning。3日間限定のCanaryであり常時Radarではない。Budget capは `CURRENT_STATE.md` §5（daily USD 0.18 / 3-day USD 0.50 / 追加top-up禁止）。
+1. **Current approved experiment: Daily Encounter Queue Canary**（status = **SCHEDULED_NOT_YET_EXECUTED** — one-shot trigger 3本設定済み・Day 1未実行。**Human-confirmed / repo-unverified**（private session state）— `CURRENT_STATE.md` §7）: 3日間限定（Day 1〜3 = 2026-08-09〜11 各18:30 JST）/ xAI Grok x_searchで毎日最大10件のEncounter候補を非公開供給 / HUMAN_SHORT / Private delivery / **Human manual send（自動送信なし）** / Adaptive query learning / **Day 3後の自動継続なし**。恒久recurringではなく常時Radarでもない。Budget capは `CURRENT_STATE.md` §5（daily USD 0.18 / 3-day USD 0.50 / 追加top-up禁止）。
 2. **X World Signal / Reply Ingestion Canary** = **HOLD**（trigger: 最初の実reply発生、またはHuman返信監視負担の実測ボトルネック化。budget未承認。それまで実行しない — `CURRENT_STATE.md` §7）。
 
 やらないこと（証拠が出るまで）: 新規M&Aシステム実装 / WebMCP常時Radar / 常時Capability・Demand Radar / SNS自動化 / 返信前のProduct構築 / 新gate体系の先行実装 / Premature Automation（反復がボトルネックとして観測されるまで、conversation → documented procedure → Skill → Hook → Automationの昇格をしない）。
