@@ -166,7 +166,11 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 Source: `experiments/batch-1/LEDGER.md`（Contact台帳・正本。2026-08-08 Human-confirmed syncとしてmain上に機械記録あり）。
 
 - Target: **20 Genuine Discovery Contacts** — **送信枠は消化済み**。
-- Funnel実測（LEDGER正本）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ SENT_BUT_NOT_PUBLICLY_VISIBLE **3**（HN。VOID — Delivery Layer failure・分母外）/ REACHABLE **17** / REPLY_WAIT **17** / REPLY **0**（2026-08-08 last repo sync。2026-08-09 D-003 AMENDMENTでHumanが「実direct reply未発生」を確認。以後の変化はHuman-confirmedがない限りrepositoryから確認不能 = `UNKNOWN`）。
+- Funnel実測（LEDGER正本。2026-08-09 23:20 JST更新）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ VOID **3**（HN・分母外）/ REACHABLE **17** / REPLY_WAIT **16** / **REPLY 1** / GENUINE_PAIN_CONFIRMED **0**。
+- **2026-08-09、Batch 1初の実返信が発生した（X-@HatoNozomu。Human画像確認）。** ただし内容は**Pain仮説の明確な否定**であり、Painスコアは実質0（`LEDGER.md` Reply Log 001）。**`REPLY > 0` を前進と読み替えない** — Terminal Signalは返信数ではなくConfirmed Revenue（現在JPY 0）。
+- 根本原因は選定側にある: 元投稿に「**作成するのはいいけどさ**」という本人による明示的な否認が書かれており、**読めば分かる位置にあった**。こちらは否認された側を質問にした。抽出した選定規則（否認語形の機械的検出）はReply Log 001が保持し、次Batchへ引き渡す。
+- 本人が実際に述べていた不満（他者が対応表を使わない）は**未着手**。3タグ（HOW/TIME/WHAT）に該当せず、Gap分類では **D. Adoption**。**N=1のためタグを増やさない**（`OS.md` HI-4 F6。同型3件で再検討）。
+- 次の1通は起草済み・**未送信**（送信はHuman Gate）。
 - 現在Phase: **World Signal回収**。送信・候補準備の仕事は本Batchに残っていない。Lane Aの定期self check-inは2026-08-08に停止済み（X読取がharnessから不可のため。Humanがreply / reactionを共有した時のみ再起動 — LEDGER Conversation Log）。
 - Message style実測: 初期7件（C01 / C02 / C04 / C09 / C14 / LN-58 / LN-62）= BASELINE確定。X 13件 = `UNKNOWN`（HUMAN_SHORT Defaultの期間だが実文面が未回収 — LEDGER凡例）。cluster / 文面 / freshness_at_send は大半が `UNKNOWN`（Demandセッション成果物の非着地による恒久喪失）。
 - DiscoveryとSalesを分離する。初回Discoveryの目的は「相手が自分の現実についてもう一言話したくなる状態を作る」こと。

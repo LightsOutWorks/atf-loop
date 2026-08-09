@@ -24,11 +24,15 @@ Owner: Lane A（Reality / Economic Engine）セッション
 - 目的は返信率最大化ではない。Terminal Goal = 返金・取消可能期間を経過した確定実収益。
 - `KILLED` / `NO_REPLY_TIMEOUT` / `VOID` は失敗・評価不能の記録として保持（FAILを消さない。VOIDをFAILとして学習しない）。
 
-## Funnel Totals（2026-08-08 Human-confirmed）
+## Funnel Totals（2026-08-09 23:20 JST 更新 — Human-confirmed）
 
-| SENT | SENT_BUT_NOT_PUBLICLY_VISIBLE（VOID） | PUBLICLY_VISIBLE / REACHABLE | REPLY_WAIT | REPLY |
-|---|---|---|---|---|
-| **20** | **3**（HN） | **17** | **17** | **0** |
+| SENT | SENT_BUT_NOT_PUBLICLY_VISIBLE（VOID） | PUBLICLY_VISIBLE / REACHABLE | REPLY_WAIT | REPLY | GENUINE_PAIN_CONFIRMED |
+|---|---|---|---|---|---|
+| **20** | **3**（HN） | **17** | **16** | **1** | **0** |
+
+**初返信が発生した（2026-08-09）。** REPLY 0 → 1（分母 REACHABLE 17 に対し 5.9%。N=1でありレートとして扱わない）。
+
+ただし **GENUINE_PAIN_CONFIRMED は 0 のまま**。返信は Pain の確認ではなく、**Pain仮説の明確な否定**だった（Reply Log 001）。`REPLY > 0` を前進と読み替えない — Terminal Signal は Confirmed Revenue であり、返信数ではない。
 
 ## Ledger（2026-08-08 Human-confirmed sync / SENT = 20）
 
@@ -44,7 +48,7 @@ Owner: Lane A（Reality / Economic Engine）セッション
 | LN-58 | X @MinoruOffice | 2026-08-08 (HC) | https://x.com/MinoruOffice/status/2085606586463268990 | UNKNOWN | UNKNOWN | BASELINE | REACHABLE / REPLY_WAIT | 2026-08-08 Human送信完了確認（公開reply） | reply監視（X読取不可 — Human報告経路） |
 | LN-62 | X @toro_etoile | 2026-08-08 (HC) | https://x.com/toro_etoile/status/2085156769622548531 | UNKNOWN | UNKNOWN | BASELINE | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@ys_aimini | X @ys_aimini | 2026-08-08 (HC) | https://x.com/ys_aimini/status/2085697604189626502 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
-| X-@HatoNozomu | X @HatoNozomu | 2026-08-08 (HC) | https://x.com/HatoNozomu/status/2085687351939051632 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
+| X-@HatoNozomu | X @HatoNozomu | 2026-08-08 (HC) | https://x.com/HatoNozomu/status/2085687351939051632 | 反復事務（シフト/マニュアル/対応表作成）※返信により事後確定 | UNKNOWN | HUMAN_SHORT（**文面を2026-08-09に回収** — 下記Reply Log 001） | **REPLY**（2026-08-09 Human画像確認） | 2026-08-09 実返信1件（Batch 1初） | Reply Log 001 参照。次の1通は起草済み・**送信はHuman Gate（未送信）** |
 | X-@Frecciarossa956 | X @Frecciarossa956 | 2026-08-08 (HC) | https://x.com/Frecciarossa956/status/2085697486853919001 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@shinchan731 | X @shinchan731 | 2026-08-08 (HC) | https://x.com/shinchan731/status/2085361070777291124 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@KIITYAN_YouTube | X @KIITYAN_YouTube | 2026-08-08 (HC) | https://x.com/KIITYAN_YouTube/status/2085376088939929684 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
@@ -59,6 +63,67 @@ Owner: Lane A（Reality / Economic Engine）セッション
 
 - Batch 1 Target 20 / SENT 20 — **送信枠は消化済み**。以後の本Batchの仕事はWorld Signal回収（reply / reaction）と会話前進のみ。
 - X 15件の送信方法: Humanが各元投稿を開き、公開replyとして手動送信（送信完了をHumanが確認）。message_styleは、初期7件（C01 / C02 / C04 / C09 / C14 / LN-58 / LN-62）がBASELINE確定、以後のX 13件は `UNKNOWN`（HUMAN_SHORT Defaultの期間だが、実文面が回収できるまで確定記録しない）。
+
+## Reply Log 001 — X-@HatoNozomu（Batch 1 初返信 / 2026-08-09）
+
+Source: 2026-08-09 23:14 JST Human画像確認（スレッド全体）。harnessからX読取不可のためHuman報告経路（E-008）。
+
+### 元投稿（2026-08-07頃 / verbatim・抜粋）
+
+> 私、実働的な仕事のほうが好き。単純作業とかルーティン作業とか。今週の業務は色々しんどかったけど私的には楽しかった。
+> でもさ、何で私がシフト作ってマニュアル作って対応表作ってんの？**作成するのはいいけどさ**、私はあなた達の感情までは知らんよ。**言いたいことは対応表に追記してよね！**
+
+### 送信文面（2026-08-08 / verbatim — 本ログで回収。従来 `UNKNOWN` だった）
+
+> シフトもマニュアルも対応表も全部作る係になってるんですね…。それ一式で毎月どれくらい時間もっていかれてます？
+
+impressions **7**（Human画像実測）。C-1 ≈20 imp と同水準で、reachが極めて小さいことの2件目の実測。
+
+### 返信（2026-08-08〜09 / verbatim）
+
+> シフト作成に関しては基本ルール『Aの時はどうする』があり、それに呼応して『ルートB』『ルートC』と対応ルートが決まっており、それに準じイレギュラーを入れるだけなので作成自体は苦ではありませんし、作成時間も通常業務時間内ですので『時間を持っていかれる』感覚はないですね。
+
+### 判定: **Pain仮説 REFUTED**
+
+こちらは「時間」を聞いた。相手は丁寧かつ具体的に全面否定した — ルール整備済み / 作成自体は苦ではない / 通常業務時間内 / 「時間を持っていかれる」感覚なし。Painスコアカード（`SALES_OS` §4）は実質 0 点。
+
+### 根本原因: **送信前に否認証拠が元投稿へ書かれていた**
+
+元投稿の「**作成するのはいいけどさ**」は、本人による「その作業はPainではない」という明示的な否認である。**こちらはその1節後ろにある本当の不満を読まずに、否認された側を質問にした。**
+
+「回収不能だったから分からなかった」ではない。**読めば分かる位置にあった。**
+
+### 本人が実際に述べていた不満（未着手）
+
+> 私はあなた達の感情までは知らんよ。言いたいことは対応表に追記してよね！
+
+仕組み（対応表）は本人が作り、機能もしている。**問題は他者がそれを使わないこと。**
+
+### 3タグ分類: **該当なし**
+
+`HOW-gap`（やり方が分からない）でも `TIME-gap`（手が回らない）でも `WHAT-gap`（何をすべきか分からない）でもない。本人は解けており、**周囲の採用が起きていない**。`CURRENT_STATE.md` §3 の Gap分類でいえば **D. Adoption**（ただし自社内・自作ツールに対するもの）。
+
+> **N=1。タグを増やさない。** 単一観測を恒久ルールへ昇格させない（`OS.md` HI-4 F6）。同型が3件出た時点で再検討する。
+
+### 起草済みの次の1通（**未送信・送信はHuman Gate**）
+
+> あ、時間の話じゃなかったですね、失礼しました。ルートBCまで決まってるなら仕組みはもう出来上がってるんですね…。気になったのは「言いたいことは対応表に追記してよね」の方で、実際に追記してくれる人ってどれくらいいます？
+
+105字 / 3文 / 質問1つ / オファーなし / リンクなし / 相手の言葉を言い換えていない（§99）。前提が外れたことを先に認めている（Realityが違えば撤回する）。
+
+**送らない判断も正当**: 時間仮説のPainスコアは0であり `SALES_OS` §4 の「2点以下 → 友好的に終える」に該当する。一方で相手は長文で丁寧に訂正しており、これは拒絶ではなく関与である。かつ**本人が実際に述べた不満は一度も質問されていない**。
+
+### 抽出した選定規則（次Batchへ適用可能）
+
+**候補スクリーニングで、次の語形を「その作業はPainではない」という否認として機械的に扱う:**
+
+- 「〜するのはいいけど」「〜自体は問題ない」「〜は苦じゃない」「〜は好き」
+- これらが名指しした作業を、Pain仮説の対象にしない
+- 否認節の**直後**に本当の不満が来ることが多い（本件では「私はあなた達の感情までは知らんよ」）
+
+コストゼロで実装でき、同型の空振りを消せる。`experiments/batch-1/LEARNINGS.md` の次回抽出へ引き渡す。
+
+---
 
 ## Conversation Log
 
