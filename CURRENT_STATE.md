@@ -1,7 +1,7 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "af26fd0d87e48ee34d888fd5bcbcbbce93f64380",
+  "base_sha": "0003e2ca3e9f5741202d73ca9c8e88c76c625670",
   "gates": [
     {
       "id": "F0",
@@ -140,7 +140,7 @@ Observed at: **2026-08-09 JST**
 
 Default branch: `main`
 
-Base SHA: `af26fd0d87e48ee34d888fd5bcbcbbce93f64380`
+Base SHA: `0003e2ca3e9f5741202d73ca9c8e88c76c625670`
 
 Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
@@ -201,19 +201,22 @@ Source: 2026-08-08 Current State Override および 2026-08-09 D-003 AMENDMENT�
 - 証明済みはここまで: Public Demandの機械探索 / Grok x_searchのSensor機能 / Contact候補生成 / HumanのReality接触。
 - Factory monthly hard cap: JPY 50,000（`CONSTRAINTS.md` Part I）。
 - Claude Max 20x契約中。ChatGPTは2026-08-13から$20 plan予定。
-- **xAI credit実測**（2026-08-09 Human-confirmed）: initial **USD 5.00** / cumulative consumption **USD 4.351** / remaining **≈ USD 0.649**。Auto top-up **OFF**。**追加購入は未承認（forbidden）**。
+- **xAI credit実測**（2026-08-09 Human-confirmed）: initial **USD 5.00** / cumulative consumption **USD 4.351** / remaining **≈ USD 0.649**。Auto top-up **OFF**。追加購入: **条件付き原則承認へ変更**（2026-08-09 Human裁定・会話レベル — Daily Encounter Queue CanaryのDay 3 Final Verdictが**SCALE**の場合に目安**USD 10**をヒロのHuman操作でチャージする。判定前の購入・自動チャージは引き続き禁止。Canary 3日間のBudget capは次項のとおり不変）。
 - **Daily Encounter Queue Canaryの暫定Budget**（2026-08-09 Human裁定）: daily hard cap **USD 0.18** / 3-day cumulative hard cap **USD 0.50** / reserve最低 **≈ USD 0.10** / 追加top-up禁止。
 
 ## 6. Open PRs and Session Ownership（観測 2026-08-09）
 
-Open PRは以下の4件（すべてdraft。GitHub API実測）:
+Open PRは以下の1件のみ（draft。GitHub API / git実測 2026-08-09午前）:
 
 - **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。W laneはBrowser-Toy Route凍結に伴い事実上凍結（§8）。canonical fileと競合しない。
-- **PR #30**（`GENOME_FACTORY.md` / `RESEARCH.md` 追加のみ）: 2026-08-07作成のRoute提案（Browser-Toy収益化 / itch.io）。**2026-08-08 Override以前の提案であり、現Mission優先順位と競合し得る。処置はヒロ裁可。** canonical fileへの変更は含まない。
-- **PR #31**（`ops/ENV_PREFLIGHT_2026-08-08.md` 追加のみ）: 環境preflight実測（E-008）。Sensor到達性（Bluesky検索・Reddit APIはHARNESS_BLOCKED等）とExecution Readinessの証拠。main外にのみ存在するdraft-PR滞留evidence（Ownership Audit A-5）。
-- **PR #34**（`experiments/md2-distribution/*` 追加のみ）: MD-2 Distribution Engine Canaryのcontent候補（GO上位3）。投稿はHuman Gate。**うちC-1候補（TETHER LOCK事故post）はPUBLISHED（Human Commit 2026-08-08 — Human-reported）。公開記録・実投稿文の差分分析はdraft PR #34 branch上にのみ存在し、main上にはない（draft-PR滞留evidence — Ownership Audit A-5と同型）。X上の反応はrepositoryから確認不能 = `UNKNOWN`。** 同branchはE-011（MD-2 Content Canary）のID採番も提案済み。
-- Merge済み（2026-08-08〜09）: #32 / #33 / #35 / #36（D-001 / LEDGER / LEARNINGS）、#37（Human Leverage Rederivation）、#38（Ownership / Compounding Audit）、#39（D-002 North Star REPLACE）。
-- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary）= **waiting**（PR #34 Human Gate待ち）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **SCHEDULED_NOT_YET_EXECUTED**（Human-confirmed / repo-unverified。§7）。
+
+2026-08-09午前のヒロ裁定（実測確認済み）:
+
+- **PR #31 = merge済み**（main `d77c4f7`）: 環境preflight実測（E-008）がmainに着地。draft-PR滞留evidence（Ownership Audit A-5）は解消。
+- **PR #34 = merge済み**（main `0003e2c`）: MD-2 Canaryのcontent候補・**C-1実投稿文と文体差分分析**がmainに着地。E-011の採番が確定（`experiments/INDEX.md`）。C-1公開はHuman Commit 2026-08-08（Human-reported）、X上の反応は引き続き `UNKNOWN`。
+- **PR #30 = merge無しでclose**（不採択。branch `claude/genome-factory-design-538h9e` に保存・reopen可逆）: Override以前のBrowser-Toy収益化Route提案。E-007はNO-GOへ（`experiments/INDEX.md`）。
+- Merge済み（2026-08-08〜09）: #32 / #33 / #35 / #36（D-001 / LEDGER / LEARNINGS）、#37（Human Leverage Rederivation）、#38（Ownership / Compounding Audit）、#39（D-002 North Star REPLACE）、#40（D-003 Four-Audit Integration）。
+- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary / E-011）= **waiting**（C-1のWorld Signal観測中。C-2/C-3は反応観測後に判断）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **SCHEDULED_NOT_YET_EXECUTED**（Human-confirmed / repo-unverified。§7）。
 - 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration / Integration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
 
 ## 7. Structural Bottleneck / Current Operational Priority
@@ -246,7 +249,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `af26fd0d87e48ee34d888fd5bcbcbbce93f64380` |
+| default branch snapshot | `0003e2ca3e9f5741202d73ca9c8e88c76c625670` |
 | Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |
 | Loop 1 Learning抽出 | `experiments/batch-1/LEARNINGS.md`（main上。訂正1含む） |
 | 4監査（D-003 Inputs） | D-002 record（`DECISIONS.md`）/ `direction/HUMAN_LEVERAGE_REDERIVATION_2026-08-08.md` / `ops/OWNERSHIP_AUDIT_2026-08-08.md` / Portfolio Rederivation（repo内artifactなし — 採択結論は2026-08-09 Task Contract経由 = D-003） |
@@ -259,9 +262,9 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 | F3 precursor reader run | run 31088621095; artifact 8962454105 |
 | W0 precursor (HOLD) | draft PR #24 head `0aa39664404aabf9214f8da96401e325b0d12308` |
 | 2026-08-08 Demand Intelligence Canary（E-005） | Human-reported（`experiments/INDEX.md` 参照。repo内raw artifactなし） |
-| 2026-08-08 Environment Preflight（E-008） | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
-| MD-2 Content Canary候補 | draft PR #34（C-1公開はHuman-reported・repositoryから検証不能 = `UNKNOWN`） |
-| xAI credit実測 | Human-confirmed 2026-08-09（D-003 AMENDMENT）: consumed USD 4.351 / remaining ≈ USD 0.649 |
+| 2026-08-08 Environment Preflight（E-008） | `ops/ENV_PREFLIGHT_2026-08-08.md`（main。PR #31 merge済み 2026-08-09） |
+| MD-2 Content Canary（E-011） | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md`（main。PR #34 merge済み 2026-08-09。C-1公開はHuman-reported・X上の反応は `UNKNOWN`） |
+| xAI credit実測 | Human-confirmed 2026-08-09（D-003 AMENDMENT）: consumed USD 4.351 / remaining ≈ USD 0.649。追加チャージはDay 3 SCALE判定時のみ条件付き承認（§5・会話レベル） |
 | Daily Encounter Queue trigger設定（one-shot×3） | Human-confirmed 2026-08-09（PR #40 FINAL REALITY SYNC）。private session state・**repo-unverified** |
 
 `experiments/INDEX.md` のstale 2行（E-006「Sent 7」/ E-001「⚠ schedule trigger残存」）は、2026-08-09 PR #40 FINAL REALITY SYNCの裁定に基づき本PR内で修正済み（main上の確定事実 — LEDGER正本・Actions実測 — のみによる機械的修正。open PR 4本のいずれもINDEX.mdを変更しないことをbranch diff実測で確認済み・競合なし）。

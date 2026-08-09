@@ -12,10 +12,11 @@ Status語彙: `ACTIVE` / `HOLD` / `NO-GO` / `RETIRED` / `HISTORICAL` / `PROPOSED
 | E-004 | W0 Distribution Precursor（X / itch.io計測可能性） | **HOLD** | 旧Mission→MD-2関連 | draft PR #24 `experiments/w0/` |
 | E-005 | Large-N Demand Intelligence Canary（Grok x_search） | **HISTORICAL — verdict: PASS**（Sensorとして実証。2026-08-08実施） | MD-1 | Human-reported。cost ≈ $1.815 / 48+5 queries / raw 75 / unique 72 / Genuine Need ≈60 / clusters 7。repo内raw artifactなし（`CURRENT_STATE.md` §3） |
 | E-006 | Batch 1 Discovery Contact（Target 20 / SENT 20 — 送信枠消化済み。VOID 3 / REACHABLE 17） | **ACTIVE**（World Signal回収Phase） | MD-1 | `experiments/batch-1/LEDGER.md`（Contact台帳・正本）、`CURRENT_STATE.md` §2。送信行為はHuman Gate。message style: 初期7件=BASELINE確定、X 13件=`UNKNOWN`（LEDGER凡例） |
-| E-007 | Genome Factory v1（Dual-Clock Pure Genome Factory） | **PROPOSED**（2026-08-08 Override以前の提案。競合あり・ヒロ裁可待ち） | 旧Mission延長 | draft PR #30 `GENOME_FACTORY.md` |
-| E-008 | Environment Preflight 2026-08-08（Sensor到達性） | **HISTORICAL**（実測記録） | MD-3 | draft PR #31 `ops/ENV_PREFLIGHT_2026-08-08.md` |
+| E-007 | Genome Factory v1（Dual-Clock Pure Genome Factory） | **NO-GO**（2026-08-09 ヒロ裁定: PR #30をmerge無しでclose・不採択。branch保存・reopen可逆） | 旧Mission延長 | closed PR #30 / branch `claude/genome-factory-design-538h9e` `GENOME_FACTORY.md` |
+| E-008 | Environment Preflight 2026-08-08（Sensor到達性） | **HISTORICAL**（実測記録） | MD-3 | `ops/ENV_PREFLIGHT_2026-08-08.md`（main。PR #31 merge済み 2026-08-09） |
 | E-009 | Public Succession Signal Sensor | **OPPORTUNITY NOTE**（実装しない。Data Boundary: `CONSTRAINTS.md` Part I §5） | 候補 | 公開Web情報のみのRanking構想。会話レベル |
 | E-010 | WebMCP / Capability Frontier Radar | **OPPORTUNITY NOTE**（常時Radarは実装しない） | 候補 | 会話レベル |
+| E-011 | MD-2 Distribution Canary（Public Content候補生成・C-1投稿） | **ACTIVE**（C-1投稿済み 2026-08-08 Human Commit・World Signal観測中。C-2/C-3は反応観測後に判断） | MD-2 | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md`（main。PR #34 merge済み 2026-08-09） |
 
 運用規則:
 
