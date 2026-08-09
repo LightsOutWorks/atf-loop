@@ -14,7 +14,7 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 - **Decision**:
   1. **Portfolio維持**: MD-1 / MD-2 / MD-3の3本を維持する。ただし3本は定理ではなく**Current Hypothesis**（反証・統合・降格可能）。Direction Review発火点 = Batch 1 signal回収クローズ / 初回Confirmed Revenue（月次はfallback）。再審理は現職MDへも対称的に適用する。
   2. **MD-1 Bootstrap解釈**: 現在Phaseの焦点は「**1本のPaid Value LoopをRealityで証明すること**」。Confirmed Revenue > 0が現在Phaseの最初のTerminal Reality Signal（D-002 Decision 3と同一。永久的達成条件ではない）。
-  3. **MD-2の所有範囲**: outbound Demand Sensingとinbound World Signal Intakeの**両方**。Audience 10,000は現時点ではAssetではなく**Proxy**（Inbound Need / Trust / Revenueへ接続して初めて資産性を持つ）。
+  3. **MD-2の所有範囲**: outbound Demand Sensingとinbound World Signal Intakeの**両方**（これに伴い `DESIRES.md` のMD-2見出しを「Distribution / Encounter Engine」へ改名）。Audience 10,000は現時点ではAssetではなく**Proxy**（Inbound Need / Trust / Revenueへ接続して初めて資産性を持つ）。
   4. **Human Position**: Human-up-the-loopを維持する。最適化対象は**義務的・機械的Human Handoff**の削減（Human-as-message-bus / lane間手動コピペ / AI出力の機械的転記 / 重複監視 / AIができる情報収集）であり、**Human Reality Contactをゼロへ収束させない**。維持するHuman Layer: Desire / Taste / Meaning / Boundary / Direction / payment / identity / irreversible decision / 独立したReality Contact / AIの世界観に閉じない外部観測。
   5. **Ownership方針**: Factoryが優先所有するのは ①Desireとその改訂履歴 ②Evidence Discipline（contract / schema / result語彙 / pinned tests）③World Experience / Failure / Outcome / Decisionの記録 ④Identity Continuityの記録。Model / Sensor / Harness / Platform / OSS / APIは原則RENT / REUSE。Need→Route→Outcome→Payment履歴は現時点でMoatではなく**将来の私有Prior候補**。canonical文書で「moat」語彙を使わない（Ownership Audit D-1）。
   6. **Structural Bottleneck確定**: 複数の独立監査が「**World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路**」の弱さへ収束した。これを長期の構造欠落として正本化する（`CURRENT_STATE.md` §7）。
