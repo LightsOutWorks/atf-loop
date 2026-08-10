@@ -42,6 +42,7 @@ Core Principles v1.0 — 2026-08-01
 Amended v1.1 — 2026-08-08(D-001: Canonical Migration。Current Identity節・Operating Philosophy補遺・Layer2 route状態注記を追加。Layer1の既存原則は変更していない)
 Amended v1.2 — 2026-08-09(D-004: Human Interface — Operator Priors節を追加。Layer1・Layer2の既存記述は変更していない)
 Amended v1.3 — 2026-08-10(D-006: HI-10 Action Default（`NO_ACTION`）とHI-11 権限分界を追加。HI-2の「既定はやる」の適用範囲を着手後のHandoffへ限定。Layer2「探索と固定」Bへ成立条件10〜12を追加。HI-4 F5へObserved / Derivedの区別を追加。Layer1の既存原則は変更していない)
+Amended v1.4 — 2026-08-10(D-007: Layer2「探索と固定」Aへ探索範囲の交差条件を1段落追加。HI-10 条件5とHI-11 Humanリストは行内参照のみ。新設した節は無く、Layer1・HI-10の7条件・HI-11の分界は変更していない)
 
 Status: **LOCKED**
 Layer1 frozen until evidence exists / Layer2 evidence-driven evolution / Layer3 continuous implementation
@@ -393,7 +394,7 @@ Desire 側の並びは別軸であり `DESIRES.md` が正本（North Star → Ma
 2. 現在優先中のMajor Desireへの因果接続を説明できる（`DESIRES.md`。現在の優先はMD-1）
 3. **現在の律速を直接動かす**（`CURRENT_STATE.md` §7）
 4. 次に必要なRealityまたはWorld Signalを近づける
-5. Strategy Committedの対象範囲内である（Layer2「探索と固定」B / D）
+5. Strategy Committedの対象範囲内である（Layer2「探索と固定」B / D。その上流にある**戦略の探索範囲**は同節 A）
 6. **より小さく、安く、可逆な方法がない**（Operating Philosophy 3: REUSE → BUY → ADAPT → COMPOSE → DELEGATE → BUILD）
 7. **今やる理由を説明できる**
 
@@ -432,7 +433,7 @@ D-003 Decision 4（Human Position）の実装規則。**どちらが決めるか
 
 **Humanが保持するもの**（Claudeは提案してよいが決定しない）:
 
-North Star / Major Desire / Hard Boundary / 戦略 / Major Bet / 対象範囲とNon-goals / 主要な資源配分 / 次の判定点 / 戦略のKILL・早期解除条件 / 戦略的Taste / Human Gate
+North Star / Major Desire / Hard Boundary / 戦略 / **戦略の探索範囲**（Layer2「探索と固定」A）/ Major Bet / 対象範囲とNon-goals / 主要な資源配分 / 次の判定点 / 戦略のKILL・早期解除条件 / 戦略的Taste / Human Gate
 
 **Strategy Committed後、Claudeが自律判断するもの**（＝**Claudeが戦術Ownerである**）:
 
@@ -506,6 +507,8 @@ Human Desire → Objective（人間） → Selection（Factory） → Execution�
 4. 主要な戦略案・ベットの比較
 5. Experiment の仮説・変更変数・判定条件
 6. 上位正本との重大な矛盾
+
+**ただし探索対象の範囲は無制限ではない。** 戦略候補として探索してよいのは `North Star × 現在優先中のMajor Desire × Humanの実戦由来の優位` の交差の内側だけであり、外側は探索せず `NO_ACTION`。**現在の優位の中身は `CURRENT_STATE.md` §7-0 が持つ**（本節は規律のみを持ち、現在値を持たない）。これは範囲判断であって実行判断ではなく（実行可否は HI-10 の7条件）、範囲そのものの変更は Human が決める（HI-11）。
 
 **探索自体を成果にしない**（HI-4 F3 / F8）。「より良い案があるかもしれない」だけを理由に探索を延長しない。**探索で作った成果物が使われなくなることは費用であって損失ではない。** 損失は固定後に揺れたときに発生する。
 
