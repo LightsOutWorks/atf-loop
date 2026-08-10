@@ -202,7 +202,7 @@ North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CUR
 |---|---|---|
 | 2026-08-10 18:30 | Encounter Queue Day 2 | 送信=Human |
 | 2026-08-11 18:30 | Day 3。**3日分の実測が揃い記事004の材料が完成** | 送信=Human |
-| 2026-08-12 | ココナラ判断（現状 NO_ACTION — 在庫0のため棚の数は無関係） | Human |
+| 2026-08-12 | ココナラ判断（現状 NO_ACTION — 在庫0のため棚の数は無関係）。**2026-08-10 追記: 候補「創業融資の3年収支計画Excel」は `KILL` / `NO_ACTION` 済み**（`DECISIONS.md` D-006）。本判断日はこの候補のためのものではない | Human |
 | 2026-08-13 | ChatGPT $100枠 P1 / @HatoNozomu 3通目のタイムアウト | Human |
 | 週内 | 記事001の公開と固定ポスト | **未決** |
 
@@ -728,6 +728,8 @@ PASS is continuous, not terminal:
 - attribution根拠なしのiframe wrapperや作品内telemetry
 
 これは恒久禁止リストではない。該当する能力不足が律速として証明されれば、通常のRadar → Benchmark → Canaryへ戻す。
+
+**本節は「何を建てないか」の列である。「どんな作業に着手しないか」の列は `OS.md` HI-10 のNon-goalsが持つ**（2026-08-10 / D-006）。行動の既定は `NO_ACTION` であり、本節に載っていないことは「許可されている」を意味しない。片方だけを見て判断しない。
 
 ---
 

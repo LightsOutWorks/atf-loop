@@ -256,11 +256,35 @@ Source: 2026-08-10 会話でのHuman裁定（**Human-confirmed / repo-unverified
 
 本節が更新された場合、`CLAUDE.md` は変更不要である（`CLAUDE.md` は本節を指すだけで内容を持たない）。
 
+**行動の既定は `NO_ACTION` である**（2026-08-10。`OS.md` HI-10）。上の戦略に接続できることは、実行の**必要条件のひとつ**であって十分条件ではない。**戦略と戦術の権限分界は `OS.md` HI-11**——Strategy Committed後の戦術はClaudeがOwnerであり、Humanへ選択肢を返さない。
+
+### 7-0-a. 2026-08-10 の候補判定（Human Commit済み。再提案・再審理しない）
+
+探索期に検討された商品候補のうち、2件が確定判定を受けた。**Portfolioの現在値であり、判定の根拠と再検討triggerは `DECISIONS.md` D-006 が正本。**
+
+| 候補 | 判定 | Routing | 再検討 |
+|---|---|---|---|
+| 就労選択支援の指定申請書式パック | **`KILL`** | — | Humanが戦略レベルで規制領域参入を明示Commitし、かつ `direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` §4-a の解除4条件が揃った場合のみ。**現在は再検討しない** |
+| 創業融資の3年収支計画Excel | **`KILL`**（現在の候補として） | **`NO_ACTION`** | 外部証拠5件のいずれか（D-006 Decision 6）。**内部でより良い案が出たことはtriggerではない** |
+
+**創業融資Excelについて、Humanへ25分の音声メモを要求しない。商品の作成・出品・追加調査・差別化案の検討を開始しない。**
+
+**「競合が存在したから」は、どちらのKILL理由でもない**（`direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` §1-c と同じ規律）。
+
 **Structural Bottleneck**（長期の構造欠落。独立した複数監査 — D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit — の収束点。D-003）:
 
 > **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
 
 **2026-08-10 — 遮断は同日中に大部分が解消した**（Human が許可ドメインを Custom へ拡張。実測200確認）。到達可能になったもの: `note.com` / はてな / `zenn.dev` / `qiita.com` / 青空文庫 / `coconala.com` / `*.wikipedia.org` / 文化庁 / J-STAGE / NHK。
+
+**ただし解消は全域ではない**（2026-08-10 本セッション一次実測。`curl` 実行）:
+
+| 対象 | 結果 |
+|---|---|
+| `https://coconala.com/` / `https://coconala.com/categories/1004` | **HTTP 200**（上記の追認。一次実測） |
+| `https://www.mhlw.go.jp/` / `https://www.e-gov.go.jp/` / `https://elaws.e-gov.go.jp/` | **CONNECT tunnel 403**（agent proxy の policy denial） |
+
+**これは tooling / reachability observation である。「一次資料が存在しない」と記録してはならない**（当該Claude実行環境・当該時点で取得できなかった、が正しい記述。`OS.md` HI-4 F9）。到達可能になったことは、**遮断下で取得済みの数値の証拠等級を遡って上げない**（`direction/COCONALA_VERDICT_2026-08.md` 2026-08-10 追記）。
 
 **ただし X は部分的にしか解けていない**（2026-08-10 実測）:
 
@@ -281,6 +305,7 @@ Source: 2026-08-10 会話でのHuman裁定（**Human-confirmed / repo-unverified
 > **世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。**
 
 - **Current approved experiment: Daily Encounter Queue Canary（E-013）** — status **DAY_1_EXECUTED / SENT 4 / REPLY 0**（2026-08-09 22:45 JST **Human-confirmed**: 配達4件・**全件送信済み**。台帳 = `experiments/encounter-queue/LEDGER.md`）。Day 1実費 **USD 0.1631**（daily cap 0.18内）/ 3日累積上限0.50の残り **USD 0.3369** / xAI推定残高 **≈ USD 0.486**。**4件中2件（EQ-1 / EQ-4）には送信前から Genuine Pain 証拠としての弱さが事前登録されている**ため、Pain confirmation率の分母は2件で見る。返信の観測はHuman経路のみ（harnessからX読取不可 — E-008）。Humanが3-Day Canaryの実行を承認済みで、one-shot triggerが3本設定済み: **Day 1 = 2026-08-09 18:30 JST / Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST**（設定自体が**Human-confirmed / repo-unverified** — 非公開Claude Codeセッション内のprivate session stateでありrepositoryから独立検証不能）。**（2026-08-09 22:45 JST Humanの報告により解除。以下は解除前の規律として保持）** 予定時刻の経過だけでは①trigger発火 ②候補の生成・配信 ③候補の品質 ④送信の有無 のいずれもrepositoryから検証できない。**Humanの報告があるまで実行済みと書いてはならない。** 恒久recurring scheduleではなく、**Day 3後の自動継続なし**。仕様（Human裁定）: 3日間限定 / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery（非公開供給）/ **Human manual send（ヒロが候補を目視して手動送信。自動送信なし）** / Adaptive query learning。常時Radarではない。Budget capは§5。
+  - **Day 2（2026-08-10 18:30 JST）= 予定どおり継続する**（2026-08-10 判定 — D-006 Decision 9）。判定根拠: E-013 は Human承認済みの**独立したStrategy Committed済みExperiment**であり、同日 `KILL` した2候補（就労選択支援の書式パック / 創業融資Excel — §7-0-a）のいずれの検証でもない。対象clusterは「一人事業・反復事務」「Creator」で、Day 1 実測4件がその範囲内にある（`experiments/encounter-queue/LEDGER.md`）。**依存が無いため `NO_ACTION` へは落とさず、Humanへも返さない**（`OS.md` HI-11: 戦術レベルの継続判断はClaude側）。送信は従来どおり Human Gate。
 - **X World Signal / Reply Ingestion Canary** — status **HOLD**（execution_authority = **NOT_GRANTED**）。理由（2026-08-09 Human裁定）: 実direct reply未発生でpositive ground truthがなく、outbound mappingしか検証できず情報価値が低い / ヒロはスマホのX通知を容易に確認できる / 現在は返信監視の自動化より良質な接点の増加が優先。**再評価trigger**: ①最初の実replyが1件以上発生した時 ②Humanの返信確認・転記負担が実測上のボトルネックになった時。budget = **UNAPPROVED**（旧案cap USD 3.00は現残高 ≈ USD 0.649で成立しない — §5）。起草済み契約fileは本PRから除外した（branch履歴 `9c1e9d7` 以前に残存。trigger発火時に再作成する）。「次にRealityへ問う1件」ではない。
 
 Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。

@@ -33,7 +33,7 @@ def main():
     if urgent:
         lines.append("期限: " + " / ".join(urgent))
     lines.append(
-        "圧縮で消えやすい結論は CLAUDE.md 本体にある。"
+        "圧縮で消えやすい結論の所在は CLAUDE.md の索引（§3）から正本を引く。"
         "「無い・できない・詰んでいる・新しく作る」と書く直前に "
         "DECISIONS.md と direction/ と research/INDEX.md を引く（OS.md HI-4 F10）。"
     )
