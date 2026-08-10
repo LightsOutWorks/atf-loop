@@ -10,7 +10,7 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 - **Date**: 2026-08-10
 - **Authority**: ヒロのTask Contract「Just-in-time Context Router v0を設計監査せよ」および同日のRed Team指示（外部Agent Skillとの比較監査を経てGO）。採択はヒロの本PR merge。
-- **Decision**: `OS.md` HI-12 として **①取得上限（anchor 5件・計6,000字）②取得順序 ③過去の棄却は同一の市場・Route・候補・Experiment・戦術仮説が一致する時だけ引く ④全文Readは6,000字未満のファイルのみ・20,000字以上は `grep` / anchor のみ** の4つだけを置く。`CLAUDE.md` §3 へ棄却の参照点と索引外正本の扱いを各1行足し、20,000字級の行にanchorを書き足す。**新規ファイル・新規script・新規語彙・hook変更は無し。**
+- **Decision**: `OS.md` HI-12 として **①取得上限（anchor 5件・計6,000字）②取得順序（先頭は `CONSTRAINTS.md` Part I 全文2,109字。第1位Sourceは節を選ばない）③過去の棄却は同一の市場・Route・候補・Experiment・戦術仮説が一致する時だけ引く ④全文Readは6,000字未満のファイルのみ・20,000字以上は `grep` / anchor のみ** の4つだけを置く。`CLAUDE.md` §3 へは**routing行を2本足すだけ**とし（棄却の参照点 / HI-12 への導線）、規則は一切持たせない。既存行には anchor と字数を書き足す。**新規ファイル・新規script・新規語彙・hook変更は無し。**
 - **Why**: 取得量に上限を課す規則が正本のどこにも無く、`research/INDEX.md`（109,174字）は497行のため `Read` 1回で全文が返る。一方、Fingerprint書式・Manifestフィールド・Execution Contract 8項目・STOP 6件のうち5件は HI-9 / HI-10 / HI-11 / `CLAUDE.md` §2 / `ROADMAP.md` §3 step 5 から導出でき、置けば再掲になる（§17 / §18 / HI-4 F3）。**新規なのは上記4つだけだった。**
 - **Supersedes**: 無し。HI-10の7条件・HI-11の分界・Layer2「探索と固定」・D-001〜D-007・`CONSTRAINTS.md`・`DESIRES.md`・`CURRENT_STATE.md` §7-0 は変更していない。設計監査で検討した depth mode・tie-break・omission_reason・Execution Contractは**未実測または再掲のため採用しない**（`OS.md` §11 / §18 / HI-4 F6）。
 - **Rollback**: 本PRのrevertで `OS.md` / `CLAUDE.md` / 本record が旧stateへ戻る。物理移動・削除・外部作用を伴わないため単一revertで完結する。

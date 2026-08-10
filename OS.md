@@ -458,10 +458,10 @@ North Star / Major Desire / Hard Boundary / 戦略 / **戦略の探索範囲**�
 
 ### HI-12. 取得規律（2026-08-10 Human裁定 / D-008）
 
-正本を全部読まない。着手前に「今回何を決めるか」を1文にし、`CLAUDE.md` §3 でその問いの正本を引く。この1文はHumanの指示と `CURRENT_STATE.md` §7-0 だけで書く——**何を読むか決めるために正本を横断しない。**
+正本を全部読まない。着手前に「今回何を決めるか」を1文にし、`CLAUDE.md` §3 でその問いの正本を引く。この1文はHumanの指示と `CURRENT_STATE.md` §7-0 だけで書く——**何を読むか決めるために正本を横断しない。** §3に無い正本が要るときは実在を確認して必要な文書だけ引き、**到達不能を検出したら索引欠陥として報告する。推測で代替しない。**
 
 1. **上限**: 1タスクの取得は **anchor 5件・計6,000字**。超えたら削る。削れないなら正本が肥大しており、それ自体を欠陥として報告して止まる。
-2. **順序**: `CONSTRAINTS.md` §1・§3・§4（計788字）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
+2. **順序**: `CONSTRAINTS.md` **Part I 全文**（2,109字。**第1位Sourceは節を選ばない**——どのBoundaryが効くかは読む前には分からない。Part IIはHistorical Experiment契約なので対象外）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
 3. **過去の棄却は条件付き**: 同一の市場・Route・候補・Experiment・戦術仮説のいずれかが一致する時だけ `KILL` / `NO_ACTION` と再検討triggerを引く。一致しないものは読まない。triggerが未充足なら `NO_ACTION`。
 4. **全文Readは6,000字未満のファイルだけ。20,000字以上は `grep` / anchor のみ**（2026-08-10時点で該当10本。`research/INDEX.md` は109,174字だが497行のため `Read` 1回で全文が返る。`OS.md` `CURRENT_STATE.md` `ROADMAP.md` 自身も該当する）。
 
