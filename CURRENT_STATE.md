@@ -244,6 +244,18 @@ Open PRは以下の**1件のみ**（draft。GitHub API / git実測 2026-08-09 23
 
 最重要未証明区間は不変: **Need→Paid Value→Confirmed Revenue**（MD-1 Terminal Signal。現在JPY 0）。
 
+### 7-0. 現在の戦略 / 現在のベット（2026-08-10 Human裁定。正本はここ）
+
+Source: 2026-08-10 会話でのHuman裁定（**Human-confirmed / repo-unverified**。実装済みの事実ではなく、現時点で採用されている方向である）。層の順序（世界観 → 戦略 → 戦略と戦術の間 → 戦術）と、どの層に何を置くかの規律は `OS.md` HI-9 が持つ。本節はその**中身**（現在何を選んでいるか）だけを持つ。North Star / Major Desireは `DESIRES.md` が正本であり、本節はそれを上書きしない。
+
+- **現在の戦略（＝資源の配分）**: **トークンと時間を「筋のいい一点を見つけること」に集中投下する。** 筋の悪いもので進めて時間とトークンを溶かすより、考え尽くして「これだ」となってから力を入れるほうが北極星に速く近づく。**ゼロから作らない。**
+- **現在のベット（＝戦略と戦術の間）**: 自分たちが先駆者になる道を取らない。**既に収益を生んでいて、日本にまだ来ていない事業**の中から、筋がよく日本で勝てるものを見つける。**その人がどうやって収益しているのかまで解剖した上で**、我々がこれまで作ってきたものを乗せて最もシナジーが出る一点を選ぶ。**決めたら全ベットする。**
+- **これは世界観ではない。** 中位の選択であり、変わりうる。変わらないのは北極星のほうだけ。
+- **現在の位相 = 探索期（Exploration）。** 固定実行（Commitment）へ移る条件、固定中に変えてよいもの・変えてはならないもの、固定を早期解除してよい場合は `OS.md` Layer2「探索と固定（Exploration / Commitment）」が持つ。本節は位相の**現在値**のみを持つ。
+- **方向転換の扱いの規律**（探索期に作ったものが使われなくなることを「無駄」「宙に浮いた」と表現しない、等）は `OS.md` Layer2「探索と固定」A / C が持つ。本節では重複させない。
+
+本節が更新された場合、`CLAUDE.md` は変更不要である（`CLAUDE.md` は本節を指すだけで内容を持たない）。
+
 **Structural Bottleneck**（長期の構造欠落。独立した複数監査 — D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit — の収束点。D-003）:
 
 > **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
