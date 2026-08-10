@@ -32,7 +32,7 @@
 | 判断の順序・判定語彙、失敗の型、提案を組み立てる順序、探索と固定の切替 | `OS.md`（HI-5 / HI-4 / HI-9 / Layer2「探索と固定」） |
 | **そもそも着手してよいか**（行動の既定 = `NO_ACTION`・7条件・Non-goals）、**誰が決めるか**（HumanとClaudeの権限分界） | `OS.md`（HI-10 / HI-11） |
 | 何を目指しているか（北極星・Major Desire・その順位） | `DESIRES.md` |
-| 今どうなっているか。現在の戦略・現在のベット・現在の律速 | `CURRENT_STATE.md`（§7-0 / §7） |
+| 今どうなっているか。現在の戦略・現在のベット・現在の優位（探索範囲）・現在の律速 | `CURRENT_STATE.md`（§7-0 / §7） |
 | 過去に何を、なぜ決めたか | `DECISIONS.md` |
 | 到達（note / X / LLMO・AI引用） | `direction/LLMO_EXECUTION_PLAN_2026-08.md` |
 | 誰に何を売るか（顧客層・介在の可否・接触母集団の禁止範囲） | `direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` |
