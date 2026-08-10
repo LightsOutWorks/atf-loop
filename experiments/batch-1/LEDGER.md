@@ -48,7 +48,7 @@ Owner: Lane A（Reality / Economic Engine）セッション
 | LN-58 | X @MinoruOffice | 2026-08-08 (HC) | https://x.com/MinoruOffice/status/2085606586463268990 | UNKNOWN | UNKNOWN | BASELINE | REACHABLE / REPLY_WAIT | 2026-08-08 Human送信完了確認（公開reply） | reply監視（X読取不可 — Human報告経路） |
 | LN-62 | X @toro_etoile | 2026-08-08 (HC) | https://x.com/toro_etoile/status/2085156769622548531 | UNKNOWN | UNKNOWN | BASELINE | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@ys_aimini | X @ys_aimini | 2026-08-08 (HC) | https://x.com/ys_aimini/status/2085697604189626502 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
-| X-@HatoNozomu | X @HatoNozomu | 2026-08-08 (HC) | https://x.com/HatoNozomu/status/2085687351939051632 | 反復事務（シフト/マニュアル/対応表作成）※返信により事後確定 | UNKNOWN | HUMAN_SHORT（**文面を2026-08-09に回収** — 下記Reply Log 001） | **REPLY**（2026-08-09 Human画像確認） | 2026-08-09 実返信1件（Batch 1初） | Reply Log 001 / 002 / 003 参照。往復3回。2026-08-10に相手から2通目の返信。仮説はSUPPORTEDだがGENUINE_PAIN_CONFIRMEDはNO（本人が「私の愚痴」と呼び実害が本人に帰属しない）。**Pain無し / Desire有り（L2）**。3通目は起草済み・未送信 |
+| X-@HatoNozomu | X @HatoNozomu | 2026-08-08 (HC) | https://x.com/HatoNozomu/status/2085687351939051632 | 反復事務（シフト/マニュアル/対応表作成）※返信により事後確定 | UNKNOWN | HUMAN_SHORT（**文面を2026-08-09に回収** — 下記Reply Log 001） | **REPLY**（2026-08-09 Human画像確認） | 2026-08-09 実返信1件（Batch 1初） | Reply Log 001 / 002 / 003 参照。往復3回。2026-08-10に相手から2通目の返信。仮説はSUPPORTEDだがGENUINE_PAIN_CONFIRMEDはNO（本人が「私の愚痴」と呼び実害が本人に帰属しない）。**Pain無し / Desire有り（L2）**。**3通目を2026-08-11 03:14 JSTに送信**（Human Commit。起草から文末1箇所をHumanが修正 — Reply Log 004）。判定時刻は事前登録どおり2026-08-13 09:45 JST |
 | X-@Frecciarossa956 | X @Frecciarossa956 | 2026-08-08 (HC) | https://x.com/Frecciarossa956/status/2085697486853919001 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@shinchan731 | X @shinchan731 | 2026-08-08 (HC) | https://x.com/shinchan731/status/2085361070777291124 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
 | X-@KIITYAN_YouTube | X @KIITYAN_YouTube | 2026-08-08 (HC) | https://x.com/KIITYAN_YouTube/status/2085376088939929684 | UNKNOWN | UNKNOWN | UNKNOWN | REACHABLE / REPLY_WAIT | 同上 | 同上 |
@@ -236,3 +236,52 @@ Source: 2026-08-10 09:46 JST Human画像確認。
 ### Stage: 変化なし（**REPLY のまま**）
 
 往復が3回になっても Stage は動かさない。`GENUINE_PAIN_CONFIRMED` は 0 のまま。**会話の長さをファネルの前進として読み替えない。**
+
+## Reply Log 004 — X-@HatoNozomu（3通目を送信 / 2026-08-11）
+
+Source: 2026-08-11 03:15 JST Human画像確認（スレッド全体）。
+
+### 送信文面（2026-08-11 03:14 JST / Human Commit / verbatim）
+
+> 口で言われて、そこで消えちゃうんですね。
+>
+> 書き入れてもらえたら実際に変えられそうなことって、なにか具体的に浮かんでたりしますか？
+
+### 起草との差分（Humanが直した箇所。`OS.md` HI-3 Taste学習則）
+
+| | 文末 |
+|---|---|
+| AI起草（Reply Log 003） | …なにか具体的に **浮かんでます？** |
+| Human送信（実際） | …なにか具体的に **浮かんでたりしますか？** |
+
+**Humanが変えたのは文末の1箇所だけで、内容・長さ・構造・意図は起草どおり。**
+
+修正の向き（解釈。**N=1の仮説**）: 「浮かんでます？」は**在ることを前提に確認する形**、「浮かんでたりしますか？」は**無くてもよい余白を残す形**。相手は直前に自分の発言を「私の愚痴でした」と自ら引き下げており、そこへ前提つきで問うと、具体を出せない場合に相手が退がる先を失う。`CURRENT_STATE.md` §7-0 の現在の優位「**進む・進まない・手放す**を含む意思決定を前に進める力」のうち、**手放す側の余白**にあたる修正である。
+
+**恒久ルールへ昇格させない**（`OS.md` HI-4 F6）。同型の修正が3件観測された時点で書法側へ引き渡す。
+
+### 実測（同スクショ）
+
+| 対象 | 投稿時刻 | impressions | 前回計測 |
+|---|---|---|---|
+| こちらの2通目 | 2026-08-09 23:32頃 | **17** | 11（2026-08-10 09:46） |
+| 相手の2通目（Reply Log 003 の返信） | 2026-08-10 09:45 | **16** | 1（2026-08-10 09:46） |
+| こちらの3通目 | 2026-08-11 03:14 | 表示数なし（送信約1分後） | — |
+
+いいね・リポストはいずれも0。
+
+**過去3回の「こちらの返信は親投稿の2〜3割」という読みを、この2件へそのまま当てない。** 比較対象が違う——従来の分母は相手の**元投稿**（32 → 38）であり、今回並ぶ 17 と 16 はどちらも**スレッド内の返信**である。加えて経過時間が異なる（こちらの2通目 ≈28h / 相手の2通目 ≈17.5h）。言えるのは**スレッド内では両者の露出がほぼ並ぶ**までである（`Derived` / N=2）。
+
+### `NO_REPLY_TIMEOUT` の判定時刻
+
+事前登録（Reply Log 003）は「**72時間（2026-08-13 09:45 JST）無応答**」。この絶対時刻は**相手の返信受信**（2026-08-10 09:45）を起点に書かれていたが、実際の送信は 2026-08-11 03:14 であり、**送信からの72時間は 2026-08-14 03:14 JST** とずれた。
+
+**事前登録した絶対時刻 2026-08-13 09:45 JST を判定時刻として維持する。** 結果を見てから待機窓を延ばさない（`CONSTRAINTS.md` Part I §6）。
+
+ずれ自体は事前登録側の欠陥として記録する——**無応答タイムアウトの起点は「受信時刻」ではなく「送信時刻」で書く**。送信がHuman Gateである以上、受信と送信の間隔は常に `UNKNOWN` である（本件では約17.5時間空いた）。次回から起点を明示する。
+
+### Stage: 変化なし（**REPLY のまま**）
+
+往復が4回になってもStageは動かさない。`GENUINE_PAIN_CONFIRMED` は 0 のまま。**会話の長さをファネルの前進として読み替えない。**
+
+判定条件は Reply Log 003 の事前登録どおりであり、**変更しない**（具体的な改善案が返る → Desire実在・L2として次段へ / 「まあ言っても変わらない」型 → 諦め確定・礼を述べて閉じる・4通目は送らない / 無応答 → `NO_REPLY_TIMEOUT`・追撃しない）。
