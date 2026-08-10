@@ -373,6 +373,7 @@ Tool / Project / Channel / Model / Providerを Terminal Desire へ昇格させ�
 
 - 本節以下の記述のうち、単一HTML / 60秒 / 作品構造 / 週1生成 / Codex gate等の具体値は **Browser-Toy Production Route(Historical Experiment、status: HOLD)** の実装値である。現在のMissionの制約ではない。
 - 現在のActive Route Familyは **Demand Intelligence → Discovery Contact → Pilot → Confirmed Revenue**(`DESIRES.md` / `CURRENT_STATE.md` 参照)。
+  **2026-08-10 補足**: MD-1の主経路は `direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` §121 で「Discovery Contact → Pilot」から「**L1入口 → L2構築**」へ更新されている。両者は排他ではなく、Discovery Contact（Encounter Queue）が②③層＝課題が明確で売上が速い側、L1入口が①層＝遅いが繋がりやすい側を担う二本立てである（同文書 §1-b）。**片方だけを現行と読まない。**
 - Route statusの一覧は `experiments/INDEX.md` が持つ。
 
 ### 能力
@@ -398,7 +399,7 @@ Human Desire → Objective（人間） → Selection（Factory） → Execution�
 
 週1。原則ではなく仮説。
 
-律速候補は Generation / Distribution / Feedback の3つで、現時点でどこが律速かの証拠は無い。DistributionとFeedbackが未成熟な間は、頻度を上げても学習速度は比例しない。
+律速候補は Generation / Distribution / Feedback の3つで、現時点でどこが律速かの証拠は無い。**（適用範囲: 本節はBrowser-Toy時代のcontrol-planeについての記述であり、Browser-Toy凍結とともに凍結している。現Missionの律速は `CURRENT_STATE.md` §7 が「World Signalを回収し次のActionへ戻す経路が弱いこと」と特定している。両者を同じ話として読まない。）**DistributionとFeedbackが未成熟な間は、頻度を上げても学習速度は比例しない。
 
 ### Open Questions
 
