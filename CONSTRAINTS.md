@@ -36,12 +36,6 @@
 | R3 | external communication / shared-state change / staging | **Human Commit** |
 | R4 | production / payment / deletion / permission / credential / irreversible action | **explicit Human Commit** |
 
-**`reversible` の定義（2026-08-10 追加）**: **git管理下のcommit済み状態へ戻せること**。これに当たらない次の3つは R1 ではなく R4 として扱う。
-
-1. **生成物の再生成**のうち、出力が実行環境に依存するもの（例: `scripts/build-catalog.mjs` はRelease dateをgit履歴から導出するため、shallow cloneで再生成すると24件中9件の日付が偽値になる — `experiments/INDEX.md` E-001 実測）
-2. **repo外にしか存在しない記録の破棄**（コンテナ内の作業記録・スクラッチ。回収不能な喪失は削除と同じ）
-3. **時点依存の観測機会の消費**（外部サービスの状態・他者の投稿など、後から同じものを観測できないもの）
-
 ## 4. Human Gates（Humanの明示Commitが必要な行為）
 
 - mainへのmerge

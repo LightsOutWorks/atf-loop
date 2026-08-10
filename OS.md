@@ -305,6 +305,18 @@ Humanへ返すのは、Humanにしか越えられない最後の1行為まで圧
 | F9 | 二次記述をEvidence化 | repo内の散文（canonical文書を含む）・サブエージェントの報告・Sensorの抽出だけを根拠に、外部stateや一次事実を断定している | 一次ソースを自分で開く。**外部stateはcanonicalの記述では確定しない**。サブエージェントの主張は統合担当が該当ファイルを開いて確認できたものだけ採用する。他者の投稿はSensor抽出ではなく全文を読む |
 | F10 | 既出の再発明 | 既に調査・決定済みの事項を「無い」と述べる／白紙から作り直す | 主張・調査の前に `DECISIONS.md` と `direction/` を引く。引いた形跡を残す |
 
+**R1 の `reversible` をどう読むか（2026-08-10 追加。`CONSTRAINTS.md` §3 の注釈であり、条文の改変ではない）**
+
+`CONSTRAINTS.md` §3 は R1 を `local / scratch / reversible generation → autonomous` とするが、`reversible` を定義していない。本Factoryでの読みは **git管理下のcommit済み状態へ戻せること**。次の3つはこれに当たらないため、R1として自律実行しない。
+
+1. **出力が実行環境に依存する再生成**。実測: `scripts/build-catalog.mjs` はRelease dateをgit履歴から導出するため、shallow cloneで再生成すると24件中9件の日付が偽値になる（`experiments/INDEX.md` E-001）
+2. **repo外にしか存在しない記録の破棄**。コンテナ内の作業記録・スクラッチは、失えば削除と同じ
+3. **時点依存の観測機会の消費**。外部サービスの状態・他者の投稿など、後から同じものを観測できないもの
+
+**この注釈をここに置く理由**: 2026-08-10、同じ内容を `CONSTRAINTS.md` §3 へ直接書き込んだところ、C0 provenance canary が STALE を返した。`CONSTRAINTS.md` は production_material として champion-baseline に焼かれており、変更にはベースライン全体の再宣言（`base_sha` の移動と全9材料の再declare）を要する。一方 `OS.md` は control_plane_snapshot で、drift は情報として記録されるだけである。**この区別は HI-8 の配置原則「変わりうるものをBoundaryへ置かない」を、canaryが機構として実装したものだった。** repo固有の具体例を含む本注釈は「変わりうるもの」であり、`OS.md` 側が正しい置き場所である。
+
+条文そのもの（R1の定義文）を変える場合は、champion-baseline の再宣言を伴うHuman判断とする。
+
 **AI側の頻出失敗**（本Factoryで実測されたもの）: ①実行可能性を理由に早すぎる棄却をする ②構造的ボトルネックを即時の最優先へ誤変換する ③データの不在からの推論を観測として断定する。
 
 ### HI-5. 判定語彙
