@@ -1,7 +1,7 @@
 ```json atf-control-state-v1
 {
   "schema": "atf.control-state/1",
-  "base_sha": "340875820bb5f876ebd8b1858fe84fcd130815dd",
+  "base_sha": "97b6c63d6db3309601704a6ddfb01aa3b65b49ba",
   "gates": [
     {
       "id": "F0",
@@ -136,11 +136,11 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-09 22:30 JST**
+Observed at: **2026-08-09 23:13 JST**
 
 Default branch: `main`
 
-Base SHA: `340875820bb5f876ebd8b1858fe84fcd130815dd`（PR #43 merge後）
+Base SHA: `97b6c63d6db3309601704a6ddfb01aa3b65b49ba`（PR #45 merge後）
 
 Evidence scope: **the default branch at the SHA above, recorded GitHub Actions runs and workflow states cited in this file（workflow stateは2026-08-09のActions API read-only実測）, and — explicitly labeled as such — Human-reported reality from the 2026-08-08 Current State Override and the 2026-08-09 Task Contract（D-003 UPPER-LAYER INTEGRATION）+ 同日D-003 AMENDMENT（CURRENT EXPERIMENT PRIORITY SYNC）+ 同日PR #40 FINAL REALITY SYNC + 同日 D-004 Public Identity決定（いずれも会話レベル。リポジトリ外の実測をヒロ/実行セッションが報告したもの）**
 
@@ -156,7 +156,16 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 - Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。`factory.yml` ファイル内にはhistorical cron定義が残るが、GitHub Actions workflow `factory` 自体は **disabled_manually**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。**cron定義の残存とworkflow enabled stateは別のfact**であり、残存riskはre-enable（Human Gate）時のみ（§4）。
 - 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2。現在Phase = World Signal回収）。
 - 上位Direction統合はD-003（`DECISIONS.md`）。現在の律速は§7。
-- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**identityの新規使用はHuman Gateであり、note / X等での実使用は2026-08-09 22:30時点で未実施 = `UNKNOWN`**（repository外・Human操作）。
+- **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。
+- **Identity rollout = 部分実施済み**（2026-08-10 00:59 Human実施・画像実測）: X表示名 / **Xハンドル `@livinggroundjp`** / Xアイコン / X bio / noteアカウント（表示名・アイコン）は切替済み。Googleアカウントは新規作成が電話番号上限で不可のため、既存 `lightsoutworks@gmail.com` の表示名・アイコンを Living Ground へ変更して対応。**noteメール認証は完了**（2026-08-10 Human-confirmed）。**投稿の前提条件は解除された。** 残る未完了: Xヘッダー（**旧名 `LIGHTS OUT FACTORY` が公開面に残存**）/ note自己紹介 / noteヘッダー / note ID は **`livinggroundjp` で確定**（`https://note.com/livinggroundjp`。2026-08-10 Human報告。**Xハンドル `@livinggroundjp` と完全一致**しており、`LLMO_EXECUTION_PLAN` §5-6 のEntity一貫性を満たす）。詳細と貼付用の実文は `experiments/md2-distribution/PROFILE_COPY_LIVING_GROUND.md` §0。
+- **公開面の実測**: Xフォロワー **3**（2026-08-10 00:59）。note記事 **0本**。
+- **`EN_GATE`（英語進出の解除条件。2026-08-10 制定 — `direction/WRITING_SYSTEM_EN_2026-08.md` §9）**: 英語は**現在すべて公開凍結**。解除は下記2つが**両方**満たされた日に、その日の実測値で再判断する。**週1回この2つだけ更新する。到達数（impression）は記録するが解除条件に入れない。**
+
+```
+EN_GATE: note = 0 / 10    non_boilerplate_reply = 1 / 3
+```
+
+  加えて、言語を増やしてよいのは「**日本語で週2本以上を4週連続で公開した**」が満たされた時のみ。凍結対象は公開だけで、調査・下書き・書法体系の更新は凍結中も行う。
 - Confirmed terminal revenue = **JPY 0**（§5）。Factoryは「成功した」と表現してはならない。
 
 ---
@@ -166,7 +175,11 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 Source: `experiments/batch-1/LEDGER.md`（Contact台帳・正本。2026-08-08 Human-confirmed syncとしてmain上に機械記録あり）。
 
 - Target: **20 Genuine Discovery Contacts** — **送信枠は消化済み**。
-- Funnel実測（LEDGER正本）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ SENT_BUT_NOT_PUBLICLY_VISIBLE **3**（HN。VOID — Delivery Layer failure・分母外）/ REACHABLE **17** / REPLY_WAIT **17** / REPLY **0**（2026-08-08 last repo sync。2026-08-09 D-003 AMENDMENTでHumanが「実direct reply未発生」を確認。以後の変化はHuman-confirmedがない限りrepositoryから確認不能 = `UNKNOWN`）。
+- Funnel実測（LEDGER正本。2026-08-09 23:20 JST更新）: SENT **20**（HN 3 / SE 1 / Bluesky 1 / X 15）/ VOID **3**（HN・分母外）/ REACHABLE **17** / REPLY_WAIT **16** / **REPLY 1** / GENUINE_PAIN_CONFIRMED **0**。
+- **2026-08-09、Batch 1初の実返信が発生した（X-@HatoNozomu。Human画像確認）。** ただし内容は**Pain仮説の明確な否定**であり、Painスコアは実質0（`LEDGER.md` Reply Log 001）。**`REPLY > 0` を前進と読み替えない** — Terminal Signalは返信数ではなくConfirmed Revenue（現在JPY 0）。
+- 根本原因は選定側にある: 元投稿に「**作成するのはいいけどさ**」という本人による明示的な否認が書かれており、**読めば分かる位置にあった**。こちらは否認された側を質問にした。抽出した選定規則（否認語形の機械的検出）はReply Log 001が保持し、次Batchへ引き渡す。
+- 本人が実際に述べていた不満（他者が対応表を使わない）は**未着手**。3タグ（HOW/TIME/WHAT）に該当せず、Gap分類では **D. Adoption**。**N=1のためタグを増やさない**（`OS.md` HI-4 F6。同型3件で再検討）。
+- 次の1通は起草済み・**未送信**（送信はHuman Gate）。
 - 現在Phase: **World Signal回収**。送信・候補準備の仕事は本Batchに残っていない。Lane Aの定期self check-inは2026-08-08に停止済み（X読取がharnessから不可のため。Humanがreply / reactionを共有した時のみ再起動 — LEDGER Conversation Log）。
 - Message style実測: 初期7件（C01 / C02 / C04 / C09 / C14 / LN-58 / LN-62）= BASELINE確定。X 13件 = `UNKNOWN`（HUMAN_SHORT Defaultの期間だが実文面が未回収 — LEDGER凡例）。cluster / 文面 / freshness_at_send は大半が `UNKNOWN`（Demandセッション成果物の非着地による恒久喪失）。
 - DiscoveryとSalesを分離する。初回Discoveryの目的は「相手が自分の現実についてもう一言話したくなる状態を作る」こと。
@@ -208,12 +221,15 @@ Source: 2026-08-08 Current State Override および 2026-08-09 D-003 AMENDMENT�
 
 ## 6. Open PRs and Session Ownership（観測 2026-08-09）
 
-Open PRは以下の2件（いずれもdraft。GitHub API / git実測 2026-08-09 22:30 JST）:
+Open PRは以下の**1件のみ**（draft。GitHub API / git実測 2026-08-09 23:13 JST）:
 
 - **PR #24**（`experiments/w0/*` 追加のみ）: W0 precursor、HOLD。W laneはBrowser-Toy Route凍結に伴い事実上凍結（§8）。canonical fileと競合しない。
-- **PR #44**（`claude/el-function-handoff-938vet`）: 本セッションの成果。LLMO実行計画 / SALES OS（§12 自己分析→有償の接合部を含む）/ JPコンプラ・ブリーフ / E-012評価と3次改訂 / Desire→Reality 3層設計 / Desire Engine長期構造 / 自己分析プロトコル v1.0 / note記事draft 2本 / **brand一式（D-004）** / `OS.md` v1.2（Human Interface節）/ `CURRENT_STATE.md` 同期。**merge = Human Gate**。
 
-- **PR #43 = merge済み**（main `3408758`）: `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（8領域並列調査）がmainに着地。
+2026-08-09夜のmerge（いずれもヒロがmerge。実測確認済み）:
+
+- **PR #43 = merge済み**（main `3408758`）: `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（8領域並列調査）。
+- **PR #44 = merge済み**（main `e42763b`）: LLMO実行計画 / SALES OS（§12 自己分析→有償の接合部）/ JPコンプラ・ブリーフ / E-012評価と3次改訂 / Desire→Reality 3層設計 / Desire Engine長期構造 / **自己分析プロトコル v1.0**（Direction Card v2のL0–L6分離）/ note記事draft 2本 / **brand一式（D-004）** / `OS.md` v1.2（Human Interface — Operator Priors）/ **E-013 Day 1台帳**。
+- **PR #45 = merge済み**（main `97b6c63`）: `OS.md` HI-8（Humanの上位優先順位・**本業がFactoryより上**）/ `JOURNAL.md` 0008（視覚判定能力の追加。0001 TETHER LOCKと同根）。
 
 2026-08-09午前のヒロ裁定（実測確認済み）:
 
@@ -231,6 +247,13 @@ Open PRは以下の2件（いずれもdraft。GitHub API / git実測 2026-08-09 
 **Structural Bottleneck**（長期の構造欠落。独立した複数監査 — D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit — の収束点。D-003）:
 
 > **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
+
+**2026-08-10 追加実測 — 律速は当初の記録より広い**: egress proxyにより `x.com` に加えて **`note.com` / `zenn.dev` も遮断されている**（本日WebFetch実測。EGRESS_BLOCKED）。つまり **Living Groundが立つ公開面は現時点で1つも harness から観測できない**。帰結:
+
+- 記事が公開されたか、読まれたか、反応があったかを **AIは一切検証できない**。すべてHuman報告経路（`UNKNOWN` 既定）
+- `direction/LLMO_EXECUTION_PLAN_2026-08.md` の20クエリ基準パネル（AI引用シェアの定点観測）は、**測定手段の実在が未確認**。着手前に測定可能性を先に確かめる
+- 観測可能な唯一の公開面は **GitHub**（API / Pages）
+- したがって「World Signalの受信経路が弱い」は X 固有の問題ではなく、**Distribution stack全体の性質**である。自動化で解く前に、Humanが低摩擦で報告できる形（スクリーンショット1枚）を維持することが実務上の最適解になっている
 
 **Current Operational Priority**（現在Bootstrap Phaseの最優先。D-003 AMENDMENT 2026-08-09 — 構造的な律速と現在の最優先実験は同一である必要はない: D-003 Decision 7）:
 
@@ -254,7 +277,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 
 | Evidence | Revision |
 |---|---|
-| default branch snapshot | `340875820bb5f876ebd8b1858fe84fcd130815dd` |
+| default branch snapshot | `97b6c63d6db3309601704a6ddfb01aa3b65b49ba`（PR #43 / #44 / #45 merge済み） |
 | Public Identity決定（D-004） | `DECISIONS.md` D-004（本PR内）。アセットは `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**外部での実使用は未実施 = `UNKNOWN`** |
 | Web Marketing Intelligence | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（main。PR #43 merge済み 2026-08-09） |
 | Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |

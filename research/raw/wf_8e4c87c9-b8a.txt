@@ -1,0 +1,767 @@
+調査完了。ppc.go.jp / soumu.go.jp / 主要法律事務所ドメインはこの実行環境のegress proxyで遮断されており（`connect_rejected` 403）、WebSearch経由の引用に依拠している。一次条文にあたれなかった箇所はその旨を明記した。
+
+---
+
+# S2〜S3の法務・個人情報上の最小リスク構成（日本法）
+
+## 前提：この設計で効く法律は4本だけ
+
+個人情報保護法（APPI）／電気通信事業法（外部送信規律）／特定商取引法（課金時のみ）／消費者契約法（課金時のみ）。それ以外は原則出番がない。
+
+---
+
+## 1. 完全ブラウザ内処理は「取得」に当たるか → **当たらない**
+
+条文構造から機械的に出る結論であって、解釈の余地はほとんどない。
+
+- APPIの義務は全て「**個人情報取扱事業者**」にかかる。定義は法16条2項で「**個人情報データベース等を事業の用に供している者**」。
+- 「個人情報データベース等」（法16条1項）は「個人情報を含む**情報の集合物**であって、特定の個人情報をコンピュータを用いて**検索できるように体系的に構成したもの**」（[PPC Q&A](https://www.ppc.go.jp/all_faq_index/faq2-q2-4/) / [BUSINESS LAWYERS](https://www.businesslawyers.jp/practices/284)）。
+- 「取得」はガイドライン通則編上、**個人情報を自己の管理下に置くこと**を指す。ヒロのサーバに1バイトも届かないなら、集合物が生成されず、管理下にも置かれない。
+
+→ **貼られたテキストがブラウザから出ない限り、ヒロは「個人情報取扱事業者」ですらない。** 20条（適正取得）、21条（利用目的の通知・公表）、23条（安全管理）、27条（第三者提供）、32条（公表事項）— **全て発動しない**。
+
+重要な副次効果：自己分析テキストには高確率で**要配慮個人情報**（病歴、精神障害を含む心身の機能の障害）が混入する。これは法20条2項で**本人の同意なしの取得が禁止**されている（[keiyaku-watch](https://keiyaku-watch.jp/media/hourei/youhairyokojinjyoho/) / [小西法律事務所](https://www.konishilaw.jp/column/10707/)）。クライアントサイド設計は、この一番厄介な論点を**論点ごと消す**。
+
+**正直な限界**：「ブラウザ内処理＝取得に当たらない」と名指しで書いたPPCの公式Q&Aは、この環境では確認できなかった（ppc.go.jp遮断）。ただし結論は条文の定義から直接出るもので、日本のブラウザ完結型ツール群（[FreeTool](https://freetool.jp/security)、[Xenuto Tools](https://xenuto.com/privacy/) 等）が全てこの前提で運用されている。争点になった事例は見当たらない。
+
+---
+
+## 2. プライバシーポリシーの掲示義務 → **法的義務なし。ただし1枚書け（理由は法律でなく信用）**
+
+- 21条の公表義務は「個人情報を**取得した場合**」に発生する。取得しないなら義務なし。
+- 32条1項1号は**保有個人データがある場合に限り**「事業者の**氏名・住所**」の公表を要求する（[小西法律事務所](https://www.konishilaw.jp/column/12027/) / [司栗事務所](https://sigrioffice.jp/4800/)）。**個人でやる以上、これは自宅住所の公開を意味する。** 取得しない設計はこれも回避する。
+- Cookie同意バナーは**日本法上そもそも不要**（GDPR適用対象でなければ）。[webtru](https://webtru.io/blog/cookie-regulation/)
+
+**書けば足りる内容（4行）**：
+```
+・入力されたテキストはお使いのブラウザ内でのみ処理され、当サイトのサーバーへ送信も保存もされません。
+・当サイトは個人情報を取得しません。お問い合わせをいただいた場合のみ、返信目的でメールアドレスを利用します。
+・アクセス解析（利用有無を明記）／ホスティング事業者（GitHub）のアクセスログについて。
+・連絡先メールアドレス。
+```
+「氏名・住所・電話番号」は不要。**義務が発生していないのだから書くな。**
+
+---
+
+## 3. サーバに1バイトでも送った瞬間に何が起きるか
+
+**フォーム/API送信の場合（テキスト本体が届く）— 世界が変わる**
+1. 「取得」成立 → 個人情報取扱事業者化。
+2. 21条：利用目的の**公表**が必須。
+3. **20条2項違反リスクが即発生**：要配慮個人情報を含むテキストを、送信前の明示同意なしに受け取ると違法。同意チェックボックスが**必須**になる。
+4. 32条：**氏名・住所の公表**が必要になる（自宅住所問題）。
+5. 23条：安全管理措置。漏えい時は26条の**PPC報告＋本人通知**義務。
+6. 外部AI API（OpenAI等）に投げるなら、**外国にある第三者への提供**（28条）の論点が乗る。
+
+**Google Analyticsだけの場合 — 法的にはほぼ何も起きない**
+- Cookie/IPは「**個人関連情報**」であり個人情報ではない。**収集自体に制限はなく**、提供先で個人が識別される場合（31条）に初めて同意が要る。GA単体では該当しない（[auriq](https://www.auriq.co.jp/blog/kojinjohohogo-ga-risk/) / [hack-le](https://hack-le.com/2022-ga/)）。同意ポップアップ**不要**。
+- 外部送信規律（電気通信事業法27条の12）：**個人・企業が自己の情報発信のために運営するホームページ、自社商品のオンライン販売は「電気通信事業」に該当せず対象外**（[総務省FAQ](https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu_00002.html) / [S&W国際法律事務所](https://www.swlaw.jp/ipo-library/4405/)）。仮に対象でも、外部送信タグが0本なら開示すべきものが0件で義務は空振り。
+
+→ **GAで変わるのは法律ではなく「嘘をつくかどうか」。** 「一切送信しません」と書いた上でGAを入れると表示が虚偽になる。回避策は**文言の精度**：「**入力されたテキストは**送信されません」と対象を限定すれば、GAを入れても嘘にならない。なお外部送信規律上は自社サーバ宛でも「外部送信」に含まれる点に注意（[privacytech](https://privacytech.co.jp/topic/gaibusoushinkiritu)）。
+
+---
+
+## 4. GitHub Pages で完全クライアントサイドは成立するか → **成立する。しかも構造が証明になる**
+
+GitHub Pagesは**静的サイト専用でサーバーサイド処理が原理的に不可能**（PHP/Python/Node不可、DB連携不可）（[株式会社一創](https://www.issoh.co.jp/tech/details/4397/) / [GitHub Docs](https://docs.github.com/ja/enterprise-server@3.2/pages/getting-started-with-github-pages/about-github-pages)）。「サーバーで処理していない」は自己申告ではなく**プラットフォームの制約**として言える。これが最大の武器。
+
+**信じてもらう方法（強い順）**
+1. **CSPを`<meta http-equiv>`で自分に課す**：`connect-src 'none'; form-action 'none'; script-src 'self'` — 送信を禁じるのはヒロの善意ではなく**ブラウザ**になる。JSがfetchしようとしてもブラウザが止める（[MDN connect-src](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/connect-src)）。静的サイトでもmetaタグで指定可能。
+2. **オフライン実演**：「ページを開いた後、Wi-Fiを切ってから貼ってください。動きます。」— 非エンジニアに効く唯一の説明。
+3. **単一HTMLファイル**：外部JS/CDN/Webフォント/埋め込みを**ゼロ**にする。読み込み先が0なら送信先も0。
+4. **リポジトリPUBLIC**（既にそう）＋「右クリック→ソースを表示」。
+5. DevToolsのNetworkタブにリクエストが1本も出ないこと。
+
+**正直に書くべき限界（隠すと逆に信用を失う）**
+- GitHubは**訪問者のIPアドレスをログとして収集する**（セキュリティ維持目的、トラッキング/マーケティング目的ではない）（[GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement)）。「通信ログが一切存在しない」は嘘。正しくは「**ヒロが取得しない**」。
+- ソースを読んだ時点と実行時点でJSは差し替え可能。**完全な証明は原理的に不可能**。「検証可能性」であって「証明」ではないと言い切った方が信用される。
+
+---
+
+## 5. 副業レベルで実務上必要な表示
+
+### S2〜S4（無料）で必要なもの → **ほぼゼロ**
+- **特商法：不要**（対価を取っていないので通信販売でない）。
+- **「診断は医療ではない」の明示：法的義務ではない**。医師法17条の「医業」は、医師の医学的判断・技術によらなければ**人体に危害を及ぼすおそれのある行為**を反復継続する意思をもって行うこと（[平成17年医政発第726005号](https://www.mhlw.go.jp/web/t_doc?dataId=00tb2895&dataType=1&pageNo=1) / [ウィーメックス](https://www.phchd.com/jp/medicom/park/idea/management-medicallaw-article17)）。性格傾向や欲求の言語化はここに当たらない。**過剰な免責文は書くな — 「これは診断ではありません」と長々書くほど胡散臭くなる。**
+  - ただし、病名の判定・治療の要否の示唆は**やらない**。1行だけ「医療・心理療法ではありません」で十分。
+  - 「キャリアコンサルタント」「公認心理師」等の**名称独占資格を名乗らない**こと。名乗らなければ何の許認可も要らない。
+- 弁護士法72条：法律相談をしなければ無関係。
+
+### S5（課金）で追加されるもの → **ここで一気に増える**
+1. **特商法11条：広告表示**。役務提供の通信販売に該当。個人事業者は「**氏名又は登記された商号、住所及び電話番号**」の表示が必要。ただし「**消費者の請求により遅滞なく提供する旨**」を広告に表示し、**実際に遅滞なく提供できる措置**を講じていれば**省略可**（[消費者庁 特商法ガイド](https://www.no-trouble.caa.go.jp/what/mailorder/advertising.html) / [マネーフォワード](https://biz.moneyforward.com/tax_return/basic/79606/)）。**自宅住所を晒さずに済む唯一の合法ルートなのでこれを使え。**
+2. **特商法12条の6：最終確認画面の6項目表示**（2022年6月施行）。「申込み確定」ボタン直前の画面に、分量・対価・支払時期方法・提供時期・申込期間・**解除/返金に関する事項**。**定期課金に限らず全通販事業者が対象**（[弁護士坂生雄一](https://bengoshi-sakao.com/column/%E3%80%902022%E5%B9%B46%E6%9C%88%E6%94%B9%E6%AD%A3%E7%89%B9%E5%95%86%E6%B3%95%E6%96%BD%E8%A1%8C%E3%80%91%E6%9C%80%E7%B5%82%E7%A2%BA%E8%AA%8D%E7%94%BB%E9%9D%A2%E3%81%AB%E5%BF%85%E8%A6%81%E3%81%AA6/) / [馬場・澤田法律事務所](https://www.babasawada.com/column/20220804-3.html)）。
+3. **消費者契約法8条：「一切責任を負いません」は無効**。事業者の責任を全部免除する条項、および軽過失に限定しない一部免除条項は無効（[BUSINESS LAWYERS](https://www.businesslawyers.jp/practices/262)）。「当社に故意又は重大な過失がある場合を除き」を必ず入れる。「法律で認められる範囲で免責」型の**サルベージ条項も令和4年改正で規制**対象（[クラウドサイン](https://www.cloudsign.jp/media/salvage/)）。
+4. 通信販売に**クーリングオフはない**。返金しないなら明示すれば足りる。
+5. （表示ではないが）売上は確定申告対象。
+
+### S4→S5の本当の分水嶺
+**ヒロが「提案するために貼られた内容を読む」時点で、その経路がメール・DMなら、彼はそこで取得者になる。** S3が完璧にクライアントサイドでも、S4で生ログをメールで送らせたら1〜3の義務が全部戻ってくる。**S4の入力は「診断結果の短い要約コード」だけを本人に手動でコピーさせ、生ログは絶対に受け取らない**設計にすること。ここが設計上いちばん壊れやすい。
+
+---
+
+## 6. 未成年
+
+- **現行法**：PPCガイドラインQ&A上、「一般的に**12歳から15歳までの年齢以下**の子どもについて、法定代理人等から同意を得る必要がある」（[TrustNow](https://www.trustnow.co.jp/blog/childrens-privacy/) / [高橋綜合法律事務所](http://www.takahashi-sogo.com/column/post-92.html)）。**ただし取得しないなら「同意」という概念自体が発生しない。クライアントサイド設計では論点なし。**
+- **令和8年改正（2026年7月10日成立・7月17日公布／法律第56号）**：**16歳未満**について、通知・同意取得を**法定代理人**に対して行う義務が新設。施行は公布から2年以内（一部2027年1月17日、本体2028年7月16日見込み）（[のぞみ総合法律事務所](https://www.nozomisogo.gr.jp/newsletter/13819) / [長島・大野・常松](https://www.nagashima.com/publications/publication20260423-1/) / [TMI](https://www.tmi.gr.jp/eyes/blog/2026/18354.html) / [法改正ナビ](https://houkaisei.jp/laws/kojin-joho-minaoshi-2026/)）。
+  → **サーバに送る設計にすると、2028年までに年齢確認フローの実装が必要になる。クライアントサイドなら永久に不要。** 将来コストの差がここで効く。
+- **S5の課金**：民法5条の**未成年者取消権**。親の同意なき契約は取り消され、返金義務が生じる。民法21条の「詐術」に当たれば取消不可だが、**単なる「成年です」チェックボックスだけでは詐術と認められにくい**（[東京くらしWEB](https://www.shouhiseikatu.metro.tokyo.lg.jp/sodan/s_faq/kiso/k_miseinen.html) / [高松春日法律事務所](https://takamatsu-kasuga.sakura.ne.jp/custom20.html)）。
+  → 現実解：**「18歳未満は利用不可」と明記し、決済前に生年月日を入力させる**。少額（〜数千円）なら実損リスクは小さい。過剰対策は不要。
+
+---
+
+## 補足（1行）
+
+法務上、この設計の**最小リスク構成＝最良のマーケティング資産**になっている。「サーバーに送らない」は義務を消すだけでなく、ヒロが指摘した「自己分析が面倒すぎる／文章に魅力がない」という信用の欠落を、**文章力ではなく構造で埋める**唯一の材料である。
+
+---
+
+# 運用上の明線（これだけ守れば大丈夫）
+
+1. **入力テキストをヒロのサーバ・外部APIに1バイトも送らない**（単一HTML＋`connect-src 'none'`／外部JS・CDNゼロ）。これを守る限り、APPI上の義務は一切発生せず、プライバシーポリシーも住所公開も要らない。
+2. **表示は「入力されたテキストは送信されません」と対象を限定して書く**（GA等を入れるなら必須）。無料の間は特商法表記も長い免責も不要。「医療ではありません」1行と「18歳未満不可」1行で足りる。
+3. **課金する瞬間に、特商法11条（住所等は「請求により遅滞なく提供」で省略）＋12条の6の最終確認画面＋「故意・重過失を除き」の免責限定の3点だけ追加する**。生ログをメールで受け取ることは、無料でも有料でも絶対にしない。
+
+===== AGENT =====
+
+## 調査条件の開示（先に読んでほしい制約）
+
+この実行環境の egress proxy は、事前に聞いていた4サイト（x.com / note.com / zenn.dev / coconala.com）よりはるかに広く遮断されている。**実測で以下がすべて到達不可**だった:
+
+`help.openai.com` / `openai.com` / `www.anthropic.com` / `support.anthropic.com` / `claude.ai` / `blog.google` / `support.google.com` / `learn.microsoft.com` / `arxiv.org` / `www.nber.org` / `www.forbes.com` / `www.techradar.com` / `techcrunch.com` / `medium.com` / `simonwillison.net` / `en.wikipedia.org` / `note.com` / `qiita.com` / `zenn.dev` / `www.nikkei.com` / `prtimes.jp` （curl で 000/403、WebFetch は EGRESS_BLOCKED）
+
+到達できたのは `www.reddit.com` と `news.ycombinator.com` のトップページのみ（reddit の検索 JSON API は 403）。
+
+**結果として、一次ソースを1本も開けていない。** 以下はすべて WebSearch が返した検索結果サマリと二次サイトの記述に依拠する。URLは付けるが、私が本文を読んで確認したものではない。特に OpenAI 公式の数値（後述の Dreaming V3 の 82.8% など）は二次情報の孫引きであり、**発注前に必ずヒロ本人の環境から一次ソースを確認すべき**。ここは推測ではなく「検証できていない」と明示しておく。
+
+---
+
+## 1. ChatGPT で「自分の過去の会話」を参照させる方法（2026年8月時点）
+
+### 経路は4つ。性質がまったく違う
+
+| # | 経路 | 実体 | プラン | 遡れる範囲 |
+|---|---|---|---|---|
+| A | 保存されたメモリ (Reference saved memories) | 明示的に保存された短い箇条書き | Free含む全プラン（管理UIの高度機能はPlus以上） | 保存された分だけ。会話そのものではない |
+| B | 過去チャットの参照 (Reference chat history) | 会話タイトル＋ユーザー発言スニペットの「ダイジェスト」を文脈に注入 | 2025-04 に Plus/Pro、2026-06-09 に Free へ縮小版 | **全文検索ではない。Freeは縮小ウィンドウ、サイズ非公表** |
+| C | データエクスポート (conversations.json) | 全会話の生データ | 全プラン | 全期間。ただし後述の重大な摩擦あり |
+| D | 手動コピペ | 本人が選んだ会話だけ | 全プラン | 本人が選んだ分だけ |
+
+### 事実（出典あり）
+
+**A/B の区別が最重要。** OpenAI は「保存されたメモリは削除するまで保持されるが、過去チャットからの詳細は選択的で、使用に応じて更新されうる」としている。つまり B は**保存ではなく合成**。([OpenAI Help経由の検索サマリ](https://help.openai.com/en/articles/8590148-memory-faq) / [alternativeto](https://alternativeto.net/news/2025/4/chatgpt-s-memory-can-now-reference-all-your-past-chats-for-more-personalized-interactions)）
+
+**B の内部実装は RAG ではない。** リバースエンジニアリング報告によれば、ChatGPT のパーソナライズは4層（セッションメタデータ / ユーザーメモリ / **チャット履歴ダイジェスト** / 現在のセッション）で、履歴ダイジェストは「最近の会話タイトルとユーザーメッセージのスニペットの軽量ダイジェスト」であって全文検索はしていない。「ChatGPT は現時点で履歴を検索することはできない」と明記されている。([llmrefs](https://llmrefs.com/blog/reverse-engineering-chatgpt-memory) / [digit.in](https://www.digit.in/features/general/how-chatgpt-memory-works-without-rag-indian-guy-unravels-the-secret-in-amazing-detail.html)）
+
+**メモリの容量はごく小さい。** 「アカウント全体で合計およそ8,000トークン程度の短いパラフレーズされたメモしか保存しない」という記述がある（二次情報、要検証）。([memorylake](https://www.memorylake.ai/en/blogs/chatgpt-forgets-previous-conversations)）
+
+**2026-06-04 に大型更新（Dreaming V3）。** 会話終了後にバックグラウンドで履歴をレビューして記憶を更新する方式に変更。OpenAI 社内評価で事実想起 67.9% → **82.8%**、選好追従 55.3% → 71.3%、時間経過後の正確性 52.2% → 75.1%。米国の Plus/Pro から開始、Free/Go は数週間後。([neowin](https://www.neowin.net/news/openai-is-rolling-out-a-major-upgrade-to-chatgpt-memory/) / [tech-insider](https://tech-insider.org/chatgpt-dreaming-v3-memory-update-2026/) / [cryptonomist](https://en.cryptonomist.ch/2026/06/05/openai-chatgpt-dreaming-v3-memory/)）
+
+→ **この 82.8% は S1 にとって好材料であると同時に悪材料**。OpenAI 自身の内部評価ですら、想起の約6分の1が外れる。「客観的なことがわかる」という売り文句の土台が 1/6 の確率で嘘を混ぜる。
+
+**2026-06-09、Free 層にも展開。** ただし「Free層の応答は Plus/Pro が受け取る完全な履歴ウィンドウではなく、縮小されたウィンドウから引く。OpenAI はその縮小ウィンドウの正確なサイズを公表していない」。AI駆動の全履歴検索は Plus/Pro 限定のまま。([digitalapplied](https://www.digitalapplied.com/blog/chatgpt-personalization-free-tier-june-2026-confidentiality-guide)）
+
+**日本での提供は 2025-04-11 から（Plus/Pro）。** 設定 → パーソナライズ に "Reference saved memories" として出る。([ITmedia](https://www.itmedia.co.jp/aiplus/articles/2504/11/news105.html) / [マイナビ](https://news.mynavi.jp/article/20250411-3181608/)）
+
+**C（エクスポート）の摩擦は深刻。** Forbes（2026-03-03）の実測レポート:「conversations という名前の複数のJSONファイルは人間の目には事実上読めない」「chat という巨大なHTMLファイルは Safari と Vivaldi の両方をクラッシュさせた」「何も構造化・整理されていないファイルの不浄な混沌。ランダムな英数字の羅列という以上に何の役にも立たない名前のフォルダ」「何が起きているのか説明する Readme すら入っていない」。([Forbes](https://www.forbes.com/sites/barrycollins/2026/03/03/heres-the-mess-you-receive-if-you-export-your-chatgpt-data/)）
+
+さらに: メールのDLリンクは**24時間で失効**。処理時間は小規模アカウントで20〜30分、公式には最大24時間、実務上は最大7日という記述もある。100会話程度で 10〜50MB。([tactiq](https://tactiq.io/learn/export-chatgpt-conversation) / [ai-toolbox](https://www.ai-toolbox.co/ai-toolbox-chatgpt-features/how-to-export-chatgpt-conversations)）
+
+### 推測（私の判断、出典なし）
+
+ヒロの案 S1 が**エクスポートを要求せず、チャット内でプロンプトを実行させる設計**なのは、この調査で見つかった中で最大の正しい判断。エクスポート経路（C）は、Forbes が「unholy mess」と書いた摩擦と24時間リンク失効を含み、ヒロ自身の判定「自己分析のところが面倒すぎる」がそのまま当てはまる。**S1 は C を使ってはいけない。** B（プロンプト）一択。
+
+---
+
+## 2. Claude / Gemini / Copilot での可否
+
+### Claude（事実）
+- チャットメモリは 2026-03 から Free 含む全ユーザーに提供、Free/Pro/Max で利用可。
+- ただし**過去会話の検索（chat search）は有料プラン限定**（Pro/Max/Team/Enterprise）。
+- 2026-07-10、単一のローリング要約から「個別のカテゴリ分けされたエントリ」方式に変更。
+- エクスポートは Settings → Privacy → Export data、ZIP(JSON)がメールで届く。**メモリはエクスポートに含まれない**。iOS/Androidからは実行不可。
+([memoryplugin](https://blog.memoryplugin.com/how-claude-memory-works/) / [MacRumors](https://www.macrumors.com/2025/10/23/anthropic-automatic-memory-claude/) / [memx](https://memx.app/blog/claude-memory-editable-entries-update/) / [Claude Help](https://support.claude.com/en/articles/9450526-export-your-claude-data)）
+
+### Gemini（事実）
+- 「Personal context」/「Past Chats」。2026-02〜03 に**全世界の無料ユーザーへ展開（欧州を除く）**。トグルはデフォルトON。
+- 条件: **18歳以上、個人のGoogleアカウント（職場・学校アカウント不可）、Keep Activity がON**。
+- エクスポートは Google Takeout（Gemini Apps を選択）。
+([9to5google 2026-02-26](https://9to5google.com/2026/02/26/gemini-past-chats-free/) / [androidheadlines](https://www.androidheadlines.com/2026/03/google-gemini-past-chats-feature-free-users-rollout.html) / [blog.google](https://blog.google/feed/gemini-referencing-past-chats/)）
+
+### Copilot（事実）
+- Microsoft 365 Copilot のメモリは GA が 2026年1月開始→7月完了、さらに「Enhanced Memory」が2026年11月GA予定。
+- Personalization をONにした全ユーザーで有効。M365 Copilot ライセンスの有無を問わず Copilot Chat ユーザーに提供。
+- **性格が違う**: 「Python が好き」「Project Alpha をやっている」といった**業務文脈の記憶**であり、自己開示の材料になりにくい。
+([MC1158329](https://mc.merill.net/message/MC1158329) / [techcommunity](https://techcommunity.microsoft.com/blog/microsoft365copilotblog/introducing-copilot-memory-a-more-productive-and-personalized-ai-for-the-way-you/4432059) / [Microsoft Learn](https://learn.microsoft.com/en-us/copilot/microsoft-365/copilot-personalization-memory)）
+
+### 判定
+S1 のプロンプトが成立するのは **ChatGPT（Free含む、ただしFreeは縮小ウィンドウ）と Gemini（欧州除く、個人アカウントのみ）**。Claude は有料プランなら可、Free は履歴検索不可。Copilot は原理的に可だが**材料が業務ログなので「本当の欲」は出ない**。
+
+---
+
+## 3. 「過去の会話全体から人物像を出させる」プロンプトは機能するか
+
+### 機能報告（事実）
+
+**すでにバイラル化済み。** "roast me based on our previous conversations" / "roast me based on everything you know about my work habits, goals, personality and recurring frustrations" は TikTok で大規模なトレンドになった。Tom's Guide の記者は「自分の自己不信の源を暴かれた」と書いている。([Tom's Guide](https://www.tomsguide.com/ai/i-used-chatgpts-viral-roast-prompt-and-it-exposed-the-source-of-my-self-doubt) / [TikTok discover](https://www.tiktok.com/discover/roast-me-based-on-your-past-prompts-chatgpt)）
+
+**OpenAI 自身が同じことを製品化した。** 2025-12-22、"Your Year with ChatGPT"（テーマ、チャット統計、会話スタイル、アーキタイプ、詩、2026年予測など）。**ただし提供国は US/UK/カナダ/豪/NZ + インドで、日本は含まれていない。** Team/Enterprise/Education も対象外。([MacRumors](https://www.macrumors.com/2025/12/22/chatgpt-year-end-summary-2025/) / [bestmediainfo](https://bestmediainfo.com/mediainfo/mediainfo-digital/chatgpt-users-in-select-countries-can-now-access-personalised-2025-usage-summary-10942928)）
+
+**同じことをやるサービスがすでに複数商用化されている。** これは S1〜S3 の直接的な先行事例:
+- **GPTRecap** — 「ChatGPT版 Spotify Wrapped」。無料・サインアップ不要、33種のAIパーソナリティ型、**解析は100%ブラウザ内で実行**。有料でトピック分析・IQ分析・ムード/関係性インサイト・トラストスコア。Product Hunt 掲載済み。([gptrecap](https://gptrecap.com/blog/how-to-export-chatgpt-data) / [Product Hunt](https://www.producthunt.com/products/gptrecap)）
+- **Memrov** — エクスポートを読み込んで Big Five・アタッチメントスタイル・価値観を6つの検証済みフレームワークで出す。アップロード時に暗号化、生ファイルは7日で削除。([memrov](https://www.memrov.com/chatgpt-personality-analysis)）
+- **AI Wrapped** — ChatGPT/Claude/Gemini を横断して統合分析。([aiwrapped](https://aiwrapped.app/blog/how-to-export-chatgpt-data/)）
+- **Kapwing ChatGPT Wrapped**。([kapwing](https://www.kapwing.com/chatgpt-wrapped)）
+
+### 失敗報告（事実）
+
+**2026年前半にメモリ検索パイプラインが壊れていた。** 「ChatGPT のメモリ機能の検索パイプラインは2026年初頭に壊れ、チャット横断メモリは部分的にしか復旧しなかった。ユーザーは保存済みメモリを忘れる、既知の選好を適用しない、約50メッセージ後に文脈を失う、と報告した」。この期間 roast プロンプトは**パーソナライズされた洞察ではなく一般論を返した**。([mayhemcode](https://www.mayhemcode.com/2026/07/ai-memory-problem-2026-risks-in-chatgpt.html)）
+
+**要約は全部を捕捉しない（OpenAI 自身の記述）。** 「メモリ要約は最も重要な詳細を捕捉するはずだが、ChatGPT がチャットに基づいて記憶していることのすべてを含むわけではない」。
+
+**確信を持って間違える。** 研究者のテストで「ChatGPT は長い物語の詳細を取得できず、100トークンに切り詰められた版しか見えていないと述べた。要約には2行の説明しか含まれず、具体的な詳細を尋ねると自信を持って誤った答えを返し、標準的なハルシネーションのように見えた」。([Embrace The Red](https://embracethered.com/blog/posts/2025/chatgpt-how-does-chat-history-memory-preferences-work/)）
+
+**「メモリは自分の発言しか持っていない」。** 同記事によれば、メモリはユーザーのメッセージを含むがモデル自身の応答は含まない。→ 対話の往復から見える「反応パターン」は材料に入っていない可能性がある。
+
+**日本語圏の記事は自己分析プロンプトを肯定的に紹介しているが、精度批判・バーナム効果への言及は検索範囲では見つからなかった（＝不明）。** 見つかった記事はいずれも手順紹介型で、「複数日にわたる複数回の対話で精度が上がる」「これは心理診断ではない」という但し書きが付く。([aismiley](https://aismiley.co.jp/ai_news/chatgpt-self-analysis-prompt/) / [AIVENTURE](https://www.theaiventure.com/ai-self-analysis-prompt/)）
+
+### 推測
+
+先行サービスが4つ以上あり、OpenAI 自身も年次リキャップを出している以上、**「AIに自分を分析させる」という体験自体の希少性はすでに消えている**。ヒロの差別化点は S3〜S5（提案→同意→試作→課金）であって S1 ではない。S1 は入口の摩擦であり、価値の源泉ではない。ここを取り違えると、すでに無料で存在するものを再実装することになる。
+
+---
+
+## 4. 【最重要】この案の入口が成立する利用者の条件
+
+### 事実
+
+**OpenAI 自身が「最低活動閾値」を設けている。** "Your Year with ChatGPT" を生成するには、(1) Reference saved memories と Reference chat history の**両方がON**、(2) **最低会話活動閾値を満たす**ことが必要。満たさないと「基本的なチャット統計しか見えない」か、そもそも表示されない。「2025年後半にアカウントを作った、あるいはほとんど使っていないユーザーについては、システムは意味のあるストーリーを生成できない」。([felloai](https://felloai.com/how-to-get-your-year-with-chatgpt-the-recap-guide/) / [almcorp](https://almcorp.com/blog/chatgpt-year-end-review-complete-guide/)）
+
+→ **これが決定的。世界で最も多くのデータを持つ OpenAI が、自社の同種機能に足切りを入れている。**「履歴が薄いと意味のある出力は作れない」を提供者自身が認めている。
+
+**利用は強いべき乗分布。** 「上位10〜20%のユーザーが総アクティビティの50〜70%を生む」。週2〜6セッションが標準、パワーユーザーは10〜25セッション。週あたり滞在は15〜60分、ヘビーユーザーは2〜6時間。([newmedia](https://newmedia.com/blog/chatgpt-usage-statistics) / [index.dev](https://www.index.dev/blog/chatgpt-statistics)）
+
+**平均メッセージ数は週25.7件（中央値ではない）。** 700M WAU × 週180億メッセージ（2025-07）から算出した**平均**。べき乗分布下では中央値は大幅に低い。([sqmagazine](https://sqmagazine.co.uk/chatgpt-statistics/) / [businessofapps](https://www.businessofapps.com/data/chatgpt-statistics/)）
+
+**課金率は約5%。** WAU 900M（2026-03）に対し消費者サブスクは50M超。([digitalinformationworld](https://www.digitalinformationworld.com/2026/02/openai-reports-900m-weekly-chatgpt.html)）
+
+**内容の内訳が致命的。** NBER WP 34255（Chatterji, Cunningham, Deming ほか、2025-09、130,000ユーザーの150万メッセージ）:
+- 非業務メッセージは 53% → 73%（2025年6月）に増加
+- しかし内訳は Practical guidance 28.1% / Seeking information 21.3% / Writing 28.3% の3カテゴリで約8割
+- **「関係性と個人的内省」はメッセージ全体のわずか 1.9%**
+- Asking 49% / Doing / Expressing の枠組み
+([NBER w34255](https://www.nber.org/papers/w34255) / [Entrepreneur](https://www.entrepreneur.com/business-news/how-people-are-using-chatgpt-openai-study/497193) / [CNBC](https://www.cnbc.com/2025/09/17/openai-releases-first-of-kind-study-revealing-how-people-use-chatgpt.html)）
+
+**日本はさらに業務寄り。** 日経:「日本の生成AI利用まだ6割 仕事中心、7割超の米国は『友達』使い」。アウンコンサルティング調査（2026-06-30〜07-06、5カ国）で日本の生成AI非利用率は3割超で最多（米20.8% / 独17.0% / 印1.6% / シンガポール3.4%）。プライベート利用でのChatGPT利用率は日本40.8%（シンガポール57.8% / インド55.6% / 米43.8%）。([日経](https://www.nikkei.com/article/DGXZQOUA223GZ0S6A720C2000000/) / [AI teller](https://aiteller.jp/blog/news-aun-consulting-ai-usage-survey)）
+
+**日本の生成AIサービス利用者は2026年末に3,553万人見込み、ChatGPT シェア36.2% / Gemini 25.0% / Copilot 13.3%。** インターネットユーザーの54.7%が直近1年以内に利用経験（前回29.0%から急伸）。([ICT総研](https://prtimes.jp/main/html/rd/p/000000027.000019182.html) / [innovatopia](https://innovatopia.jp/ai/ai-news/81085/) / [Forbes JAPAN](https://forbesjapan.com/articles/detail/92437)）
+
+### ヒロの「2,300行」についての算術チェック（推測、ただし根拠は数値）
+
+ChatGPT アプリ内の GPT-5 系は**1応答あたり約8,000トークンの上限**（GPT-4o は16,384）。([aitoolsynergy](https://aitoolsynergy.com/chatgpt-token-limit-explained/) / [scriptbyai](https://www.scriptbyai.com/token-limit-openai-chatgpt/)）
+
+日本語は概ね1文字≒1トークン前後。2,300行が1行平均10文字でも23,000文字≒2万トークン超、30文字なら6万トークン超。**いずれにせよ1応答の上限を大きく超える。**
+
+→ **推測: ヒロの2,300行は単一プロンプトの1回の出力ではなく、複数ターンの継続、あるいは極端に短い行・空行を多く含む出力である可能性が高い。** これは S1 の設計に直接効く。「プロンプトを1回貼るだけ」では2,300行相当は物理的に出ない。つまり利用者にも継続入力（「続けて」を5〜10回）を要求することになり、**ヒロ自身が却下した「面倒すぎる」がそのまま S1 に再発する。**
+
+これは要検証。ヒロが実際に何回のやり取りで2,300行を得たか、どのモデル/モードだったかを本人に確認すれば即座に確定する。
+
+### 入口が成立する利用者の条件（結論）
+
+以下を**すべて**満たす必要がある:
+
+1. ChatGPT または Gemini を使っている（Claude は有料、Copilot は材料が業務ログで不適）
+2. 個人アカウント（Gemini は職場・学校アカウント明示的に不可。ChatGPT も Team/Enterprise/Edu は年次リキャップ対象外）
+3. Reference chat history / Past Chats が**ON**（Temporary Chat 常用者は除外）
+4. **利用歴が長く、会話数が多い**（＝べき乗分布の上位10〜20%）
+5. **その履歴の中に業務タスク以外の自己開示がある**（個人的内省は全体の1.9%、日本はさらに業務寄り）
+6. Free 層の場合は縮小ウィンドウで、Plus/Pro より材料が少ない
+7. 欧州在住でない（Gemini）
+
+**4と5が同時に成立する人は、日本のAI利用者の中でごく少数。** そしてこの人物像は「長期間ChatGPTと個人的な話をしてきた人」＝**ヒロ本人とほぼ同型**である。ヒロが自分の環境で2,300行を得たのは、条件4・5を満たす稀な人だからであって、案の一般性の証拠ではない。**これは典型的な "founder is the outlier" の罠。**
+
+---
+
+## 5. 「マスキングして出せ」の信頼性
+
+### 事実
+
+**LLMに指示を守らせること自体が2〜3割失敗する。** IFEval（検証可能な制約に対する指示追従ベンチマーク、約500プロンプト×1〜3制約）で「指示追従領域でフロンティアモデルは依然として22〜30%失敗する（正答率70〜80%）」。([surgehq](https://surgehq.ai/blog/advancedif-and-the-evolution-of-instruction-following-benchmarks)）
+
+**専用のPIIマスキングモデルですら文脈依存エンティティを外す。** Singh & Narayanan, arXiv:2504.12308「Unmasking the Reality of PII Masking Models」: 16種のPIIを含む17K文の半合成データセットで Piiranha / Starpii / Microsoft Presidio を評価し、**非検出だけでなく大量の誤分類**（特に Presidio と Starpii）を確認。モデルカードでの文脈開示が必要と結論。([arXiv 2504.12308](https://arxiv.org/abs/2504.12308)）
+
+**手法別の穴。** 「正規表現は構造化エンティティ（SSN、メール、電話、クレカ）で優位だが、文脈依存エンティティ（人名、住所）では完全に失敗する。NERモデルは文脈依存エンティティを扱えるが構造化パターンでは正規表現に劣る」。「'María García' のような名前や住所は、NERモデルなしでは検出されない」。([ertas.ai](https://www.ertas.ai/blog/pii-redaction-accuracy-benchmark-regex-ner-llm) / [redactchat](https://redactchat.com/blog/articles/anonymize-data-for-chatgpt.html)）
+
+**そもそもマスキングしても再同定される。** Staab ら（ETH Zurich, ICLR 2024）「Beyond Memorization: Violating Privacy Via Inference with LLMs」: 実際のRedditプロフィールで、LLMは居住地・収入・性別などの属性を **top-1 で最大85%、top-3 で95.8%** の精度で推論。人間の1/100のコスト・1/240の時間。そして**「テキスト匿名化とモデルアラインメントを含む一般的な緩和策は、LLMの推論に対してユーザーのプライバシーを保護するのに現状で効果がない」**。([arXiv 2310.07298](https://arxiv.org/abs/2310.07298) / [ETH SRI Lab](https://www.sri.inf.ethz.ch/publications/staab2023beyond) / [ICLR proceedings](https://proceedings.iclr.cc/paper_files/paper/2024/file/9028b8a3ca98f58e373f0c1497a17448-Paper-Conference.pdf)）
+
+**「文字列を消しても匿名化にならない」。** 「不可逆な文字列削除ですらプロンプトを匿名化しないことがある。珍しい職種、正確な出来事の日付、小さな町が組み合わさると個人を特定しうる」。([truefoundry](https://www.truefoundry.com/blog/pii-redaction-llm-gateway-vs-application)）
+
+**業界の合意は「LLMに自己マスキングさせるな」。** 検索で見つかったマスキング系サービス（RedactChat, Redactprompt, Caviard.ai, Ghostit）は**例外なく「送信前にローカル/ブラウザ内で処理する」**設計。「プライバシー保護は ChatGPT に送る**前**に行うべきで、ChatGPT 自身に安全に匿名化させることに依存すべきではない」。([redactprompt](https://redactprompt.com/) / [caviard](https://www.caviard.ai/blog/how-to-redact-sensitive-information-in-chatgpt-conversations-a-step-by-step-guide)）
+
+### 不明
+- 「本人のAIに自己マスキングを指示した場合の失敗率」を直接測った研究は、この調査範囲では**見つからなかった**。上記はすべて隣接領域からの推定材料。
+
+### 判定（推測を含む）
+
+**S1のマスキング設計は現状では信頼できない。** 理由3つ:
+
+1. 指示追従の一般失敗率が22〜30%。マスキング指示も指示である以上、この率から自由ではない。
+2. 人名・地名・組織名という**まさに隠したいもの**が、最も検出漏れが起きやすいカテゴリ。
+3. **仮にマスキングが完璧でも、残った文章から居住地・収入・性別が85%の精度で推論できる。** ヒロのページに貼られた「マスク済み」テキストは、ヒロ側のAIが読んだ時点で再同定可能。これは技術的な穴ではなく**原理的な穴**。
+
+さらに事業リスクとして: リポジトリは PUBLIC、送信・公開は Human Gate 対象（CONSTRAINTS.md）。他人の自己開示テキストを受け取る時点で、日本の個人情報保護法上の「個人情報取扱事業者」該当性の検討が必要になる可能性がある（法的判断は私の権限外、専門家確認が必要）。
+
+**設計変更の示唆（推測）**: GPTRecap が採っている「**解析は100%ブラウザ内で実行、データはサーバに送らない**」方式が、この問題の既知の回避策。ヒロのページに「貼る」設計は、貼った時点でサーバに渡るなら同じリスクを負う。クライアントサイド完結にできるかが分岐点。
+
+---
+
+## 6. S1 の成立確率
+
+### 定義を分ける（ここを曖昧にすると数字が意味を失う）
+
+母集団: **「AIチャットを使ったことのある日本人100人が、実際にプロンプトを実行した」**とする（実行するかどうかの前段は別問題。ヒロの実測 = 送信24件→返信1件 が示す通り、そちらの方が厳しい）。
+
+| 定義 | 人数/100 | 確度 |
+|---|---|---|
+| ① 何らかの出力が返ってくる | **90〜98** | 高。LLMは必ず何か書く |
+| ② 本人が「これは自分のことだ」と感じる密度の出力 | **15〜25** | 中 |
+| ③ ②かつマスキングが実用に足り、他人のサイトに実際に貼れる | **2〜6** | 中〜低 |
+
+### ③の内訳（各係数の根拠と、測定値か推測かの区別）
+
+| 係数 | 値 | 根拠 | 種別 |
+|---|---|---|---|
+| A. 対応プラットフォーム＋個人アカウント＋履歴参照ON | 0.75 | Free層は2026-06に展開済だが縮小ウィンドウ。Gemini は職場/学校アカウント不可、欧州除外。日本は業務利用中心で会社アカウント率が高い | **推測**（構成要素は事実） |
+| B. 履歴量が「意味のある出力」の閾値を超える | 0.30 | 上位10〜20%が活動の50〜70%（べき乗分布）。OpenAI自身が "Your Year" に最低活動閾値を設定し、薄い履歴では生成不可と明言 | **推測**（分布は事実） |
+| C. その履歴に「本当の欲」を語れる自己開示が含まれる | 0.35 | 個人的内省は全メッセージの1.9%（NBER）。日本はさらに業務寄り（日経）。ただし1.9%でも絶対量があれば足りる場合があるので0.019よりは高く置く | **推測**（1.9%は事実） |
+| D. 出力が一般論・ハルシネーションに崩れない | 0.50 | Dreaming V3 の事実想起82.8%（＝1/6は外す、二次情報）。履歴ダイジェストは全文でなくタイトル＋発言スニペット。2026年前半に検索パイプライン障害 | **推測**（82.8%は要検証） |
+| E. マスキングが本人の納得する水準で、実際に貼る | 0.40 | 指示追従の失敗率22〜30%。人名・住所は最も漏れやすい。匿名化後も85%再同定。本人が読み返して怖くなって止める分を含む | **推測**（各数値は事実） |
+
+B と C は材料の話で重複するため、まとめて **0.12〜0.15** とする（0.30×0.35=0.105 より甘めに）。
+
+**0.75 × 0.13 × 0.50 × 0.40 ≒ 0.020 → 100人中2人**
+
+幅を取って **2〜6人/100**。
+
+### この数字の読み方
+
+- **①（90〜98人）と③（2〜6人）の差がこの案の本質。** 「出力は必ず出るが、貼るに値する出力はほぼ出ない」。しかも本人には①と③の区別がつかない。バーナム効果で「当たってる」と感じたまま薄い出力を貼る人が一定数出る → S3 で「客観的なことがわかる」を返せず、S4 の提案が的外れになり、S5 の課金に到達しない。
+- **成立する2〜6人は、ヒロ本人と同じ属性の人**（長期・個人利用・自己開示型）。市場としては「日本のAI利用者の上位数%かつ内省的な層」。3,553万人の2〜6%なら70〜210万人という計算にはなるが、**その人たちにリーチする経路をヒロは今まったく持っていない**（フォロワー3人）。S1 の技術的成立確率より、そこが律速。
+- **エクスポート（C経路）を使う設計にすると、③はさらに下がる**（Forbes「unholy mess」、24時間リンク失効）。逆に**プロンプト（B経路）のみなら上記の数字が維持される**。ヒロの案は正しくB経路。
+
+### ヒロの2つの判定に対する所見
+
+- 「文章に魅力がない」「変な文章も多い」→ S1 の調査範囲外。ただし S3（ページが返す文章）の品質問題として同じ壁が再来する。**自分の文章に魅力がないと判定した人が、ページで文章を返す事業を始めることになる**という構造は指摘しておく。
+- 「自己分析のところが面倒すぎる」→ **S1 はこの問題を解決していない可能性が高い。** 8,000トークン/応答の上限から、2,300行相当の出力は複数ターンを要する。「1回貼るだけ」にはならない。ここは**ヒロ本人に「実際に何回やり取りしたか」を確認すれば即座に判明する**。1回で出たなら私の算術が間違っている（その場合は行が極端に短い）。
+
+### 最も重要な未検証事項（発注前に確認すべき3点）
+
+1. ヒロの2,300行は**何ターンで**出たか（1ターンなら本レポートの算術が誤り）
+2. OpenAI 公式の Dreaming V3 数値（82.8%等）— 一次ソース `openai.com/index/` がこの環境から開けなかったため未確認
+3. GPTRecap / Memrov / AI Wrapped が実際に何を返すか — **ヒロ自身の履歴で3つとも試せば、S1〜S3 の到達点と自分の差分が1時間で分かる**。これが最も安価な検証。
+
+---
+
+**Sources:**
+- [OpenAI Memory FAQ (検索サマリ経由)](https://help.openai.com/en/articles/8590148-memory-faq)
+- [Reverse Engineering ChatGPT Memory — llmrefs](https://llmrefs.com/blog/reverse-engineering-chatgpt-memory)
+- [How ChatGPT Remembers You — Embrace The Red](https://embracethered.com/blog/posts/2025/chatgpt-how-does-chat-history-memory-preferences-work/)
+- [OpenAI rolling out major memory upgrade (Dreaming V3) — Neowin](https://www.neowin.net/news/openai-is-rolling-out-a-major-upgrade-to-chatgpt-memory/)
+- [ChatGPT Dreaming V3: Memory Recall 82.8% — tech-insider](https://tech-insider.org/chatgpt-dreaming-v3-memory-update-2026/)
+- [ChatGPT Personalization Free Tier June 2026 — digitalapplied](https://www.digitalapplied.com/blog/chatgpt-personalization-free-tier-june-2026-confidentiality-guide)
+- [ChatGPTがチャット履歴を自動的に記憶 — ITmedia (2025-04-11)](https://www.itmedia.co.jp/aiplus/articles/2504/11/news105.html)
+- [ChatGPT「メモリ」機能を強化 — マイナビニュース](https://news.mynavi.jp/article/20250411-3181608/)
+- [Here's The Mess You Receive If You Export Your ChatGPT Data — Forbes](https://www.forbes.com/sites/barrycollins/2026/03/03/heres-the-mess-you-receive-if-you-export-your-chatgpt-data/)
+- [How to Export ChatGPT Conversation — Tactiq](https://tactiq.io/learn/export-chatgpt-conversation)
+- [Does Claude Have Memory? How Claude Memory Works in 2026 — memoryplugin](https://blog.memoryplugin.com/how-claude-memory-works/)
+- [Anthropic Brings Automatic Memory to Claude Pro and Max — MacRumors](https://www.macrumors.com/2025/10/23/anthropic-automatic-memory-claude/)
+- [Export your Claude data — Claude Help Center](https://support.claude.com/en/articles/9450526-export-your-claude-data)
+- [Gemini app rolling out 'Past Chats' personalization to free users — 9to5Google](https://9to5google.com/2026/02/26/gemini-past-chats-free/)
+- [The Gemini app can now recall past chats — blog.google](https://blog.google/feed/gemini-referencing-past-chats/)
+- [Microsoft 365 Copilot: Updates to memory and personalization — MC1158329](https://mc.merill.net/message/MC1158329)
+- [Introducing Copilot Memory — Microsoft Community Hub](https://techcommunity.microsoft.com/blog/microsoft365copilotblog/introducing-copilot-memory-a-more-productive-and-personalized-ai-for-the-way-you/4432059)
+- [I used ChatGPT's viral roast prompt — Tom's Guide](https://www.tomsguide.com/ai/i-used-chatgpts-viral-roast-prompt-and-it-exposed-the-source-of-my-self-doubt)
+- [ChatGPT Year-End Summary Like Spotify Wrapped — MacRumors](https://www.macrumors.com/2025/12/22/chatgpt-year-end-summary-2025/)
+- [ChatGPT users in select countries can access personalised 2025 summary — bestmediainfo](https://bestmediainfo.com/mediainfo/mediainfo-digital/chatgpt-users-in-select-countries-can-now-access-personalised-2025-usage-summary-10942928)
+- [Your Year with ChatGPT: The Recap Guide — Fello AI](https://felloai.com/how-to-get-your-year-with-chatgpt-the-recap-guide/)
+- [AI Memory Problem 2026: Risks in ChatGPT, Claude, Gemini — mayhemcode](https://www.mayhemcode.com/2026/07/ai-memory-problem-2026-risks-in-chatgpt.html)
+- [GPTRecap — ChatGPT Wrapped](https://gptrecap.com/blog/how-to-export-chatgpt-data) / [Product Hunt](https://www.producthunt.com/products/gptrecap)
+- [Memrov — ChatGPT Personality Analysis](https://www.memrov.com/chatgpt-personality-analysis)
+- [AI Wrapped — Export guide](https://aiwrapped.app/blog/how-to-export-chatgpt-data/)
+- [How People Use ChatGPT — NBER w34255](https://www.nber.org/papers/w34255) / [PDF](https://www.nber.org/system/files/working_papers/w34255/w34255.pdf)
+- [Here's How People Are Actually Using ChatGPT — Entrepreneur](https://www.entrepreneur.com/business-news/how-people-are-using-chatgpt-openai-study/497193)
+- [OpenAI releases first-of-kind study — CNBC](https://www.cnbc.com/2025/09/17/openai-releases-first-of-kind-study-revealing-how-people-use-chatgpt.html)
+- [日本の生成AI利用まだ6割 仕事中心 — 日本経済新聞](https://www.nikkei.com/article/DGXZQOUA223GZ0S6A720C2000000/)
+- [2026年2月 生成AIサービス利用動向に関する調査 — ICT総研](https://prtimes.jp/main/html/rd/p/000000027.000019182.html)
+- [日本の生成AI利用率が54.7%に急伸 — innovatopia](https://innovatopia.jp/ai/ai-news/81085/)
+- [日本の生成AI利用者が2029年に5000万人突破へ — Forbes JAPAN](https://forbesjapan.com/articles/detail/92437)
+- [【2026】日本の生成AI利用率が5カ国中最下位 — AI teller](https://aiteller.jp/blog/news-aun-consulting-ai-usage-survey)
+- [OpenAI Reports 900M Weekly ChatGPT Users, 50M Subscribers — digitalinformationworld](https://www.digitalinformationworld.com/2026/02/openai-reports-900m-weekly-chatgpt.html)
+- [100+ ChatGPT Usage Statistics for 2026 — NEWMEDIA](https://newmedia.com/blog/chatgpt-usage-statistics)
+- [Unmasking the Reality of PII Masking Models — arXiv:2504.12308](https://arxiv.org/abs/2504.12308)
+- [Beyond Memorization: Violating Privacy Via Inference with LLMs — arXiv:2310.07298](https://arxiv.org/abs/2310.07298) / [ETH SRI Lab](https://www.sri.inf.ethz.ch/publications/staab2023beyond)
+- [PII Redaction Accuracy Benchmark: Regex vs NER vs LLM — Ertas AI](https://www.ertas.ai/blog/pii-redaction-accuracy-benchmark-regex-ner-llm)
+- [PII Redaction in LLM Pipelines — TrueFoundry](https://www.truefoundry.com/blog/pii-redaction-llm-gateway-vs-application)
+- [Building AdvancedIF: Evolving Instruction Following Beyond IFEval — SurgeHQ](https://surgehq.ai/blog/advancedif-and-the-evolution-of-instruction-following-benchmarks)
+- [ChatGPT Token Limit Explained — aitoolsynergy](https://aitoolsynergy.com/chatgpt-token-limit-explained/)
+- [ChatGPT自己分析プロンプト — aismiley](https://aismiley.co.jp/ai_news/chatgpt-self-analysis-prompt/)
+
+===== AGENT =====
+
+{"index_html": {"what": "現在の /home/user/atf-loop/index.html は Living Ground のホームページではなく、Browser-Toy Route（E-001・HOLD）の作品カタログである。<title>Catalog — Browser FPS-style Toys</title>、h1「Browser FPS-style Toys — Catalog」、lede「Single-file, dependency-free browser toys. Each play is about 60 seconds.」。構成は body > main（max-width 760px, 中央寄せ）> h1 + p.lede + p.redirect-note（旧URLからSEED 001へのリダイレクト告知）+ ul.catalog（li.entry × 24件 = SEED 001 NEON RANGE 〜 SEED 024 RING RUNNER。各 entry は h2 + p.desc + div.meta[span.date + a.play]）+ footer（a.feedback href=\"#feedback\" 'Feedback (coming soon)' — cursor:default のダミーリンク、機能していない）。最初の1件のみ li.entry.featured。配色はダーク単一固定（テーマ切替なし）: 背景 #0a0b12 / 文字 #e8ecf6 / カード背景 #12141f / featured #141a2e / 枠線 #2a2e40 / featured枠線 #4a5fd9 / lede #a9b1c6 / desc #c7cce0 / date・footer #8891ac・#7f879e / seed-num #7f8bc9 / リンク #9db2ff・枠 #3a4470・hover #1f2748 / redirect-note 背景 #10142a。角丸 10px(card) / 8px(note) / 6px(button)。CSS設計はクラスセレクタ＋要素セレクタのみ、CSS変数なし、メディアクエリなし、prefers-color-scheme 対応なし、flex 縦積み gap 14px。<meta name=\"viewport\" ... maximum-scale=1, user-scalable=no> でズーム禁止（アクセシビリティ上の既知の難点）。このファイルは手書きではなく scripts/build-catalog.mjs が works/seed-*/meta.json から機械生成する（outPath = リポジトリ root の index.html、line 253 で writeFileSync）。同スクリプトは config/champion-baseline.json で SHA-256 pin されている。experiments/INDEX.md E-001 に既知欠陥2件が記録済み: ①公開中のPagesトップのtitleが現Missionと矛盾 ②Release dateをgit履歴から導出するため shallow clone 環境で再生成すると24件中9件の日付が偽値になる（このリポジトリをshallow cloneした環境で index.html を再生成してcommitしてはならない）。", "lines": 322, "external_deps": ["なし — 完全ゼロ依存。<script> タグ0個、外部CSS0個、@font-face 0個、外部CDN 0個、画像・SVG参照0個、http(s):// で始まる参照は本文リンクを含め0個。フォント指定は `font-family: sans-serif;` の1行のみ（system default）。CSSは <head> 内 <style>（7〜109行、計103行）にインライン。JavaScriptは1行も無い。"], "reusable": "再利用できるもの: (1) ゼロ依存・単一ファイル・GitHub Pages配信という配信形態そのもの（新ページも同じ規律で作れる。CSPやCDN到達性の問題が起きない）。(2) レイアウト骨格: main{max-width:760px;margin:0 auto} + body{padding:32px 16px 64px;box-sizing:border-box} の1カラム縦積み。(3) カードpattern: li.entry{border:1px solid;border-radius:10px;padding:16px 18px} と .featured の強調差分。(4) .redirect-note の告知ボックスpattern（枠+背景+0.9rem+line-height1.5）。(5) footer の border-top 区切りpattern。(6) 行間・字送りの実値（lede line-height 1.5 / desc 1.45 / h1 letter-spacing 0.04em / meta 0.85rem）。(7) a.play の枠線ボタンpattern。\n再利用できない／衝突するもの: (a) 配色一式 — #0a0b12系のダーク青紫パレットは brand/BRAND_SPEC.md（黒 #111111 / 白 #FFFFFF のみ）と別系統であり、BRAND_SPEC にページ用パレットの規定は存在しない。(b) index.html 自体を編集して新ページにすること — 機械生成物であり build-catalog.mjs が上書きする／SHA-256 pin されたbaselineの再宣言を伴う。新ページは別ファイルとして作る必要がある。(c) viewport の user-scalable=no。(d) footer の #feedback ダミーリンク（受信先が存在しない）。"}, "md1_verbatim": "【North Star（DESIRES.md §1、逐語）】\n> **Human Desireをその時々の最良の手段でRealityへ変換し、その変換能力自体をWorld Signalで改善し続ける、個人所有の機関。**\n\n（同§1の注記・逐語）「North Starは原則1つ。RouteやProductはNorth Starではない。」「（D-002解釈: ここでの「World Signal」はRealityで発生する外部観測可能な結果を指す（§5の階層参照）。Gate PASS / agent数 / cycle time / token効率等のinternal shaping signalはWorld Signalではなく、それらのみでNorth Star前進を宣言してはならない。Bootstrap Phaseの最初のTerminal Reality SignalはConfirmed Revenue > 0（MD-1 Terminal。現在未達）。これは永久的達成条件ではなく最初の通過点であり、非経済的Human DesireをNorth Starから除外しない。）」\n\n【OS.md 冒頭 Current Identity（逐語）】\n> **This repository is not currently a game factory.**\n>\n> Its current mission is to improve a system that transforms Human Desire\n> into Reality using the best available external intelligence,\n> capabilities, tools, services, humans, and execution routes.\n>\n> Games, browser toys, MCP tools, and previous routes are historical\n> experiments unless explicitly reactivated by a current approved decision.\n\n【Major Desire Portfolio 全体（DESIRES.md §2 見出し、逐語）】\n- 「### MD-1 — Economic Engine（現在最優先）」\n- 「### MD-2 — Distribution / Encounter Engine」\n- 「### MD-3 — Desire→Reality Engine」\n（§2前文・逐語）「Major Desireの本数は固定しない。現時点の有力な最小十分集合は3つ。この3本は定理ではなく**Current Hypothesis**であり、反証・統合・降格可能である（再審理条件は§3。D-003）。」\n\n【MD-1 全文（DESIRES.md §2、逐語）】\n### MD-1 — Economic Engine（現在最優先）\n\n> Human Desireへの価値提供を、ヒロの日常運用労働に依存しない継続的な確定利益へ変換する。\n\n- 確定実収益がまだ発生していないため、他Major Desireと競合した場合は原則MD-1を優先する。\n- Terminal World Signal: **返金・取消可能期間を経過した確定実収益**。\n- Bootstrap Phase読み（D-003）: 現在PhaseのMD-1は巨大なEconomic System構築を意味しない。最初の焦点は**1本のPaid Value LoopをRealityで証明すること**。Confirmed Revenue > 0が現在Phaseの最初のTerminal Reality Signal（§1のD-002解釈と同一）。\n\n【MD-2 本文（逐語、抜粋）】\n> 広告費や毎回のcold outreachだけに依存せず、Genuine Needを持つ人とのEncounterが継続的に発生するDistribution Assetを構築する。\n「MD-2は**outbound Demand Sensing**（Large-N需要探索・Discovery Contact候補生成）と**inbound World Signal Intake**（reply / reaction / inbound needの受信・帰属・Humanへの必要最小Handoff）の**両方を所有する**（D-003）。Encounterは双方向であり、受信経路の欠如はMD-2の欠陥として扱う。」\n\n【MD-3 本文（逐語、抜粋）】\n> Human Desireから最適なCapability / Routeを選び、Realityまで実行するFactory自体の速度・確度・Human Interventionを継続改善する。\n\n【World Signal Hierarchy（DESIRES.md §5、逐語）】\n- **Shaping**: impressions / followers / likes / replies / conversations / interest / pilot discussion / tool usage\n- **Stronger Shaping**: pilot agreement / quote request / purchase intent / recurring use / inbound request\n- **Terminal**（MD-1）: 返金・取消可能期間を経過した確定実収益", "md1_compatible": "整合する（ただし現時点では「S5の課金到達時にのみMD-1に接続し、S1〜S4単体ではMD-1の前進にならない」という条件付き）。判定根拠は以下の実在テキストのみ。\n\n■ 整合を支持する実在記述\n1. DESIRES.md §2 MD-1 Bootstrap Phase読み（逐語）「最初の焦点は**1本のPaid Value LoopをRealityで証明すること**」。新案 S1→S5 は「価値提供 → 同意 → 制作 → 体験 → 課金」という単一のPaid Value Loopの定義そのものであり、この記述と語彙レベルで一致する。\n2. DESIRES.md §6「Route is not Identity」（逐語）「Game / MCP / WebMCP / X / Grok / Claude / Cursor / SaaS / API / OSS / Human labor / Advertising / Outbound / Inbound / Web Marketing」はRouteでありIdentityではない、「成功したRouteでも、より良いRouteが出れば置換する」。ホームページ貼付という新案の形式はRoute変更であり、North Star / MD-1の変更を要さない。\n3. direction/SALES_OS_2026-08.md §12「自己分析からの接続（無料 → 有償の唯一の経路）」が既にリポジトリ内に存在し、無料自己分析→有償の接合部が正本として定義済み。新案 S4/S5 はこの既存経路と同じ骨格（§12.4「有償が発生する条件（1つだけ）」＝「繋いでも解けず、かつ相手が『やってもらえますか』と言った時だけ。こちらから提案しない。相手の言葉が先。」）。\n4. experiments/INDEX.md E-012（逐語）「Desire発見（在重力自己分析 → Direction Card → 検証日 → 伴走）」status **ACTIVE**、Major Desire欄は「MD-3 →（接続時）MD-1」。新案は E-012 の配布面（note記事）をホームページへ差し替える提案であり、既存ACTIVE実験の系統上にある。\n5. MD-2本文（逐語）「inbound World Signal Intake（reply / reaction / inbound needの受信・帰属・Humanへの必要最小Handoff）」を MD-2 が所有し「受信経路の欠如はMD-2の欠陥として扱う」。ページ貼付は inbound 受信経路そのものであり、CURRENT_STATE.md §7 の Structural Bottleneck（「World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと」）に直接あたる。\n\n■ 整合を制限する実在記述（事実として併記）\n6. DESIRES.md §5 の階層上、S1〜S4が生む観測値（貼付件数・提案同意）は Shaping Signal であり Terminal ではない。MD-1 Terminal は「返金・取消可能期間を経過した確定実収益」のみ。したがって S5 の課金・かつ取消期間経過までは MD-1 の前進として数えられない。\n7. direction/SALES_OS_2026-08.md §12.1（逐語）「**無料で提供したものの中で売り込まない。相手から言われた時にだけ、価格と範囲を明示して答える。**」および §12.2「接続点は『検証日』ただ1つ」「**この会話以外に接続点を作らない。**」。新案 S4「その欲に合うサービス案を提案し、同意を取る」は、ページが自動でオファーを出す形になると §12.1 / §12.2 の既存規律と直接衝突する（衝突の有無は実装形態に依存するため、現時点では未判定＝ページ実装が存在しない）。\n8. CURRENT_STATE.md §5（逐語）「**副業条項**（2026-08-09 Human-confirmed）: 就業規則上、副業は**要相談だが禁止ではない**。ヒロの現方針は「**実収益が発生してから会社へ相談して通す**」。相談は**未実施** = `UNKNOWN`。無償提供（自己分析・note記事）のみの現段階では相談不要という前提で進行中。有償受注の発生時点で本項を更新する。」→ S5の課金発生は本項の更新トリガに該当する。\n9. CONSTRAINTS.md 由来の Human Gates（CLAUDE.md 記載・逐語）「mainへのmerge / 第三者への送信 / 支払い / credential変更 / 公開・不可逆操作」。新ページの公開は「公開・不可逆操作」に該当しHuman Gate。\n10. CURRENT_STATE.md §7（実測）: egress proxy により x.com / note.com / zenn.dev が遮断され「**Living Groundが立つ公開面は現時点で1つも harness から観測できない**」「観測可能な唯一の公開面は **GitHub**（API / Pages）」。新案の貼付先が GitHub Pages 上のページである場合、これは現時点でAIが観測可能な唯一の公開面である（ただしページ上のユーザー入力自体が観測可能になるかは、実装が存在しないため未判定）。\n\n■ 現時点での実測位置\nE-012（自己分析）の実施件数は **0 / N=0・完全に未測定**（experiments/INDEX.md 逐語）。したがって新案が MD-1 と整合するかは設計文書上の整合であり、Reality での検証は1件も行われていない。", "measured_funnel": [{"metric": "Xフォロワー数", "value": "3", "source": "CURRENT_STATE.md §1「**公開面の実測**: Xフォロワー **3**（2026-08-10 00:59）」（Human実測・画像）"}, {"metric": "note公開記事数", "value": "0本", "source": "CURRENT_STATE.md §1「note記事 **0本**」。note-self-analysis.md（FINAL）は Status: 投稿はHuman Gate = 未投稿"}, {"metric": "E-006 Batch 1 SENT（送信数）", "value": "20（HN 3 / SE 1 / Bluesky 1 / X 15）— 送信枠消化済み", "source": "experiments/batch-1/LEDGER.md（正本、SENT=20 台帳）／ CURRENT_STATE.md §2（2026-08-09 23:20 JST更新）"}, {"metric": "E-006 VOID（分母外）", "value": "3（C01 / C02 / C04 = すべてHacker News・SENT_BUT_NOT_PUBLICLY_VISIBLE / Delivery Layer failure）", "source": "experiments/batch-1/LEDGER.md 行43-45 ／ CURRENT_STATE.md §2"}, {"metric": "E-006 REACHABLE（分母）", "value": "17", "source": "experiments/batch-1/LEDGER.md ／ CURRENT_STATE.md §2"}, {"metric": "E-006 REPLY_WAIT", "value": "16", "source": "CURRENT_STATE.md §2"}, {"metric": "E-006 REPLY（実返信）", "value": "1（X-@HatoNozomu。2026-08-09 Human画像確認。分母REACHABLE 17に対し5.9%だがN=1でレートとして扱わない）", "source": "experiments/batch-1/LEDGER.md 行33/51 Reply Log 001 ／ CURRENT_STATE.md §2"}, {"metric": "E-006 返信の内容評価", "value": "Pain仮説の明確な否定。Painスコア実質0。根本原因は選定側 — 元投稿に本人の明示的否認「作成するのはいいけどさ」が読める位置にあった", "source": "CURRENT_STATE.md §2 ／ experiments/batch-1/LEDGER.md Reply Log 001"}, {"metric": "E-006 GENUINE_PAIN_CONFIRMED", "value": "0", "source": "experiments/batch-1/LEDGER.md 行35 ／ CURRENT_STATE.md §2"}, {"metric": "E-006 記録欠損（join key）", "value": "cluster / 送信文面 / freshness_at_send は大半が UNKNOWN（Demandセッション成果物の非着地による恒久喪失）。message style: 初期7件=BASELINE確定 / X 13件=UNKNOWN", "source": "CURRENT_STATE.md §2 ／ experiments/batch-1/LEDGER.md 行134"}, {"metric": "E-013 Daily Encounter Queue Day 1 SENT", "value": "4（配達4 / 全件送信。EQ-1〜EQ-4。送信 18:30〜22:45 JSTの間・exact timestamp UNKNOWN）", "source": "experiments/encounter-queue/LEDGER.md Funnel Totals ／ CURRENT_STATE.md §7（Human-confirmed 2026-08-09 22:45）"}, {"metric": "E-013 Day 1 REPLY", "value": "0（REACHABLE = UNKNOWN。harnessからX読取不可のため独立検証不能）", "source": "experiments/encounter-queue/LEDGER.md Funnel Totals"}, {"metric": "E-013 Day 1 事前登録された弱点", "value": "4件中2件（EQ-1 / EQ-4）に送信前からGenuine Pain証拠としての弱さを事前登録済み → Pain confirmation率の分母は2件で見る", "source": "CURRENT_STATE.md §7 ／ experiments/encounter-queue/LEDGER.md 行41,44"}, {"metric": "累積 Reality Contact（E-006 + E-013）", "value": "SENT 24", "source": "experiments/encounter-queue/LEDGER.md 行27（2026-08-09 22:45 JST時点）"}, {"metric": "【台帳間の不整合・実測事実】累積REPLYの記載", "value": "encounter-queue/LEDGER.md 行27 は「累積 Reality Contact（E-006 + E-013）= SENT 24 / **REPLY 0**」と書いているが、batch-1/LEDGER.md 行33 と CURRENT_STATE.md §2 は E-006 REPLY = **1**。CURRENT_STATE.md §9 Evidence Index 行283 も「REACHABLE 17 / REPLY 0」のまま。正しい累積は SENT 24 / REPLY 1（GENUINE_PAIN_CONFIRMED 0）。3箇所がstale。", "source": "experiments/encounter-queue/LEDGER.md 行27 vs experiments/batch-1/LEDGER.md 行33 vs CURRENT_STATE.md §2 / §9"}, {"metric": "確定実収益（MD-1 Terminal Signal）", "value": "JPY 0", "source": "CURRENT_STATE.md §1 / §5「Confirmed terminal revenue = **JPY 0**」「Factoryは『成功した』と表現してはならない」"}, {"metric": "E-011 X投稿 impression実測（初回）", "value": "C-1（TETHER LOCK）約15h経過で ≈ 20 imp / replies可視 0。Inbound Desire募集投稿 約15h で ≈ 16 imp / replies 0。C-2（検証の粒度）は直後・未計測。", "source": "experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md §H 行290-295"}, {"metric": "E-011 実測からの解釈", "value": "「現時点のreachはフォロワー基盤不在によりほぼゼロであることが実測された。単独投稿は届かない。」判定は事前登録ルール「3本×2週間」どおりで早期結論を出さない", "source": "experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md 行298"}, {"metric": "E-011 投稿数", "value": "C-1（2026-08-08）/ C-2（2026-08-09）の2本 + Inbound Desire募集投稿。いずれもHuman Commit", "source": "experiments/INDEX.md E-011 ／ CURRENT_STATE.md §6"}, {"metric": "E-005 Large-N Demand Intelligence Canary（2026-08-08）", "value": "cost ≈ USD 1.815 / 48 collection + 5 verification queries / raw rows 75 / unique 72 / Genuine Need ≈ 60 / semantic clusters 7 / top clusters 3 → verdict PASS（Sensorとして）。repo内raw artifactなし", "source": "experiments/INDEX.md E-005 ／ CURRENT_STATE.md §3"}, {"metric": "E-012 自己分析サービスの実施件数", "value": "**0件 / N=0・完全に未測定**（無料提供のみ。有償接続はSALES_OS §12の条件下でのみ発生）", "source": "experiments/INDEX.md E-012（status ACTIVE・2026-08-09に凍結解除・主軸へ昇格）"}, {"metric": "note記事内に自己申告された実測（S1〜S2をヒロ本人に実行した結果）", "value": "いつものAIの出力 = 2,300行（エディタの行数表示）／ そのうち弱みとして挙がったのは3項目（「作り込みすぎる」「抱え込みすぎる」「理想が高い分、自分を追い込む」）で3項目とも裏返すとほめ言葉／ Step 2で並んだ「同時に成り立っている2つ」= 3つ（うち1つは推測が実数字と不一致、1つは『覚えていない』、1つは未回答）／ 費用0円 / 他人にやった件数0件 / Step 3〜5は未実施", "source": "experiments/copy-2026-08-10/FINAL/note-self-analysis.md 行9, 13-19, 46, 90-98, 250-258"}, {"metric": "EN_GATE（英語公開解除条件・週1更新）", "value": "note = 0 / 10、non_boilerplate_reply = 1 / 3（英語は現在すべて公開凍結）", "source": "CURRENT_STATE.md §1 行162-168"}, {"metric": "xAI credit残高", "value": "initial USD 5.00 / cumulative consumption USD 4.351 / Day 1 Encounter Queueで USD 0.1631 消費 → 推定残高 ≈ USD 0.486（2026-08-09 22:45）。Auto top-up OFF", "source": "CURRENT_STATE.md §5"}, {"metric": "E-013 Budget cap", "value": "daily hard cap USD 0.18 / 3-day cumulative hard cap USD 0.50（残り USD 0.3369）/ reserve最低 ≈ USD 0.10 / 追加top-up禁止", "source": "CURRENT_STATE.md §5 / §7"}, {"metric": "Factory monthly hard cap", "value": "JPY 50,000（AIは自己変更禁止）", "source": "CONSTRAINTS.md Part I（CURRENT_STATE.md §5 / CLAUDE.md で参照）"}, {"metric": "観測経路の実測制約", "value": "x.com に加えて note.com / zenn.dev も egress proxy で遮断（2026-08-10 WebFetch実測 EGRESS_BLOCKED）。「Living Groundが立つ公開面は現時点で1つも harness から観測できない」。観測可能な唯一の公開面は GitHub（API / Pages）", "source": "CURRENT_STATE.md §7 行251-256"}, {"metric": "Identity rollout 実測", "value": "切替済: X表示名 / Xハンドル @livinggroundjp / Xアイコン / X bio / noteアカウント表示名・アイコン / noteメール認証完了 / note ID = livinggroundjp 確定。未完了: Xヘッダー（旧名 LIGHTS OUT FACTORY が公開面に残存）/ note自己紹介 / noteヘッダー。Googleは新規作成不可のため既存 lightsoutworks@gmail.com の表示名・アイコンを変更して対応", "source": "CURRENT_STATE.md §1 行160"}, {"metric": "Structural Bottleneck（4監査の収束点）", "value": "「World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。」17 REACHABLE threadのうちX 15件はharnessから読めず、送信主体handle・送信文面等のjoin keysも大半が未記録", "source": "CURRENT_STATE.md §7（D-003）"}, {"metric": "Current Operational Priority（現在の最優先）", "value": "「世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。」Current approved experiment = Daily Encounter Queue Canary（E-013）。Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST。Day 3後の自動継続なし", "source": "CURRENT_STATE.md §7"}], "brand": {"colors": ["#111111（マークの標準色・唯一の指定色）", "#FFFFFF（反転時／アバター背景）", "【規定なし】BRAND_SPEC.md にはページ用の背景色・文字色・アクセント色の規定が存在しない。§6使用ルールは「色を替えない（黒 / 白のみ）」とマークに対してのみ規定している。", "【参考・非brand】現行 index.html のダークパレット（#0a0b12 / #e8ecf6 / #12141f / #2a2e40 / #4a5fd9 / #9db2ff ほか）は BRAND_SPEC と別系統であり、brand準拠ではない"], "mark": "八卦の**巽（☴）**。「二層の水平構造＝安定・積層・継続。下段中央の余白＝受容・余地。硬い構造の中に最小限のひらきを残すことで『生きる土台』を示す。」（逐語）。**意味をこれ以上足さない**（翼・風・拡散などの追加解釈を図形へ反映しない）。\n幾何（確定・相対値）: 基準ボックス 60 × 44.4 / バー幅 60 / バー高さ 上段・中段 10 / 下段 **10.4**（下方向へ伸ばす。分割で光学的重量が落ちるため +4%。360pxレンダリングで実測確認済み）/ 行位置 y = 0 / 17 / 34 / 行間 7 / 中央の切れ目 幅 **10**（x = 25〜35）= 全幅の16.7%（**切れ目を広げない** — 広げると「余地」ではなく「分断」に見える）/ 角丸 r = 1.5、**下段の内側4隅のみ** / 外周の角はすべて直角。\n小サイズ版（32px以下・別ファイル `living-ground-mark-small.svg`）: 角丸を **0** にする / 行間を 7 → **8.5** に開く（基準ボックス 60 × 47）/ 下段の +4% 補正は行わない。16pxでも三段構造と中央の切れ目が判別できることを実測確認済み。\n使用ルール（§6 逐語）: 縦横比を変えない / 回転させない / 色を替えない（黒 / 白のみ）/ 余白は最低でもバー高さ1本分（= 10）を四方に確保する / 32px以下では必ず小サイズ版を使う。\n実ファイル（すべて自己完結SVG・外部依存なし・data URI化可能）: brand/living-ground-mark.svg（viewBox 0 0 60 44.4、fill #111111、rect×2 + path×2）/ -mark-inverse.svg / -mark-small.svg / -lockup-horizontal.svg（**書体は仮**）/ -avatar.svg / -avatar-dark.svg（1000×1000）/ brand/png/ に avatar-1000-dark.png, avatar-1000-light.png, avatar-400-light.png, header-note-1920x1006.png, header-x-1500x500.png, icon-16.png, icon-32.png, icon-180.png。\nStatus: **シンボル確定 / ロゴタイプ未確定**（Human決定 2026-08-09・D-004）。", "type": "**未確定（BRAND_SPEC.md §5 — 「書体は**未決**。ロックアップ内の文字は現在システムフォント指定であり、最終アセットではない。」逐語）。**\n候補（いずれも幾何学サンセリフ、既存案の字形に整合）: 1. **Jost\\*** — SIL OFL・商用可・ライセンス risk なし。Futura系で、広い字間でも字が散らない / 2. **Poppins** — 無料。より丸く親しみやすいが、広い字間で空きすぎる / 3. **Futura PT** — 原典。有料ライセンス。\n規定: 決定後、**必ずアウトライン化**してから最終アセットに含める（フォント依存を残さない）。字間は現行の広めを維持してよいが、広げすぎると高級ブランド寄りになる。**シンボル単体 / 横組み / 黒地反転の3パターンで確認して決める。**\n本文書体・見出し書体・サイズスケール・行間の規定は BRAND_SPEC.md に**存在しない**（ロゴタイプのみを扱っている）。日本語の文章規律は別正本 direction/WRITING_SYSTEM_JA_2026-08.md（C1〜C52＋禁止語）にあり、機械検査器は scripts/writing-check.py（kind: bio / x / note）。"}, "prompts_reusable": "experiments/copy-2026-08-10/FINAL/note-self-analysis.md に含まれるプロンプトは全6ブロック。うち新案で再利用可能なのは以下。行番号はすべて同ファイル。\n\n■ R1. Step 1 プロンプト（行21-38）— 新案 S1 の中核。**利用者が自分のAIチャットに1本貼るだけ**という形式が S1 の要求と完全一致。逐語:\n```\nこれまでの私との会話全体を振り返って、私について観察できることを教えてください。\n\nお願い: 褒めないでください。ただし、私を分析・診断・評価もしないでください。\n「あなたは〇〇な人です」という結論は要りません。\n観察された事実だけを、実例とともに挙げてください。\n\n以下の6点について、それぞれ具体的な会話の実例を挙げながら答えてください。\n\n1. 私が繰り返し戻ってくる話題は何か（頻度の高い順に3つ）\n2. 私が話すときに明らかに熱量が上がる話題と、義務感で話している話題の違い\n3. 私が「やる」と言って、実際に着手した形跡があること\n4. 私が「やりたい」と言い続けて、着手した形跡がないこと\n5. 私が繰り返し避けている、または話題を変えているテーマ\n6. 私が言っていることと、実際に相談してくる内容がずれている箇所（事実として）\n\n推測が入る場合は「推測」と明記してください。会話に無いことは書かないでください。\n```\n設計意図（行40、逐語）「『やる』と言ったことと、『やりたい』と言ったことを分けて聞いています。私は『やりたい』と言うとき、自分に都合よく話しています。着手した記録は、あとから書き換えられません。」\n\n■ R2. Step 2 プロンプト（行60-76）— 新案 S3「客観的に見えること」の生成器そのもの。逐語:\n```\n上記は、あるAIが私について書いた観察です。\nこのAIは私と長く話しているため、私の自己認識に寄っている可能性があります。\n\n第三者として、次の3つをやってください。\nただし私の性格・心理・動機を断定しないでください。事実と構造だけを扱ってください。\n\n1. この観察のうち、事実（会話に実際にあったこと）と、\n   解釈（このAIが意味づけたこと）を分けてください\n\n2. 事実の中に、互いに整合しない組み合わせがあれば、\n   「AとBが同時に成り立っている」という形で並べてください。\n   ※「なぜそうなのか」の説明は不要です。並べるだけにしてください\n\n3. その組み合わせについて、本人にしか答えられない問いを3つ挙げてください\n   （過去の具体的な出来事を尋ねる形で。心理を問う形にしないこと）\n```\n出力形（行84-86、逐語）:\n```\nAを大事だと言っている。同時に、時間はBに使っている。この2つが同時に成り立っている。\n```\n実測された設計上の学習（行78-88、逐語）「最初は理由まで書かせていました。…実際にやったら、私はその説明が当たっているかを考えはじめました。考えている間、事実そのものを見ていません。」「説明が付いていないので、言い返す相手がいません。自分で考えるほかなくなりました。知らない事実が出てきたのではなく、知っていた2つを並べて見たことがなかっただけです。」→ **理由・説明を書かせないこと**が実測済みの必須制約。\n\n■ R3. 9項目の提出フォーム（行220-230）— 新案 S2「ホームページに貼る」の入力形式として**そのまま流用可能な既存の唯一の構造化フォーマット**。逐語:\n```\n1. Step 2で並んだ「同時に成り立っている2つ」を1文で:\n2. いつものAIが褒めてきたこと:\n3. 別のAIが褒めなかったこと:\n4. 別のAIから出てきた3つ:\n5. 最初に確かめると決めた1つ:\n6. 絶対になりたくない状態:\n7. 今までに試して、やめたこと:\n8. 人より上手くできると言われること:\n9. その1つを試す日（日付を1つ）:\n```\n付随する既存の約束（行232-242、逐語）「送られてきたものを読んだら、切り分けを1つ返します。調べれば既存のサービスで終わるものか、設定や自動化を足せば届くものか、作らないと解けないものかです。」「作らないと解けないもので、しかも頼まれたときだけ、作る話の値段を出します。」「9番に日付が書いてあれば、その日に私から一度だけ連絡します。聞くのは『何が起きましたか』の1つだけです。それ以外の連絡はしません。」「送られてきた内容は、記録するとしても匿名にした傾向だけです。生の文章は保存しないので、公開する場合も事前に許可を取ります。」→ この3分類（既存サービスで終わる / 設定・自動化で届く / 作らないと解けない）が新案 S4「サービス案の提案」の既存の判定軸。\n\n■ R4. Step 4 プロンプト（行174-186）— 新案 S4「欲に合うサービス案を提案」の生成器。逐語:\n```\n上記すべてを踏まえ、次を出力してください。推測は推測と明記してください。\n\nA. 実際に時間・金・感情を使った対象から逆算される価値観（自己申告ではなく行動から）3〜5個\nB. 他人に感謝された事実・繰り返し成功している行動から見える強み 3個\nC. 理想と現状のギャップを埋めうる選択肢を、5つ以上並べてください\n   - 一つに絞らないこと\n   - 「何もしない」も選択肢として必ず入れること\n   - 各選択肢について: それが成立するために真である必要がある前提を1つ\nD. 各選択肢について、2〜4週間でその前提を確かめられる最小の行動\n\n順位はつけないでください。選ぶのは私です。\n```\n制約の実測理由（行188、逐語）「順位を付けさせません。順位が付いていると、私はそれが正しいかを考えはじめます。付いていなければ、自分で見比べるほかありません。」\n※ただしこのプロンプトは「上記すべて（Step 1〜3）」を前提入力にしている。Step 3（17問）を捨てる場合、入力の一部が欠ける（下記 prompts_discard 参照）。\n\n■ R5. Step 5 の6項目フォーム（行194-202）— 新案 S4の「同意を取る」／S5の「体験してもらう」の記録形式。逐語:\n```\n絶対になりたくない状態: （16番で書いたもの）\nやること: 2〜4週間で確かめること（1文）\n分かること: それが本当だった場合に何が分かるか\n邪魔: 実行を止める自分側の事情\n      （「時間がない」ではなく「夜になると疲れて開かない」くらい具体的に）\n対策: 「もし〈その状況〉になったら、〈この代わりの行動〉をする」の形で書く\n日付: カレンダーに入れる日を1つ\n```\n根拠（行204、逐語）「最後の『もし〜なら〜する』の形は、私が読んだ研究のまとめで再現性が高いとされていたものです。私自身は、他の形と比べていません。」\n※「（16番で書いたもの）」は Step 3 の17問への参照であり、17問を捨てるとこの1行だけ参照先を失う。\n\n■ R6. 非プロンプトだが再利用可能な既存資産\n- 独立条項（行206-212、逐語）「自己分析そのものでお金を取ることは、これから先もしません。」「自己分析でお金をもらう側になったら、送ってくれた人に嫌がられた時点で次がありません。そうなったら、私は無意識に優しくなると考えています。」「私が値段を出すのは、見つかってから作るものだけです。確定した収益は、今日まで0円です。」→ 新案 S5 の課金位置と一致。\n- 事実ブロック形式（行250-258、逐語）: やった日 / やった範囲 / 使ったAI / 規模 / 費用 / 他人にやった件数 / 確定した収益。\n- 検査器 scripts/writing-check.py（kind: bio / x / note）— 新ページのコピーにも機械適用可能。正本 direction/WRITING_SYSTEM_JA_2026-08.md。禁止語には「寄り添」「サポートし」「導く」「引き出す」「気づかせ」「アドバイス」等の上から目線語、および内部用語（「在重力」「Direction Card」「検証日」「World Signal」「Human Gate」「3タグ」「HOW-gap」等）が含まれる = 新ページの表面に出してはならない語のリストとして既に機械化されている。", "prompts_discard": "■ D1. Step 3 の17問すべて（行106-120 / 136-142 / 146-149 / 154-156 / 160-166）— ヒロの判定「何より自己分析のところが面倒すぎる」に該当。内訳（逐語・全17問）:\n第1ブロック 5問（行106-120）: 1. これを始めたきっかけは何だったか（今の仕事・状況・役割に入った理由。当時どう思っていたか）/ 2. 今、実際に何をやっているか（役職名ではなく、実際の時間の使い方で）/ 3. 今の状態に点数をつけるとしたら、何点か（直感で。理由は後でいい）/ 4. 100点じゃない部分は、何が足りていないか。もしくは、何が減らせていないか / 5. それについて、何かやっていること、考えていることはあるか\n第2ブロック 5問（行136-142）: 6. 直近1年で、時間を忘れて没頭したことは何か。その時、具体的に何をしていたか / 7. 直近1年で、金や時間を払ってでも避けたかったことは何か / 8. 誰かに感謝された、「助かった」と言われた出来事を3つ / 9. 他人がやっているのを見て、明確に嫉妬を感じたことは何か / 10. 「これは自分の役割ではない」と感じる仕事は何か\n面談用2問（行146-149）: 「3年後、会社がどうなっていたら一番納得できますか」「3年後、社長自身はどんな役割・生活をしていたいですか」\n第3ブロック 2問（行154-156）: 11. 3年後、今いる場所（会社・家庭・立場）がどうなっていたら一番納得できるか / 12. 3年後、自分自身はどんな役割・生活をしていたいか\n第4ブロック 5問（行160-166）: 13. 今後の選択にかかわらず、必ず守りたいものは何か / 14. 10年後にも一つだけ残すなら、何を残したいか / 15. 目的のためなら、変えてもよいものは何か / 16. 最も起きてほしくない結果は何か / 17. 今の状態が続いた場合、3年後はどうなっていると思うか\n※これは「AIが出す」ものではなく**利用者が自分で各3〜5行書く**工程（行134、逐語「上の5問を書いてから、5問足します。各3行から5行で、頭の中で済ませずに私が書きます。」）。捨てると失われる依存: Step 4（R4）の入力「上記すべて」の一部、Step 5（R5）の「絶対になりたくない状態:（16番で書いたもの）」の参照先。\n※同じ17問は experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md v1.0（E-012の実装正本・INDEX.md記載「ヒロ実発話の質問列」）にも存在するため、note記事から捨てても正本側には残る。\n\n■ D2. note記事の地の文すべて（行7-20, 44-58, 78-104, 122-134, 144-172, 188-218, 244-262）— ヒロの判定「note見たけどやっぱり文章に魅力がないね」「そして辺な文章も多い」「内容を見たけど全然自分のこと言ってると思わないと思う」に該当。具体的にはタイトル「AIに弱みを3つ挙げさせたら、全部ほめ言葉だった。」以下の全ての見出し・本文・体験談・面談経験の説明。プロンプト本体（コードブロック内）と地の文は物理的に分離可能（すべて ``` フェンスで囲われている）。\n\n■ D3. note記事フォーマット固有の要素\n- 行260「[署名]」プレースホルダ（未確定・未挿入）\n- 行263 のファイルパス行「ファイル: /tmp/claude-0/-home-user-atf-loop/9800231e-5758-51dc-b2f7-0fa56b84ee97/scratchpad/note_final.md」— **成果物に混入した作業ディレクトリの残骸**（行261の閉じフェンスの外に残っている。公開面に出してはならない）\n- 「Step 1〜5」「Step 2で並んだ」等の連番参照（行221ほか）— 記事を通読していることを前提にした参照であり、ページ単体では意味を失う\n\n■ D4. 新案 S1 の要求のうち、既存プロンプトに**存在しない**もの（実測）\n- **マスキング指示は6ブロックのどこにも存在しない。** R1〜R5 のいずれも「個人名・会社名・固有名詞を伏せろ」「マスキングしろ」に相当する語を1語も含まない（ファイル全体を検索した結果、該当なし）。新案 S1 の「マスキングかけて出させて」を満たすプロンプトは現時点で**未作成**。\n- **出力量の制約が存在しない。** R1 をヒロ本人に実行した結果は **2,300行**（行9/19、エディタの行数表示）。新案 S2「ホームページに貼る」の入力としては、この量のままでは貼付不能。要約・圧縮を指示する語も6ブロックのいずれにも存在しない（R3 の9項目フォームだけが圧縮形だが、これは Step 2 まで通した後に**人間が手で埋める**形式であり、AIに出させる指示ではない）。\n- Step 3〜5 は **2026-08-09時点で一度も通しで実行されていない**（行9「Step 3から5は、2026年8月9日の時点でまだ通していません。」／行246「2026年8月9日に終わっているのはStep 2までです。」）。R4 / R5 は**未検証のプロンプト**である。\n- R2（Step 2）の実行結果として並んだ3つは「理由まで書かせていた最初の版で出たもので、いまの形では通し直していません」（行90、逐語）。つまり**現行版の R2 も未検証**。\n- 他人に対する実施件数は 0件（行218, 256 / experiments/INDEX.md E-012）。R1〜R5 は **n=1・ヒロ本人の環境のみ**でしか動作が観測されていない（行50、逐語「n=1、私の環境のみ」）。"}
+
+===== AGENT =====
+
+## 0. 結論（先に3行）
+
+1. バーナムを生むのは「曖昧さ」ではなく **母集団基準率（base rate）が1に近いこと**。Meehl が 1956 年にこの語を作った時の定義そのものが「triviality（自明性）ゆえに当たること」であり、判定は文体ではなく**確率**で機械的にできる。
+2. ヒロの案の S3（引用のみ方式）は、バーナムの生成経路の大半を構造的に潰す。**残る漏れ口は「引用と引用の間の地の文」と「S1のマスキング仕様」の2点**で、ここを設計しないと確実に占いに戻る。
+3. S3 は在重力と整合する。**S4 が現状のままだと真正面から矛盾する**（心理の断定＋無料の中での売り込み）。S4 を検証日の後ろへ動かすだけで両立する。
+
+---
+
+## 1. どういう文の形が「誰にでも当てはまる」を生むのか
+
+### 1.1 定義の正本 — 判定基準は「基準率」であって「曖昧さ」ではない
+
+Paul Meehl が 1956 年 "Wanted — A Good Cookbook" でこの語を作った時の定義：
+
+> 「…personality descriptions from tests are made to fit the patient largely or wholly **by virtue of their triviality**; and in which any nontrivial, but perhaps erroneous, inferences are hidden in a context of assertions or denials which carry high confidence **simply because of the population base rates, regardless of the test's validity**」
+> — [Barnum effect - Wikipedia](https://en.wikipedia.org/wiki/Barnum_effect)
+
+ここから出る**唯一の実装可能な定規**：
+
+> **P(この文が真 | 無作為な日本人成人) を見積もれ。0.9 を超えたら削除。**
+
+情報量は −log₂P。P=0.95 の文の情報量は 0.07 bit。**「当たっている」と「情報がある」は別の軸**であり、ヒロの「全然自分のこと言ってると思わない」はこの区別を直感で言い当てている。
+
+### 1.2 Layne 1979 — 承認は「騙され」ではなく「合理」
+
+これが最も重要な実証知見。Layne (1979) *Journal of Consulting and Clinical Psychology* 47(1), 219-21：
+
+> subjects **accurately recognize the triviality** and actual accuracy of Barnum feedback … the acceptance phenomenon manifests subjects' **rationality more than their gullibility**.
+> — [ERIC EJ223039](https://eric.ed.gov/?id=EJ223039) / [ResearchGate](https://www.researchgate.net/publication/232570411_The_Barnum_effect_Rationality_versus_gullibility)
+
+含意：**失敗モードは「嘘をつく」ではなく「真だが情報量ゼロ」。** 対策は「正確さを上げる」ではなく「基準率を下げる」。この違いを外すと、精度を上げようとして余計にバーナム化する。
+
+### 1.3 文の性質レベルの分類（生成経路8種）
+
+| # | 性質 | 例 | なぜ全員に真になるか |
+|---|---|---|---|
+| B1 | **両価接続**（Rainbow Ruse） | 「人前では控えめだが、条件が揃えば場の中心にもなれる」 | 論理的に全事象を被覆する。真理値が恒真 |
+| B2 | **程度・頻度の緩衝語** | 時には / しばしば / 〜しがち / ある程度 / 傾向がある | 反例が出ても文が壊れない＝**反証条件が存在しない** |
+| B3 | **条件節による退避** | 「状況が整えば」「本気を出せば」 | 条件節が観測されないので偽にならない |
+| B4 | **内的状態の記述** | 「認められたいという思いがある」「本当は〜を求めている」 | 外部観測不能。判定権が本人にしかなく、本人は自分に合う方向へ読む（molding） |
+| B5 | **未実現の潜在** | 「まだ使い切れていない力がある」 | 全員に真。反証手段が原理的に無い |
+| B6 | **行動を指定しない述語** | 感じる / 思う / 望む / 大切にしている | 時刻・回数・対象を持たない＝検証点が無い |
+| B7 | **成長ナラティブ**（Jacques statement） | 「以前より自分の判断を信じられるようになった」 | 年齢に応じてほぼ全員に真 |
+| B8 | **曖昧な事実の芽**（Fuzzy Fact） | 「海外との関わりが関係している」 | 後からいくらでも具体化できる |
+
+B1・B7・B8 の命名は Ian Rowland の cold reading 分類（[Cold Reading Techniques — Ian Rowland](https://www.ianrowland.com/faqs/cold-reading-techniques)）、および Ray Hyman の古典（[Hyman 1977, Skeptical Inquirer](https://skepticalinquirer.org/1977/04/cold-reading-how-to-convince-strangers-that-you-know-all-about-them/)）による。
+
+### 1.4 文の外側にある2つの増幅器（S2 が構造的に持ってしまうもの）
+
+- **好意性（favorability / social desirability）**：好意的記述は承認が上がる。Dickson & Kelly のレビューは、承認度が「the relevance and favorability of the profile」に依存すると結論している（[Dickson & Kelly 1985, *Psychological Reports* 57, 367-382](https://journals.sagepub.com/doi/10.2466/pr0.1985.57.2.367)、[Furnham & Schofield 1987, *Current Psychology*](https://link.springer.com/article/10.1007/BF02686623)）。
+- **個別化の主張（personalization）**：「あなたのために作った」と**言うだけで**承認が上がる（Snyder & Larson 1972；[Snyder, Shenkel & Lowery 1977, JCCP](https://pubmed.ncbi.nlm.nih.gov/321490/)）。
+
+**この2つが、ヒロの案の最大の危険**。S2「自分のログを貼る」という体験は、個別化の主張を**最強の形で無料で与えてしまう**。「私のログから作られた」という事実がある以上、内容が空でも承認される。つまり**承認率は測定として使えない**（→ §6.6）。
+
+LLM でも同じ効果が確認済み。CHI 2026 の実験（N=238）は、**中身が架空の台本であっても**肯定的な予測は否定的な予測より valid +36% / personalized +42% / reliable +27% / useful +22% と評価されたと報告している（[Personal Validation Effect in LLMs, CHI 2026](https://dl.acm.org/doi/full/10.1145/3772318.3791851) / [Microsoft Research page](https://www.microsoft.com/en-us/research/publication/personal-validation-effect-in-llms-positive-ai-responses-bias-perceptions-of-validity-reliability-personalization-and-usefulness-of-fictitious-predictions/)）。**LLM のシコファンシーとバーナム効果は同じ穴に落ちる。**
+
+---
+
+## 2. 逆に、本人が「違う」と言える出力の性質
+
+反証可能性を人物記述に落とすと、**文の性質4つ＋手続きの性質1つ**になる。
+
+### 2.1 文の性質
+
+| # | 性質 | 実装 |
+|---|---|---|
+| F1 | **削除条件が文面に書いてある** | 回数・日付・固有の対象を含む。「3月4日と5月19日に同じことを書いている」は日付を確認すれば偽にできる |
+| F2 | **比較クラスを持つ** | 「あなたは〜だ」ではなく「N 回中 M 回」。心理測定でいう norm。percentile が falsifiable を作る（[Britannica: Test norms](https://www.britannica.com/science/psychological-testing/Test-norms)） |
+| F3 | **外れうる予測を含む** | 「次の2週間で X に手をつけない」は2週間後に判定できる。criterion validity の個人版 |
+| F4 | **他人に差し替えると成立しない** | 別人の入力から同じ文が出るなら、それは人物記述ではない |
+
+### 2.2 好意性を落とすと反証可能性が上がる（ただし断定してはいけない）
+
+Self-verification 理論（Swann 1981-）：人は**自己像と一致する記述なら否定的でも受け入れ、自己像と矛盾する記述は肯定的でも拒否する**（[Simply Psychology](https://www.simplypsychology.org/self-verification-theory.html)、[Szumowska et al. 2022, *Psychological Science*](https://journals.sagepub.com/doi/10.1177/09567976211049439)）。
+
+つまり **「違う」を言わせる力は、不快さではなく具体性から来る**。不快な断定（v0.1 の敵対的レビュー）は在重力違反であると同時に、self-verification によって「拒否」を招くだけで情報にならない。**事実の並置は、断定せずに具体性だけを取り出す形**であり、この2つの要求を同時に満たす唯一の形になっている。
+
+### 2.3 手続きの性質（文だけでは完成しない）
+
+**F5：「違う」を押す物理的な場所がある。** 反証可能性は文の性質であると同時に**受け皿の性質**。各項目に［違う］が無いページは、どんなに具体的な文を書いても反証不可能な装置になる。
+
+---
+
+## 3. 実在サービス — 回避できている／できていない例
+
+### 3.1 できていない側
+
+| サービス | 何が起きているか | 出典 |
+|---|---|---|
+| **MBTI / 16Personalities** | 5週間の再検査で **39〜76% が別タイプ**に分類される。連続量を二値に潰すため、Thinking 51% の人と 99% の人が同じ「T」ラベルになる | [PsyZen Lab](https://www.psyzenlab.com/blog/mbti-scientific-reliability)、[JobCannon](https://jobcannon.io/blog/is-mbti-accurate-science) |
+| **CliftonStrengths** | ipsative（本人内の順位のみ・規範集団と比較しない）＋**記述が全部ポジティブ**＋テーマ記述が互いに重なる。B1/B6 の温床 | [CliftonStrengths - Wikipedia](https://en.wikipedia.org/wiki/CliftonStrengths)、[Gallup Technical Report](https://www.gallup.com/file/services/176321/clifton-strengthsfinder-technical-report-development-validation.aspx) |
+| **Crystal Knows / Humantic AI**（AI人格推定） | 外部監査で、**同一の履歴書を PDF で渡すか raw text で渡すかで人格スコアが変わる**。入力の職務無関係な変動に対して不安定＝「valid testing instrument とは言えない」と結論 | Rhea et al. 2022, *Data Mining and Knowledge Discovery* — [arXiv:2201.09151](https://arxiv.org/abs/2201.09151) / [Springer](https://link.springer.com/article/10.1007/s10618-022-00861-0) |
+
+なお Crystal 自身は公開データから 80%、検査済みプロファイルで 97% の精度を主張しているが、これは**第三者検証を経ていない自己申告**（[Crystal: How Accurate Is Crystal?](https://www.crystalknows.com/blog/crystal-accuracy)）。
+
+### 3.2 できている側と、差を作っているもの
+
+Big Five / IPIP 系や Hogan 系が違うのは、記述の巧さではなく**装置の3点**：
+
+1. **比較クラス（norm）がある** — percentile を出す。「12パーセンタイル」は外れうる主張。
+2. **外れうる予測がある** — Conscientiousness → 職務遂行の相関 r ≈ 0.20-0.30 という、公表され検証され続けている数値がある（[Personality and job performance: a review of trait models and recent trends, 2025](https://www.sciencedirect.com/science/article/pii/S2352250X25000673)）。効果量が小さいことが公開されている**こと自体**が、占いとの分水嶺。
+3. **無関係な入力変動に対する安定性** — Rhea et al. の stability audit が測ったのはこれ。**必要条件であって十分条件ではないと明記されている**点が重要（安定していても妥当とは限らない。しかし不安定なら妥当ではありえない）。
+
+**この3点は、ヒロのページで全部実装できる。** 特に 3 は自作できる（→ §6.7）。「客観的なことがわかる」の、実装可能な唯一の意味がこれ。
+
+### 3.3 歴史的な補足 — 人は自分の本物の結果すら見分けられない
+
+Sundberg (1955) は、本物の MMPI 解釈と汎用の偽解釈を並べたとき、被験者が両者を区別できず、**女性群では偽の方を好む傾向すらあった**と報告している（[The acceptability of "fake" versus "bona fide" personality test interpretations, *J. Abnormal and Social Psychology*](https://researchgate.net/publication/10317824_The_acceptability_of_fake_versus_bona_fide_personality_test_interpretations)）。
+
+**「本人が納得したか」は品質の指標にならない。** これは S3 の測定設計を根本から縛る制約。
+
+---
+
+## 4. 「入力に含まれていた具体物を必ず引用する」方式の評価
+
+### 4.1 どの程度潰すか — かなり潰す。中核として正しい
+
+§1.3 の生成経路のうち **B2・B3・B4・B5・B6 は構造的に不可能になる**。引用は基準率を強制的に下げ、Meehl の triviality 条件を機械的に満たせなくする。B1（両価接続）と B7（成長ナラティブ）は引用があっても書けてしまうので、別途の禁止が要る（→ §6.4）。
+
+さらにこの方式は在重力の **§12 補完禁止の厳密な機械実装**になっている（`/home/user/atf-loop/experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md`）。思想と実装が一致するのは強い。
+
+### 4.2 潰せない弱点6つ
+
+**W1 — 選択のバイアス。** 引用は真でも「どれを引くか」が既に解釈。LLM の証拠選択に位置バイアスが実測されている（BioASQ で、5文書中の**最初の2文書に引用の 81.8% が集中**）。[Cited but Not Verified, arXiv:2605.06635](https://arxiv.org/html/2605.06635v1)。長いチャットログでは、これは「最近の話ばかり引かれる」形で必ず出る。
+
+**W2 — Deceptive grounding。** 全ての引用が実在し、捏造がゼロで、faithfulness/citation チェックを全部通るのに、**帰属先が誤っている**という失敗類型。「every claim is sourced from a real document, about the wrong entity」。[arXiv:2607.09349](https://arxiv.org/html/2607.09349)。**引用は真、束ねる文が偽**という形で漏れる。
+
+**W3 — 地の文へのバーナム再侵入（最大の実務的漏れ口）。** 引用と引用の**間**の接続文・見出し・まとめ段落が、従来型のバーナムに戻る。「つまりあなたは」「全体として」で始まる1文が、それまでの引用の全部を無効化する。→ §6.4 D9 / §6.5 G7 で潰す。
+
+**W4 — 入力が母集団ではない。** AIチャット履歴は「AIに話す気になったこと」のサンプル。そこに無い話題は「避けている」ではなく「AIに聞く必要がなかった」だけかもしれない。**不在からの推論（「あなたが避けているのは〜」）は必ず外れる。** SELF_ANALYSIS_PROTOCOL の Step 1 質問5「繰り返し避けているテーマ」は、この形式では危険になる。
+
+**W5 — マスキングが具体性を殺す（S1 と S3 の構造的トレードオフ）。** 匿名化は情報損失を伴い、その損失は一様ではない。研究では **NUMBERS / OBJECTS の置換が PLACES / OTHERS の置換より遥かに大きな情報損失を生む**と報告されている（[Anonymization and Information Loss, arXiv:2511.15364](https://arxiv.org/html/2511.15364)、[Named Entity Swapping, arXiv:2505.21128](https://arxiv.org/pdf/2505.21128)）。そして S3 の反証可能性を担っているのは、まさに数値と対象物。
+
+> **S1 のマスキング仕様が S3 の品質上限を直接決める。** 素朴に「固有名詞を全部伏せて」と書かせると、残るのは緩衝語だらけの要約＝バーナムの原料になる。
+
+**W6 — 自己引用の錯覚（測定の破壊）。** 自分の言葉を返されれば、人は必ず「合っている」と答える。これはトートロジーであって承認ではない。**承認率が指標として無意味になる。** §3.3 の Sundberg と合わせると、測るべきは承認ではない（→ §6.6）。
+
+### 4.3 結論
+
+**引用は必要条件であって十分条件ではない。** 引用 ＋（比較クラス or 予測）の同時義務化で初めて成立する。
+
+---
+
+## 5. 在重力営業との整合／矛盾
+
+参照した正本：`/home/user/atf-loop/experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md`、`/home/user/atf-loop/direction/SALES_OS_2026-08.md` §12、`/home/user/atf-loop/direction/DESIRE_ENGINE_LONG_GAME.md` §3.5。
+
+在＝決めつけない／重力＝現実を置く／前進＝相手が選ぶ最小の一歩。
+
+### 5.1 S3 は整合する（むしろ在重力の最も忠実な実装）
+
+| 在重力の条項 | S3（引用のみ方式）との対応 |
+|---|---|
+| §12 補完禁止 | 「入力に無いことは言わない」は補完禁止の機械実装。**思想を守るコストがゼロになる** |
+| 重力＝解釈を挟まず行動の記録を並べる | 逐語引用の並置そのもの |
+| Step 2 の「AとBが同時に成り立っている」形 | S3 の出力型そのもの |
+| 「人は診断されると防御するが、自分の行動記録を並べられると考え始める」 | S3 が返すのは本人の行動記録 |
+
+**「客観的なことがわかる」の在重力的な訳語**：客観＝当たっていること、ではない。**本人が見ていなかった自分の記録が、判断抜きで並ぶこと**。この訳し替えが案の生死を分ける。
+
+### 5.2 矛盾3点（S3 の一部と S4）
+
+**X1 — 「本当の欲は何か」を返すのは在重力違反。**
+§3.5「心理を直接言い当てない」／§42「返す時は事実・構造・選択肢へ変換する」に抵触する。SELF_ANALYSIS_PROTOCOL が v0.1 → v1.0 で全面改訂した理由そのもの。加えて Failure Mode 表の「診断化」に直撃する。
+
+→ **修正：欲を出力にしない。欲は問いとして返す。** Step 2 の #3「本人にしか答えられない問いを3つ」がそのまま使える。「本当の欲はこれです」ではなく「この2つが同時に成り立っています。〈日付〉に何が起きていましたか」。
+
+**X2 — S4「合うサービスを提案して同意を得る」は二重に矛盾する。**
+
+- **在重力側**：1つに絞って提案する形は「順位をつけないでください。選ぶのは本人です」（Step 4）と §58「自分で考えて決めた状態がゴール」に違反。
+- **SALES_OS §12.1 独立条項**：「**無料で提供したものの中で売り込まない。相手から言われた時にだけ、価格と範囲を明示して答える**」に真正面から抵触。
+
+そして最も重い帰結：**S3 の直後に S4 を置くと、S3 が S4 への釣りになる。** 独立性は一度でも売り込んだ瞬間に消える。note の「面倒すぎる」より、こちらの方が深刻な毀損。
+
+**X3 — S5「一度作って体験してもらう」は在重力的に正しい。ただし位置が違う。**
+「本人が選んだ、2〜4週間で検証できる一歩」（前進）と同型であり、Direction Card の L5 と一致する。だが SALES_OS §12.2 は**接続点を「検証日」ただ1つ**に限定している。
+
+### 5.3 整合させる並べ替え（変更は1箇所だけ）
+
+```
+現案:  S1 → S2 → S3(欲を断定) → S4(サービス提案・同意) → S5(作る) → 課金
+
+修正案: S1 → S2 → S3(事実の並置 + 問い3つ + 選択肢5つ以上 + 「何もしない」)
+                → 本人が1つ選ぶ → 検証日を本人が決める
+                → 【検証日】「やりましたか。何が起きましたか」
+                → 詰まった時だけ → 無料で繋ぐ → 解けなければ本人が依頼 → S5 → 課金
+```
+
+**S4 を S3 の直後から、検証日の後ろへ動かす。** これだけで在重力と SALES_OS §12 の両方に載る。売上が遅れるのではなく、§12.4 の通り「相手の言葉が先」になるので**成約率が上がる方向**。
+
+### 5.4 「面倒すぎる」への回答 — この案が note より強い唯一の点
+
+ヒロの判定は正しい。現行 SELF_ANALYSIS_PROTOCOL は Step 3 だけで 17 問、記事版でも 9 項目を本人に書かせる。
+
+**面倒さの正体は工程数ではなく「本人が書く量」。**
+
+この案の構造的な強みはただ1つ：**S1 と S2 で本人が書く量がゼロ**（貼るだけ）。したがって S3 の出力は「本人が書かなかった 17 問分を、本人の過去の言葉で埋め戻したもの」であるべき。**これが note に無い唯一の優位**であり、S3 の設計目標はここに固定される。
+
+---
+
+## 6. S3 出力仕様（書式レベル）
+
+### 6.0 出力の単位
+
+**1項目 = 【逐語引用】＋【並置文】＋【問い】＋【違うボタン】。この形以外の文を1つも出力しない。**
+
+### 6.1 全体構成（順序固定・段落を書かない）
+
+```
+0. 読んだ範囲（必須・冒頭）
+   「読んだのは N 件の会話、YYYY-MM 〜 YYYY-MM。ここに無い話題については何も書きません。」
+1. 繰り返し出てきたもの（頻度順・最大5）        各項目に回数
+2. 同時に成り立っている2つ（最大3）            各項目に両側の引用
+3. 一度出て、それ以降出ていないもの（最大3）    日付つき
+4. あなたが自分で書いていた言葉（原文ママ・最大5）言い換え禁止
+5. ここからは分からないこと（最大5）
+6. あなたにしか答えられない問い（3つ）
+7. 選択肢（5つ以上・「何もしない」必須・順位なし）
+8. 確かめる日（本人が入力する空欄）
+```
+
+§0 は母集団宣言であり、W4（入力が母集団ではない）への唯一の防御。
+
+### 6.2 出してよい文 — 型は4つだけ
+
+| 型 | 書式 | 例 |
+|---|---|---|
+| **T1 頻度** | 「〈引用〉が N 回。最初は〈日付〉、最後は〈日付〉。」 | 「『時間が足りない』が 11 回。最初は 3/2、最後は 7/28。」 |
+| **T2 並置** | 「〈引用A〉と書いている。同じ期間に〈引用B〉と書いている。」 | — |
+| **T3 不在** | 「〈X〉は〈日付〉に1回出て、以降 N 件の会話に出ていない。」 | — |
+| **T4 不明** | 「〈Y〉について、この入力からは分かりません。」 | — |
+
+**T2 の接続詞は「同じ期間に」「一方で」まで。** 「しかし」「にもかかわらず」「だから」は解釈なので禁止。
+**T2 の後ろに理由・原因・心理を1文も足さない。** 足したくなったら、それは §6.3 の問いへ変換する。
+**T3 に「避けている」と書かない**（W4）。
+
+### 6.3 問いの型（3つだけ・すべて過去の出来事を尋ねる）
+
+```
+Q1 「〈引用A〉と書いたのは〈日付〉でした。その日、実際に何が起きていましたか。」
+Q2 「〈X〉に最後に手をつけたのはいつですか。どこで止まりましたか。」
+Q3 「〈引用B〉のあと、実際にやったことが1つあるとしたら何ですか。」
+```
+
+**禁止**：「なぜ」で始まる問い（心理を問う形）。「どう感じましたか」。「本当は何を望んでいますか」。
+
+### 6.4 出さない文（禁止リスト・機械判定可能）
+
+| ID | 禁止 | 検出方法 |
+|---|---|---|
+| D1 | 人物ラベル | 主語「あなた」＋述語が属性形容の文を全落とし。「〜な人」「〜タイプ」 |
+| D2 | 両価接続（B1） | 「〜な時もあれば」「一方で〜他方で」を人物記述に使う |
+| D3 | 緩衝語（B2） | 時には / しばしば / どちらかといえば / 比較的 / ある程度 / 〜しがち / 〜な面がある / 傾向 / 可能性がある |
+| D4 | 条件退避（B3） | 状況が整えば / 本気を出せば / 環境次第では |
+| D5 | 心理・動機・欲の断定（B4） | 〜したいと思っている / 〜を恐れている / **本当の欲は〜** / 承認欲求 / 自己肯定感 / 完璧主義 |
+| D6 | 潜在の記述（B5） | まだ活かしきれていない / 眠っている / 本来の |
+| D7 | 成長ナラティブ（B7） | 以前より〜できるようになった ※前後比較の実データがある場合のみ回数つきで許可 |
+| D8 | 褒め・励まし | 素晴らしい / 強みです / 大丈夫 / きっと〜できます |
+| D9 | **総括文** | つまりあなたは / 総じて / 全体として / まとめると ← **最大の漏れ口（W3）。1文も出さない** |
+| D10 | 不在からの推論 | 避けている / 目を背けている / 無意識に |
+| D11 | 二人称の一般論 | 人は〜なものです / 多くの人が〜 |
+
+D3・D8・D9 は `/home/user/atf-loop/scripts/writing-check.py` の既存 BANNED 辞書と大半が重なる。**同じスクリプトを S3 の出力ゲートに転用できる。**
+
+### 6.5 機械ゲート（生成後に必ず通す。落ちたら出力しない）
+
+| ID | ゲート | 実装 |
+|---|---|---|
+| **G1** | **引用率** | 断定文はすべて直前か直後に逐語引用を持つ。引用符内の文字列が入力に部分一致しない文は削除 |
+| **G2** | **数量** | 各項目に 回数 / 日付 / 順序 のいずれかが1つ以上。ゼロなら削除 |
+| **G3** | **反転テスト** | その文の否定形が実在の人物について成立しうるか。しないなら情報がない |
+| **G4** | **万人テスト（基準率）** | 「無作為な日本人成人100人のうち何人に当てはまるか」。**90人以上なら削除**。Meehl の triviality 条件の実装 |
+| **G5** | **他人差し替えテスト** | 引用を外して文が残るなら、その文は他人にも出る。削除 |
+| **G6** | **文長** | 1文60字以内。長い文には必ず解釈が混入している |
+| **G7** | **段落禁止** | 見出しと箇条書き以外の地の文を書かない（W3への構造的防御） |
+
+**G4 と G5 が中核。G1〜G3・G6・G7 は形式で、内容を守るのは G4/G5。**
+
+### 6.6 「違う」を受け取る仕様
+
+各項目の右に3ボタン：**［合っている］［違う］［これは知らなかった］**
+
+- 「違う」が押されたら**その項目を消す**。理由を1行だけ聞く（任意・必須にしない）。
+- **測定するのは承認率ではなく「これは知らなかった」率。** 承認率は自己引用（W6）と個別化ブースト（§1.4）で必ず高く出るため、測定として死んでいる。
+- **「違う」が1つも押せない出力は、反証不可能な出力である。** 「違う」率が数日続けて 0% なら、それは精度が高いのではなく**仕様が壊れている合図**。
+
+これは Sundberg 1955（本物と偽物を区別できない）と Layne 1979（承認は合理性の表れ）の両方から出る帰結。
+
+### 6.7 公開前にヒロが1本走らせる自己テスト（stability audit の最小実装）
+
+> **同じ人の入力を前半・後半に2分割し、別々に S3 を通す。両方に出た項目だけを本番の出力にする。**
+
+Rhea et al. 2022 の「small changes in the input lead to small changes in the output」を最小コストで実装したもの。ここで消える項目が多ければ、**それは占いだった**。これが「客観的」の、実装可能な唯一の意味。
+
+副次効果として W1（位置バイアス・最近の話ばかり引かれる）も同時に検出できる。
+
+### 6.8 S4 の書式（在重力に載せるための最小変更）
+
+```
+・提案を1つ出さない。5つ以上並べる。
+・「何もしない」を必ず含める。
+・順位をつけない。
+・各案に1行：「これが成立するために、真である必要があること」
+・各案に1行：「2〜4週間でそれを確かめられる最小の行動」
+・価格をこの画面に出さない（独立条項）。聞かれた時にだけ答える。
+・同意を取る対象は「サービス案」ではなく【確かめる日】ただ1つ。
+```
+
+---
+
+## 7. 潰す順序（最初にやること）
+
+1. **S1 のマスキング・プロンプトを書く。** 「固有名詞は伏せる／**回数・日付・動詞・目的語は残す**」。ここが未設計なら S3 は必ずバーナムに戻る（W5）。**S3 より先にこれ。**
+2. **G4/G5 を実装する**（他人差し替えテスト）。既存の `scripts/writing-check.py` を拡張するのが最短。
+3. **「これは知らなかった」率の記録欄**を LEDGER に足す（承認率は取らない）。
+4. **S4 を検証日の後ろへ動かす**（`direction/SALES_OS_2026-08.md` §12 との整合）。
+5. §6.7 の前半／後半テストをヒロ自身のログで1回走らせ、**消えた項目数を記録する**。これが公開前の唯一の判定。
+
+**Human Gate の注意**：他人のチャットログをページ上で受け取ると、第三者の個人データを扱うことになる。最小構成は**ブラウザ内で完結させ、サーバへ送信しない**設計にすること。送信する設計にするなら公開前に Gate（`CONSTRAINTS.md` Part I §4）。
+
+---
+
+## 証拠の質について（自己申告）
+
+この環境は複数ドメイン（cortecs.org / dl.acm.org / arxiv.org / ncbi / archive.org / traitlab / skepticalinquirer / iitk）への直接取得が遮断されており、**Dickson & Kelly 1985、Johnson et al. 1985、Hyman 1977、CHI 2026、Rhea et al. 2022 の各数値は検索スニペット経由**。一次PDFで再確認していない。抄録・タイトル・年・掲載誌までは複数ソースで一致を確認済み。Meehl の引用文と Layne 1979 の結論、CHI 2026 の N=238 と4つの増加率は、複数の独立ソースで同一文言を確認した。
+
+---
+
+## Sources
+
+- [Barnum effect — Wikipedia](https://en.wikipedia.org/wiki/Barnum_effect)（Meehl 1956 の定義原文、Forer 1948）
+- [Dickson & Kelly 1985, "The 'Barnum Effect' in Personality Assessment: A Review of the Literature", *Psychological Reports* 57, 367-382](https://journals.sagepub.com/doi/10.2466/pr0.1985.57.2.367)
+- [Furnham & Schofield 1987, "Accepting personality test feedback: A review of the Barnum effect", *Current Psychology*](https://link.springer.com/article/10.1007/BF02686623)
+- [Layne 1979, "The Barnum Effect: Rationality versus Gullibility?", *JCCP* 47(1), 219-221 — ERIC EJ223039](https://eric.ed.gov/?id=EJ223039) / [ResearchGate](https://www.researchgate.net/publication/232570411_The_Barnum_effect_Rationality_versus_gullibility)
+- [Snyder, Shenkel & Lowery 1977, "Acceptance of personality interpretations: the 'Barnum Effect' and beyond", PubMed 321490](https://pubmed.ncbi.nlm.nih.gov/321490/) / [ERIC EJ156763](https://eric.ed.gov/?id=EJ156763)
+- [Kelly, Dickson & Saklofske 1986, "Personality and the Acceptance of Barnum Statements under a Condition of Ambiguous Relevance"](https://journals.sagepub.com/doi/abs/10.2466/pms.1986.63.2.795)
+- [Sundberg 1955, "The acceptability of 'fake' versus 'bona fide' personality test interpretations"](https://researchgate.net/publication/10317824_The_acceptability_of_fake_versus_bona_fide_personality_test_interpretations)
+- [Ian Rowland, Cold Reading Techniques（Rainbow Ruse / Jacques Statement / Fuzzy Fact / Vanishing Negative）](https://www.ianrowland.com/faqs/cold-reading-techniques)
+- [Ray Hyman 1977, "Cold Reading: How to Convince Strangers That You Know All About Them", *Skeptical Inquirer*](https://skepticalinquirer.org/1977/04/cold-reading-how-to-convince-strangers-that-you-know-all-about-them/)
+- [Personal Validation Effect in LLMs, CHI 2026 (N=238)](https://dl.acm.org/doi/full/10.1145/3772318.3791851) / [Microsoft Research](https://www.microsoft.com/en-us/research/publication/personal-validation-effect-in-llms-positive-ai-responses-bias-perceptions-of-validity-reliability-personalization-and-usefulness-of-fictitious-predictions/) / [code](https://github.com/mitmedialab/personal-validation-llms)
+- [Rhea et al. 2022, "An external stability audit framework to test the validity of personality prediction in AI hiring", *Data Mining and Knowledge Discovery* — arXiv:2201.09151](https://arxiv.org/abs/2201.09151) / [Springer](https://link.springer.com/article/10.1007/s10618-022-00861-0)
+- [Crystal Knows — How Accurate Is Crystal?（自己申告の精度主張）](https://www.crystalknows.com/blog/crystal-accuracy)
+- [MBTI 再検査信頼性の批判的レビュー — PsyZen Lab](https://www.psyzenlab.com/blog/mbti-scientific-reliability) / [JobCannon](https://jobcannon.io/blog/is-mbti-accurate-science)
+- [CliftonStrengths — Wikipedia（ipsative 採点）](https://en.wikipedia.org/wiki/CliftonStrengths) / [Gallup 技術報告書](https://www.gallup.com/file/services/176321/clifton-strengthsfinder-technical-report-development-validation.aspx)
+- [Personality and job performance: a review of trait models and recent trends (2025)](https://www.sciencedirect.com/science/article/pii/S2352250X25000673)
+- [Self-Verification Theory (Swann) — Simply Psychology](https://www.simplypsychology.org/self-verification-theory.html) / [Szumowska et al. 2022, *Psychological Science*](https://journals.sagepub.com/doi/10.1177/09567976211049439)
+- [Attribution, Citation, and Quotation: A Survey of Evidence-based Text Generation with LLMs — arXiv:2508.15396](https://arxiv.org/pdf/2508.15396)
+- [Deceptive Grounding: Entity Attribution Failure in Clinical RAG — arXiv:2607.09349](https://arxiv.org/html/2607.09349)
+- [Cited but Not Verified: Parsing and Evaluating Source Attribution in LLM Deep Research Agents — arXiv:2605.06635](https://arxiv.org/html/2605.06635v1)（証拠選択の位置バイアス 81.8%）
+- [Anonymization and Information Loss — arXiv:2511.15364](https://arxiv.org/html/2511.15364) / [Named Entity Swapping — arXiv:2505.21128](https://arxiv.org/pdf/2505.21128)
+- [Situation-Behavior-Impact (SBI) — Center for Creative Leadership](https://www.ccl.org/articles/leading-effectively-articles/closing-the-gap-between-intent-vs-impact-sbii/) / [Mind Tools](https://www.mindtools.com/ay86376/the-situation-behavior-impact-feedback-tool/)（観察された行動のみを述べ、意図の解釈を混ぜない書式の先行例）
+- [Psychological testing — Test norms, Britannica](https://www.britannica.com/science/psychological-testing/Test-norms)
+
+参照した repo 内正本: `/home/user/atf-loop/experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md`（在重力自己分析 v1.0）、`/home/user/atf-loop/direction/SALES_OS_2026-08.md` §12（独立条項・検証日）、`/home/user/atf-loop/direction/DESIRE_ENGINE_LONG_GAME.md` §3.5（在重力営業との照合）、`/home/user/atf-loop/direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md`（L1/L2/L3 と 繋ぐ・足す・作る）、`/home/user/atf-loop/scripts/writing-check.py`（G1-G7 の実装母体になる既存 BANNED 辞書）
