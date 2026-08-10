@@ -39,6 +39,7 @@
 | 到達（note / X / LLMO・AI引用） | `direction/LLMO_EXECUTION_PLAN_2026-08.md` |
 | 誰に何を売るか（顧客層・介在の可否・接触母集団の禁止範囲） | `direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` |
 | 収益動線・価格 | `direction/SALES_OS_2026-08.md` |
+| どう売るか（在重力営業の構造） | `experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md`（在→重力→前進の実装。原典はリポジトリ外・非取り込み） |
 | 日本語の書法（何が生きていて、何が実測で停止したか） | `direction/WRITING_SYSTEM_JA_FALSIFICATION_2026-08-10.md` / `direction/WRITING_SYSTEM_JA_MEASURED_2026-08-10.md`（体系本体 `direction/WRITING_SYSTEM_JA_2026-08.md` は53,707字・C番号で引く） |
 | 英語を公開してよいか | `direction/WRITING_SYSTEM_EN_2026-08.md` §9（EN_GATE） |
 | Web Marketingの一次調査・生データ | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md` / `research/INDEX.md`（109,174字・§A〜§Nを質問キーで引く） |
