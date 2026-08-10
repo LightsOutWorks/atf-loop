@@ -179,7 +179,8 @@ Source: `experiments/batch-1/LEDGER.md`（Contact台帳・正本。2026-08-08 Hu
 - **2026-08-09、Batch 1初の実返信が発生した（X-@HatoNozomu。Human画像確認）。** ただし内容は**Pain仮説の明確な否定**であり、Painスコアは実質0（`LEDGER.md` Reply Log 001）。**`REPLY > 0` を前進と読み替えない** — Terminal Signalは返信数ではなくConfirmed Revenue（現在JPY 0）。
 - 根本原因は選定側にある: 元投稿に「**作成するのはいいけどさ**」という本人による明示的な否認が書かれており、**読めば分かる位置にあった**。こちらは否認された側を質問にした。抽出した選定規則（否認語形の機械的検出）はReply Log 001が保持し、次Batchへ引き渡す。
 - 本人が実際に述べていた不満（他者が対応表を使わない）は**未着手**。3タグ（HOW/TIME/WHAT）に該当せず、Gap分類では **D. Adoption**。**N=1のためタグを増やさない**（`OS.md` HI-4 F6。同型3件で再検討）。
-- 次の1通は起草済み・**未送信**（送信はHuman Gate）。
+- **3通目は2026-08-11 03:14 JSTに送信済み**（Human Commit。2026-08-11 03:15 JST Human画像確認 — `LEDGER.md` Reply Log 004）。往復4回。**Stageは `REPLY` のまま動かさない**（会話の長さをファネルの前進として読み替えない）。判定時刻は事前登録どおり **2026-08-13 09:45 JST**（起点を受信時刻で書いた事前登録側の欠陥は Reply Log 004 に記録。窓は延ばさない — `CONSTRAINTS.md` Part I §6）。
+- **Humanが起草を1箇所だけ直した**（`OS.md` HI-3 Taste学習則の学習源）: 文末「浮かんでます？」→「**浮かんでたりしますか？**」。在ることを前提に確認する形から、無くてもよい余白を残す形へ。§7-0 の現在の優位のうち**手放す側の余白**にあたる。**N=1のため恒久ルールへ昇格させない**（`OS.md` HI-4 F6。同型3件で書法側へ引き渡す）。
 - 現在Phase: **World Signal回収**。送信・候補準備の仕事は本Batchに残っていない。Lane Aの定期self check-inは2026-08-08に停止済み（X読取がharnessから不可のため。Humanがreply / reactionを共有した時のみ再起動 — LEDGER Conversation Log）。
 - Message style実測: 初期7件（C01 / C02 / C04 / C09 / C14 / LN-58 / LN-62）= BASELINE確定。X 13件 = `UNKNOWN`（HUMAN_SHORT Defaultの期間だが実文面が未回収 — LEDGER凡例）。cluster / 文面 / freshness_at_send は大半が `UNKNOWN`（Demandセッション成果物の非着地による恒久喪失）。
 - DiscoveryとSalesを分離する。初回Discoveryの目的は「相手が自分の現実についてもう一言話したくなる状態を作る」こと。
