@@ -6,6 +6,40 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-006 — Action Default を `NO_ACTION` とし、戦術をClaudeへ委任する。2候補を確定判定する
+
+- **Date**: 2026-08-10
+- **Authority**: ヒロのTask Contract「NO_ACTION原則・戦術委任・今回の候補判定を正本へ反映せよ」（2026-08-10）。Decision 5 の2候補は **Human Commit済み**であり、**再提案・再審理しない**。採択はヒロの本PR merge。
+- **Decision**:
+  1. **行動のDefaultを実行ではなく `NO_ACTION` とする**（`OS.md` HI-10）。7条件を**すべて**満たした作業だけを実行し、着手前に「この作業 → 取得または変化させるReality → 動かす現在の律速 → 接続する現在優先中のMajor Desire → North Star」を1文で言えることを要求する。**North Star接続だけでは実行を正当化できない。** 「将来役立つ」「品質が上がる」「Factoryが強くなる」「自動化できる」「念のため」「より良い案かもしれない」を実行理由として認めない。恒常的なNon-goals 12件を同節に置く。
+  2. **HI-2「既定はやる」の適用範囲を、着手すると決めた後のHandoff規律へ限定する**（`OS.md` HI-2）。着手するかどうかの既定はその逆であり `NO_ACTION`。2つを混同すると、7条件を満たさない作業を「既定はやる」で正当化できてしまう。
+  3. **HumanとClaudeの権限分界を明文化する**（`OS.md` HI-11）。Humanが保持するのは North Star / Major Desire / Hard Boundary / 戦略 / Major Bet / 対象範囲とNon-goals / 主要な資源配分 / 次の判定点 / 戦略のKILL・早期解除条件 / 戦略的Taste / Human Gate。**Strategy Committed後の戦術（タスク分解 / Experiment設計 / 承認済み対象内の優先順位 / チャネル / 訴求 / メッセージ / 導線 / ツール / 実装方法 / 戦術の継続・修正・KILL / 計測 / 分析 / 次の一手）はClaudeがOwnerであり、Humanへ選択肢を返さず1案を選んで実行・検証する。** Humanへ戻してよい9件を限定列挙する（D-003 Decision 4の実装規則であり、Human Positionを変更しない）。
+  4. **Strategy Committedの成立条件へ3件を追加する**（`OS.md` Layer2「探索と固定」B-10〜12）: この戦略に固有のNon-goals / 今回明示的にやらないこと / **`NO_ACTION` を解除する具体的なtrigger**（「内部でより良い案が出たこと」はtriggerではない）。「採用しなかった主要な代替案」は既存条件5であり重複させない。
+  5. **2026-08-10 の商品候補2件を確定判定する。**
+     - **就労選択支援の指定申請書式パック = `KILL`。** 理由: ①公的指定申請に関わる高影響領域 ②指定権者による様式・要件差がある ③HumanにもClaudeにも当該制度の専門性がない ④Claudeの現環境では一次資料を安定取得・検証できない（本日 `mhlw.go.jp` / `e-gov.go.jp` は CONNECT 403）⑤誤った成果物が第三者へ重大な実害を与えうる ⑥現在のNon-goalおよびHard Boundaryに反する。**「競合が存在したから」はKILL理由ではない**（`direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` §1-c）。再検討は、Humanが戦略レベルで規制領域への参入を明示的にCommitし、かつ §4-a の解除4条件（一次資料への安定アクセス / 版管理 / 管轄差への対応 / 適格な専門家レビュー）が揃った場合に限る。**現在は再検討しない。**
+     - **創業融資の3年収支計画Excel = `KILL`（現在の候補として）/ Routing: `NO_ACTION`。** 理由: ①North StarおよびMD-1への抽象的な接続は説明できても、現在の律速を十分に動かす証拠がない ②60日後の成否から得られるRealityの識別力が低い ③無名出品者としてのdistribution advantageがない ④強い既存出品者が存在する ⑤Human固有知見を投入しても購入意図がある証拠にはならない ⑥Humanの時間と注意を投入する優先順位として弱い。**Humanへ25分の音声メモを要求しない。商品の作成・出品・追加調査・差別化案の検討を開始しない。**
+  6. **創業融資Excelの再検討trigger（B-12の実例）**: 再検討triggerは**内部でより良い商品案が出たことではない**。次の**外部証拠**のいずれかが得られた場合だけ候補として再登録できる——①対象顧客からの具体的な購入意図 ②既存商品で解消されていない反復的な不満 ③予約・事前購入・依頼など金銭に近いSignal ④無名出品者でも到達可能なdistribution advantage ⑤現在より短期間で判定可能なExperiment設計。
+  7. **証拠水準 `Observed` / `Derived` を分離する**（`research/INDEX.md` 凡例 / `OS.md` HI-4 F5）。**raw dataまたは再現可能な取得記録がworktreeに存在しない数値は、正本を上書きせず `HOLD` として報告する。** 本日のココナラ調査（0件率 / 中央値 / 総流通推計 / **「60日以内に確定1円が出る確率 2.2%」** / 各関門の積算 / Indie Hackersとの整合評価）は取得記録が worktree に無いため**全て `HOLD`。判断の前提・結論欄・数値表のいずれへも取り込まない**（`HOLD` 対象として名指しすることと、正本化することは別である）。D-005 の「ココナラ170件の93.5%が実績0」も同じ扱いとし、他の判断の前提として引用しない（D-005 の決定内容そのものは変更しない）。
+  8. **`direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` §4 の2語を明確化する**（同 §4-a / §4-b）。「法規制のかかる領域」= 公的申請 / 指定・許認可 / 資格判定 / 法的適否 / 公的報酬・給付の計算など、誤りが第三者の権利・事業・金銭へ重大な影響を与える成果物。**単なる免責文では解除できない。** 「他社サービスの模倣」= コピー・近似再現・出所の混同・業種名だけの差し替え・他社固有価値の流用は禁止。市場の存在を証拠として使うこと・価格帯や納品形式を市場構造として観測すること・同カテゴリへ独立設計の商品を出すこと・他社の成功失敗から需要仮説を作ることは許可。**ただし独自の因果価値が説明できない場合は、模倣禁止への抵触有無にかかわらず `NO_ACTION`。**
+  9. **Encounter Queue Day 2（E-013 / 2026-08-10 18:30 JST）は予定どおり継続する。** 判定: Day 2 は**独立したStrategy Committed済みExperiment**であり、本日 `KILL` した2候補のいずれにも依存しない（E-013の対象clusterは「一人事業・反復事務」「Creator」で、Day 1 実測がその範囲内 — `experiments/encounter-queue/LEDGER.md`）。よって**変更しない**。
+- **Why**:
+  1. 現在の位相は**探索期**であり（`CURRENT_STATE.md` §7-0）、現在の戦略は「トークンと時間を筋のいい一点を見つけることに集中投下する」である。**探索期に既定が「やる」のままだと、筋の悪い候補へ資源が流れる**。HI-2 の「やる」は本来Handoff規律であって着手判断の規律ではなく、この取り違えが起きうる形で書かれていた。
+  2. 2候補はいずれも「North Starへ接続できる」ことは説明できた。**接続の説明可能性が実行の十分条件になっていたこと自体が欠陥**であり、律速（現在は「会話の本数」— `ROADMAP.md` §0）と次のRealityを必須条件へ昇格させることで塞ぐ。
+  3. Strategy Committed の成立条件が「何をやるか」側だけを要求しており、**やらないことと、`NO_ACTION` を戻す条件が事前登録されていなかった**。結果として `NO_ACTION` 判定が「良い案が出た」で崩れうる状態だった（`OS.md` Layer2 C が禁じている崩れ方と同型）。
+  4. 本日、到達可能ドメインが拡張されて `coconala.com` が取得可能になった一方、取得記録を保存しない数値が canonical へ流入しかけた。**F5（Evidence帰属ミス）と F9（二次記述をEvidence化）の同時発生**であり、Observed / Derived の分離と「取得記録が無ければ `HOLD`」を規則側へ置く。
+- **Supersedes**:
+  - `OS.md` HI-2 の「したがって既定は『やらない』ではなく『やる』」を、**着手判断の既定としての読み**において supersede する（Handoff規律としての読みは維持）。
+  - `direction/COCONALA_VERDICT_2026-08.md` 冒頭の「`coconala.com` は egress 遮断」を、**2026-08-10 時点の環境事実としてのみ** supersede する（同文書 2026-08-10 追記 (1)）。**等級Bの数値は昇格させない。**
+  - D-001〜D-005 の決定内容は変更しない。`DESIRES.md` の North Star / Major Desire、`CONSTRAINTS.md` の条文、`CURRENT_STATE.md` §7-0 の現在の戦略・現在のベットのいずれも変更しない。
+- **Explicitly NOT decided here**:
+  - **「買い切りテンプレは日本で死んでいる」「Claude Code講座が無名個人にとって唯一強い帯」を正本化しない。** どちらも canonical に存在せず、支える取得記録も worktree に無い。
+  - ココナラへの出品可否（`ROADMAP.md` §0 の 2026-08-12 判断は `NO_ACTION` のまま）。
+  - 規制領域への参入（Decision 5 の解除条件が揃っていない）。
+  - 新商品・新Experimentの開始、外部送信、出品、課金、mainへのmerge。**本Task中にいずれも行っていない。**
+- **Rollback**: 本PRのrevertで `OS.md` / `DECISIONS.md` / `CURRENT_STATE.md` / `ROADMAP.md` / `CLAUDE.md` / `research/INDEX.md` / `direction/` 2本 / `.claude/hooks/context-brief.py` が旧stateへ戻る。物理移動・削除・外部作用を伴わないため単一revertで完結する。
+
+---
+
 ## D-005 — 文章スキルの自作をKILLし、既存（coji/natural-japanese）を取り込む
 
 - **Date**: 2026-08-10
