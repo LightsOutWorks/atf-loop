@@ -237,21 +237,42 @@ Open PRは以下の**1件のみ**（draft。GitHub API / git実測 2026-08-09 23
 - **PR #34 = merge済み**（main `0003e2c`）: MD-2 Canaryのcontent候補・**C-1実投稿文と文体差分分析**がmainに着地。E-011の採番が確定（`experiments/INDEX.md`）。C-1公開はHuman Commit 2026-08-08（Human-reported）、X上の反応は引き続き `UNKNOWN`。
 - **PR #30 = merge無しでclose**（不採択。branch `claude/genome-factory-design-538h9e` に保存・reopen可逆）: Override以前のBrowser-Toy収益化Route提案。E-007はNO-GOへ（`experiments/INDEX.md`）。
 - Merge済み（2026-08-08〜09）: #32 / #33 / #35 / #36（D-001 / LEDGER / LEARNINGS）、#37（Human Leverage Rederivation）、#38（Ownership / Compounding Audit）、#39（D-002 North Star REPLACE）、#40（D-003 Four-Audit Integration）。
-- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary / E-011）= **active-observing**（C-1 2026-08-08・C-2 2026-08-09投稿済み。初のimpression実測: C-1 ≈20 imp/15h・reply 0 — reachほぼゼロが実測され、Encounter Queue reply→profile訪問を主動線とする仮説を観測対象に追加。§H参照）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **SCHEDULED_NOT_YET_EXECUTED**（Human-confirmed / repo-unverified。§7）。
+- Lane状態: Lane A（Batch 1 / E-006）= **waiting**（World Signal待ち。self check-in停止）/ Lane B（MD-2 Content Canary / E-011）= **active-observing**（C-1 2026-08-08・C-2 2026-08-09投稿済み。初のimpression実測: C-1 ≈20 imp/15h・reply 0 — reachほぼゼロが実測され、Encounter Queue reply→profile訪問を主動線とする仮説を観測対象に追加。§H参照）/ Lane C（Learning抽出）= **closed**（Loop 1完了。第2回抽出はreply回収後）/ Direction監査4本 = **closed**（merge済み。統合はD-003）/ Daily Encounter Queue Canary = **DAY_1_EXECUTED / SENT 4 / REPLY 0**（2026-08-09 Human-confirmed。§7。Day 2 = 2026-08-10 18:30 JST 予定）。
 - 並行セッション規律: Demand / Reality実験はExperiment Ownerセッション、Canonical文書はMigration / Integration Ownerセッションが担当し、同一canonical fileを複数セッションで同時編集しない。
 
 ## 7. Structural Bottleneck / Current Operational Priority
 
 最重要未証明区間は不変: **Need→Paid Value→Confirmed Revenue**（MD-1 Terminal Signal。現在JPY 0）。
 
+### 7-0. 現在の戦略 / 現在のベット（2026-08-10 Human裁定。正本はここ）
+
+Source: 2026-08-10 会話でのHuman裁定（**Human-confirmed / repo-unverified**。実装済みの事実ではなく、現時点で採用されている方向である）。層の順序（世界観 → 戦略 → 戦略と戦術の間 → 戦術）と、どの層に何を置くかの規律は `OS.md` HI-9 が持つ。本節はその**中身**（現在何を選んでいるか）だけを持つ。North Star / Major Desireは `DESIRES.md` が正本であり、本節はそれを上書きしない。
+
+- **現在の戦略（＝資源の配分）**: **トークンと時間を「筋のいい一点を見つけること」に集中投下する。** 筋の悪いもので進めて時間とトークンを溶かすより、考え尽くして「これだ」となってから力を入れるほうが北極星に速く近づく。**ゼロから作らない。**
+- **現在のベット（＝戦略と戦術の間）**: 自分たちが先駆者になる道を取らない。**既に収益を生んでいて、日本にまだ来ていない事業**の中から、筋がよく日本で勝てるものを見つける。**その人がどうやって収益しているのかまで解剖した上で**、我々がこれまで作ってきたものを乗せて最もシナジーが出る一点を選ぶ。**決めたら全ベットする。**
+- **これは世界観ではない。** 中位の選択であり、変わりうる。変わらないのは北極星のほうだけ。
+- **現在の位相 = 探索期（Exploration）。** 固定実行（Commitment）へ移る条件、固定中に変えてよいもの・変えてはならないもの、固定を早期解除してよい場合は `OS.md` Layer2「探索と固定（Exploration / Commitment）」が持つ。本節は位相の**現在値**のみを持つ。
+- **方向転換の扱いの規律**（探索期に作ったものが使われなくなることを「無駄」「宙に浮いた」と表現しない、等）は `OS.md` Layer2「探索と固定」A / C が持つ。本節では重複させない。
+
+本節が更新された場合、`CLAUDE.md` は変更不要である（`CLAUDE.md` は本節を指すだけで内容を持たない）。
+
 **Structural Bottleneck**（長期の構造欠落。独立した複数監査 — D-002 North Star Audit / Portfolio Rederivation / Human Leverage Rederivation / Ownership Audit — の収束点。D-003）:
 
 > **World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと。** 17 REACHABLE threadのうちX 15件はharnessから読めず（E-008）、送信主体handle・送信文面等のjoin keysも大半が未記録（Ownership Audit F節）。Need発見・Contact準備・Solve調査より、Realityから返る信号の受信経路が弱い。
 
-**2026-08-10 追加実測 — 律速は当初の記録より広い**: egress proxyにより `x.com` に加えて **`note.com` / `zenn.dev` も遮断されている**（本日WebFetch実測。EGRESS_BLOCKED）。つまり **Living Groundが立つ公開面は現時点で1つも harness から観測できない**。帰結:
+**2026-08-10 — 遮断は同日中に大部分が解消した**（Human が許可ドメインを Custom へ拡張。実測200確認）。到達可能になったもの: `note.com` / はてな / `zenn.dev` / `qiita.com` / 青空文庫 / `coconala.com` / `*.wikipedia.org` / 文化庁 / J-STAGE / NHK。
+
+**ただし X は部分的にしか解けていない**（2026-08-10 実測）:
+
+| 取得可否 | 対象 |
+|---|---|
+| **可** | 単一ポストの本文（URL既知の場合。`og:description` に載る）／アカウントのbio |
+| **不可** | スレッドの2投目以降（返信）／impressions・いいね・返信数／フォロワー数／タイムライン |
+
+`WebFetch` は `x.com` を別途拒否するが `curl` は通る。**返信の検知とimpressionsは静的HTMLに載らないため、Encounter Queue の返信監視は引き続き Human 報告経路（E-008）に依存する。** 以下は遮断解消前の記録として保持する（取り消し線を引かず、日付で区別する）:
 
 - 記事が公開されたか、読まれたか、反応があったかを **AIは一切検証できない**。すべてHuman報告経路（`UNKNOWN` 既定）
-- `direction/LLMO_EXECUTION_PLAN_2026-08.md` の20クエリ基準パネル（AI引用シェアの定点観測）は、**測定手段の実在が未確認**。着手前に測定可能性を先に確かめる
+- `direction/LLMO_EXECUTION_PLAN_2026-08.md` の20クエリ基準パネル（AI引用シェアの定点観測）は、**測定手段の実在が未確認**（2026-08-09時点の記述）。→ **2026-08-10 訂正**: 同パネルは計画 §7 が「ヒロがChatGPT/Claude/Perplexityアプリで1回~15分」と定める**Human手動計測**であり、harnessの到達性とは無関係に実行できる。未確認だったのは測定手段ではなく**未実行**であること。着手の障害は無い
 - 観測可能な唯一の公開面は **GitHub**（API / Pages）
 - したがって「World Signalの受信経路が弱い」は X 固有の問題ではなく、**Distribution stack全体の性質**である。自動化で解く前に、Humanが低摩擦で報告できる形（スクリーンショット1枚）を維持することが実務上の最適解になっている
 
@@ -259,7 +280,7 @@ Open PRは以下の**1件のみ**（draft。GitHub API / git実測 2026-08-09 23
 
 > **世界との良質な接点候補を毎日継続供給し、ヒロが業務外時間に送信できる状態を作ること。**
 
-- **Current approved experiment: Daily Encounter Queue Canary（E-013）** — status **DAY_1_EXECUTED / SENT 4 / REPLY 0**（2026-08-09 22:45 JST **Human-confirmed**: 配達4件・**全件送信済み**。台帳 = `experiments/encounter-queue/LEDGER.md`）。Day 1実費 **USD 0.1631**（daily cap 0.18内）/ 3日累積上限0.50の残り **USD 0.3369** / xAI推定残高 **≈ USD 0.486**。**4件中2件（EQ-1 / EQ-4）には送信前から Genuine Pain 証拠としての弱さが事前登録されている**ため、Pain confirmation率の分母は2件で見る。返信の観測はHuman経路のみ（harnessからX読取不可 — E-008）。Humanが3-Day Canaryの実行を承認済みで、one-shot triggerが3本設定済み: **Day 1 = 2026-08-09 18:30 JST / Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST**（設定自体が**Human-confirmed / repo-unverified** — 非公開Claude Codeセッション内のprivate session stateでありrepositoryから独立検証不能）。**Day 1の予定時刻は経過したが、①triggerが発火したか ②候補が生成・配信されたか ③候補の品質 ④ヒロが送信したか のいずれもrepositoryから検証不能 = `UNKNOWN`。Humanの報告があるまで実行済みと書いてはならない。** 恒久recurring scheduleではなく、**Day 3後の自動継続なし**。仕様（Human裁定）: 3日間限定 / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery（非公開供給）/ **Human manual send（ヒロが候補を目視して手動送信。自動送信なし）** / Adaptive query learning。常時Radarではない。Budget capは§5。
+- **Current approved experiment: Daily Encounter Queue Canary（E-013）** — status **DAY_1_EXECUTED / SENT 4 / REPLY 0**（2026-08-09 22:45 JST **Human-confirmed**: 配達4件・**全件送信済み**。台帳 = `experiments/encounter-queue/LEDGER.md`）。Day 1実費 **USD 0.1631**（daily cap 0.18内）/ 3日累積上限0.50の残り **USD 0.3369** / xAI推定残高 **≈ USD 0.486**。**4件中2件（EQ-1 / EQ-4）には送信前から Genuine Pain 証拠としての弱さが事前登録されている**ため、Pain confirmation率の分母は2件で見る。返信の観測はHuman経路のみ（harnessからX読取不可 — E-008）。Humanが3-Day Canaryの実行を承認済みで、one-shot triggerが3本設定済み: **Day 1 = 2026-08-09 18:30 JST / Day 2 = 2026-08-10 18:30 JST / Day 3 = 2026-08-11 18:30 JST**（設定自体が**Human-confirmed / repo-unverified** — 非公開Claude Codeセッション内のprivate session stateでありrepositoryから独立検証不能）。**（2026-08-09 22:45 JST Humanの報告により解除。以下は解除前の規律として保持）** 予定時刻の経過だけでは①trigger発火 ②候補の生成・配信 ③候補の品質 ④送信の有無 のいずれもrepositoryから検証できない。**Humanの報告があるまで実行済みと書いてはならない。** 恒久recurring scheduleではなく、**Day 3後の自動継続なし**。仕様（Human裁定）: 3日間限定 / xAI Grok x_search / 毎日最大10件 / HUMAN_SHORT / Private delivery（非公開供給）/ **Human manual send（ヒロが候補を目視して手動送信。自動送信なし）** / Adaptive query learning。常時Radarではない。Budget capは§5。
 - **X World Signal / Reply Ingestion Canary** — status **HOLD**（execution_authority = **NOT_GRANTED**）。理由（2026-08-09 Human裁定）: 実direct reply未発生でpositive ground truthがなく、outbound mappingしか検証できず情報価値が低い / ヒロはスマホのX通知を容易に確認できる / 現在は返信監視の自動化より良質な接点の増加が優先。**再評価trigger**: ①最初の実replyが1件以上発生した時 ②Humanの返信確認・転記負担が実測上のボトルネックになった時。budget = **UNAPPROVED**（旧案cap USD 3.00は現残高 ≈ USD 0.649で成立しない — §5）。起草済み契約fileは本PRから除外した（branch履歴 `9c1e9d7` 以前に残存。trigger発火時に再作成する）。「次にRealityへ問う1件」ではない。
 
 Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのどれが律速か）はBrowser-Toy Route凍結に伴い凍結。
@@ -280,7 +301,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 | default branch snapshot | `97b6c63d6db3309601704a6ddfb01aa3b65b49ba`（PR #43 / #44 / #45 merge済み） |
 | Public Identity決定（D-004） | `DECISIONS.md` D-004（本PR内）。アセットは `brand/`、幾何規格は `brand/BRAND_SPEC.md`。**外部での実使用は未実施 = `UNKNOWN`** |
 | Web Marketing Intelligence | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md`（main。PR #43 merge済み 2026-08-09） |
-| Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / REPLY 0） |
+| Batch 1 Contact台帳（正本） | `experiments/batch-1/LEDGER.md`（main上。SENT 20 / VOID 3 / REACHABLE 17 / **REPLY 1** — 2026-08-09 初返信。Reply Log 001 / 002） |
 | Loop 1 Learning抽出 | `experiments/batch-1/LEARNINGS.md`（main上。訂正1含む） |
 | 4監査（D-003 Inputs） | D-002 record（`DECISIONS.md`）/ `direction/HUMAN_LEVERAGE_REDERIVATION_2026-08-08.md` / `ops/OWNERSHIP_AUDIT_2026-08-08.md` / Portfolio Rederivation（repo内artifactなし — 採択結論は2026-08-09 Task Contract経由 = D-003） |
 | factory workflow state | workflow id 322145639 = `disabled_manually`（updated 2026-08-07 10:39 JST。2026-08-09 Actions API read-only実測） |

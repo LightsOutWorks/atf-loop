@@ -188,9 +188,39 @@ North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CUR
 
 これは長期Theme（Structural Bottleneck = World Signal ingestion / attribution経路の弱さへの対処方向）であり、**現在の最優先実験と同一ではない**（D-003 Decision 7 — 構造的な律速と現在の最優先実験は同一である必要はない）。
 
+**2026-08-10 更新 — ③（まず1円）までの経路と、その律速**
+
+`direction/SALES_OS_2026-08.md` の動線に現在地を重ねると、律速が1箇所に出る。
+
+```
+公開リプ 24件 ✓ → 会話 1件 ✓ → DMゲート通過 ✓ → 一問一答 × → 無料で繋ぐ × → 相手から依頼 × → 有償 ×
+```
+
+**律速は会話の本数**（24件送って会話になったのは1件）。記事・LLMO・書法・hookは全てこの1本を太くするための準備であり、それ自体は収益に接続しない。
+
+| 期日 | 何を確かめるか | 判断者 |
+|---|---|---|
+| 2026-08-10 18:30 | Encounter Queue Day 2 | 送信=Human |
+| 2026-08-11 18:30 | Day 3。**3日分の実測が揃い記事004の材料が完成** | 送信=Human |
+| 2026-08-12 | ココナラ判断（現状 NO_ACTION — 在庫0のため棚の数は無関係） | Human |
+| 2026-08-13 | ChatGPT $100枠 P1 / @HatoNozomu 3通目のタイムアウト | Human |
+| 週内 | 記事001の公開と固定ポスト | **未決** |
+
+**今週の成否の判定基準（事前登録）**: 会話が1件から2件以上になるか。ならなければ Encounter Queue の抽出条件を変える（現在は Pain を探す網だが、実際に拾えたのは Desire だった — `experiments/batch-1/LEDGER.md` Reply Log 003）。
+
+**8月末〜9月**: 会話が2〜3件になっていれば `SALES_OS` の「最初に必ず無料の繋ぐを試す」へ入る。**③1円が最初に立ちうるのはここ**であり、8月中ではない。
+
+**3〜12ヶ月（並走）**: LLMO。note.com が日本語AI引用ドメイン2位でフォロワー0でも読者が来る経路。計画自身が短期の直接収益をほぼゼロ想定としており、即効路の置換ではない。
+
+**失敗の判定（事前登録）**: 2026-11-10 時点で確定収益0円なら、④（noteとX）が施策として誤っていたと判定する。見るのは記事の本数ではなく**会話の本数**であり、この日までに会話5件へ届いていなければ、noteとXの前に接触の作り方を変える。
+
+**未決のまま進まないもの**: (a) 1本目を記事001にするか、メインプロダクトを先に決めるか (b) メインプロダクト自体（Desire→Reality は主軸昇格済みだが実績0件、新ファネルはHOLD、記事①はKILLで指す先が無い） (c) 新ファネルのHOLD解除条件（入口ゼロは上記「会話を増やす」と同一の問題）。
+
+---
+
 現在の実験順序（D-003 AMENDMENT 2026-08-09 / Human裁定）:
 
-1. **Current approved experiment: Daily Encounter Queue Canary**（status = **SCHEDULED_NOT_YET_EXECUTED** — one-shot trigger 3本設定済み・Day 1未実行。**Human-confirmed / repo-unverified**（private session state）— `CURRENT_STATE.md` §7）: 3日間限定（Day 1〜3 = 2026-08-09〜11 各18:30 JST）/ xAI Grok x_searchで毎日最大10件のEncounter候補を非公開供給 / HUMAN_SHORT / Private delivery / **Human manual send（自動送信なし）** / Adaptive query learning / **Day 3後の自動継続なし**。恒久recurringではなく常時Radarでもない。Budget capは `CURRENT_STATE.md` §5（daily USD 0.18 / 3-day USD 0.50 / 追加top-up禁止）。
+1. **Current approved experiment: Daily Encounter Queue Canary**（status = **DAY_1_EXECUTED / SENT 4 / REPLY 0**（2026-08-09 Human-confirmed） — one-shot trigger 3本設定済み・Day 1未実行。**Human-confirmed / repo-unverified**（private session state）— `CURRENT_STATE.md` §7）: 3日間限定（Day 1〜3 = 2026-08-09〜11 各18:30 JST）/ xAI Grok x_searchで毎日最大10件のEncounter候補を非公開供給 / HUMAN_SHORT / Private delivery / **Human manual send（自動送信なし）** / Adaptive query learning / **Day 3後の自動継続なし**。恒久recurringではなく常時Radarでもない。Budget capは `CURRENT_STATE.md` §5（daily USD 0.18 / 3-day USD 0.50 / 追加top-up禁止）。
 2. **X World Signal / Reply Ingestion Canary** = **HOLD**（trigger: 最初の実reply発生、またはHuman返信監視負担の実測ボトルネック化。budget未承認。それまで実行しない — `CURRENT_STATE.md` §7）。
 
 やらないこと（証拠が出るまで）: 新規M&Aシステム実装 / WebMCP常時Radar / 常時Capability・Demand Radar / SNS自動化 / 返信前のProduct構築 / 新gate体系の先行実装 / Premature Automation（反復がボトルネックとして観測されるまで、conversation → documented procedure → Skill → Hook → Automationの昇格をしない）。
