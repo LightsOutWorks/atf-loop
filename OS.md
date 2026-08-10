@@ -43,6 +43,7 @@ Amended v1.1 — 2026-08-08(D-001: Canonical Migration。Current Identity節・O
 Amended v1.2 — 2026-08-09(D-004: Human Interface — Operator Priors節を追加。Layer1・Layer2の既存記述は変更していない)
 Amended v1.3 — 2026-08-10(D-006: HI-10 Action Default（`NO_ACTION`）とHI-11 権限分界を追加。HI-2の「既定はやる」の適用範囲を着手後のHandoffへ限定。Layer2「探索と固定」Bへ成立条件10〜12を追加。HI-4 F5へObserved / Derivedの区別を追加。Layer1の既存原則は変更していない)
 Amended v1.4 — 2026-08-10(D-007: Layer2「探索と固定」Aへ探索範囲の交差条件を1段落追加。HI-10 条件5とHI-11 Humanリストは行内参照のみ。新設した節は無く、Layer1・HI-10の7条件・HI-11の分界は変更していない)
+Amended v1.5 — 2026-08-10(D-008: HI-12 取得規律を追加。上限・順序・棄却の条件・字数境界の4つだけを持ち、既存規則を再掲しない。Layer1・HI-10・HI-11・Layer2は変更していない)
 
 Status: **LOCKED**
 Layer1 frozen until evidence exists / Layer2 evidence-driven evolution / Layer3 continuous implementation
@@ -454,6 +455,17 @@ North Star / Major Desire / Hard Boundary / 戦略 / **戦略の探索範囲**�
 9. 外部環境により現在戦略が成立しなくなった
 
 1ターンにつきHuman Actionは原則1つ（HI-2）。**戦術レベルの選択肢を並べて返すことは、この9件のいずれにも当たらない。**
+
+### HI-12. 取得規律（2026-08-10 Human裁定 / D-008）
+
+正本を全部読まない。着手前に「今回何を決めるか」を1文にし、`CLAUDE.md` §3 でその問いの正本を引く。この1文はHumanの指示と `CURRENT_STATE.md` §7-0 だけで書く——**何を読むか決めるために正本を横断しない。** §3に無い正本が要るときは実在を確認して必要な文書だけ引き、**到達不能を検出したら索引欠陥として報告する。推測で代替しない。**
+
+1. **上限**: 1タスクの取得は **anchor 5件・計6,000字**。超えたら削る。削れないなら正本が肥大しており、それ自体を欠陥として報告して止まる。
+2. **順序**: `CONSTRAINTS.md` **Part I 全文**（2,109字。**第1位Sourceは節を選ばない**——どのBoundaryが効くかは読む前には分からない。Part IIはHistorical Experiment契約なので対象外）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
+3. **過去の棄却は条件付き**: 同一の市場・Route・候補・Experiment・戦術仮説のいずれかが一致する時だけ `KILL` / `NO_ACTION` と再検討triggerを引く。一致しないものは読まない。triggerが未充足なら `NO_ACTION`。
+4. **全文Readは6,000字未満のファイルだけ。20,000字以上は `grep` / anchor のみ**（2026-08-10時点で該当10本。`research/INDEX.md` は109,174字だが497行のため `Read` 1回で全文が返る。`OS.md` `CURRENT_STATE.md` `ROADMAP.md` 自身も該当する）。
+
+実行してよいかは HI-10、誰が決めるかは HI-11、矛盾時の停止は `CLAUDE.md` §2、律速不明時は `ROADMAP.md` §3 step 5 が持つ。**本節はそれらを再掲しない。**
 
 ---
 
