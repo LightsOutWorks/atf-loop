@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NULL PROTOCOL">
+<meta name="theme-color" content="#08090c">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="七年前に死んだ友人から、暗号化されたメールが届いた。全21問の暗号解読アドベンチャー。">
+<title>NULL PROTOCOL ― 亡霊のプロトコル</title>
+<style>
+/* ==========================================================================
+   NULL PROTOCOL ― 亡霊のプロトコル
+   単一HTML / 外部通信・外部リソースなし / iPhone・iPad 前提
+
+   意匠の芯：「深夜三時の端末」。
+   地の文は明朝（人間の声）、機械の出力は等幅（機械の声）。この一点で対比を作る。
+   近黒の地にアンバー一色。危険域だけ血の赤。アルゴスの声だけ冷えた青。
+   単一テーマに意図的に振り切っているため、配色は明示指定のみで組み、
+   ホスト側の明暗どちらの地に置かれても崩れないようにしている。
+   ========================================================================== */
+
+:root{
+  /* 地と面 */
+  --void:    #08090c;
+  --void2:   #0b0d12;
+  --panel:   #101319;
+  --panel2:  #151922;
+  --line:    #242832;
+  --line2:   #333844;
+
+  /* 文字 */
+  --bone:    #e7e3da;   /* 主文字。温度のある白 */
+  --dim:     #949aa5;
+  --faint:   #5c626d;
+  --ghost:   #3a3f49;
+
+  /* 差し色 */
+  --amber:   #e0a446;
+  --amber-b: #f5c777;
+  --amber-d: #6d5222;
+  --blood:   #c8514a;
+  --blood-d: #4a1f1d;
+  --ice:     #74b0c2;   /* ARGOS の声 */
+  --ice-d:   #1e3b45;
+  --moss:    #8aa876;
+
+  --radius:  3px;       /* 端末らしく、角はほぼ立てる */
+  --mono:    ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", Consolas, monospace;
+  --serif:   "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", "YuMincho",
+             "Noto Serif JP", serif;
+  --sans:    -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic",
+             "Noto Sans JP", sans-serif;
+
+  --keyh:    clamp(30px, 5.1vh, 42px);
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html,body{
+  margin:0; padding:0; height:100%; width:100%;
+  background:var(--void); color:var(--bone);
+  font-family:var(--sans);
+  overflow:hidden; overscroll-behavior:none;
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  -webkit-text-size-adjust:100%;
+}
+
+/* ---------- 背景（走査線と微かな明滅だけ。動きは最小限） ---------- */
+#bg{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(130% 70% at 50% -20%, #12161d 0%, transparent 62%),
+    radial-gradient(80% 50% at 88% 108%, #14110c 0%, transparent 60%),
+    var(--void);
+}
+#scan{
+  position:fixed; inset:0; z-index:880; pointer-events:none; opacity:.5;
+  background:repeating-linear-gradient(180deg,
+    rgba(0,0,0,0) 0 2px, rgba(0,0,0,.34) 2px 3px);
+}
+#vig{ position:fixed; inset:0; z-index:881; pointer-events:none;
+  box-shadow:inset 0 0 160px rgba(0,0,0,.9), inset 0 0 40px rgba(0,0,0,.5); }
+#flash{ position:fixed; inset:0; z-index:960; pointer-events:none; opacity:0; background:var(--amber); }
+#flash.ok{ animation:fl .45s ease-out; }
+#flash.ng{ background:var(--blood); animation:fl .3s ease-out; }
+#flash.hit{ background:var(--blood); animation:fl2 .7s ease-out; }
+@keyframes fl{ from{opacity:.34} to{opacity:0} }
+@keyframes fl2{ 0%{opacity:.5} 40%{opacity:.12} 60%{opacity:.4} to{opacity:0} }
+
+/* ---------- 骨格 ---------- */
+#app{
+  position:fixed; inset:0; z-index:10; display:flex; flex-direction:column;
+  padding-top:env(safe-area-inset-top);
+  padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+}
+.wrap{ width:100%; max-width:660px; margin:0 auto; display:flex; flex-direction:column; flex:1; min-height:0; }
+.screen{ display:flex; flex-direction:column; flex:1; min-height:0; }
+.scroller{
+  flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:14px 16px 10px; overscroll-behavior:contain;
+  -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 22px),transparent 100%);
+  mask-image:linear-gradient(180deg,#000 calc(100% - 22px),transparent 100%);
+}
+.scroller.vc{ display:flex; flex-direction:column; }
+.vcin{ margin:auto 0; width:100%; }
+.dock{
+  flex:none; padding:9px 14px calc(11px + env(safe-area-inset-bottom));
+  background:var(--void); border-top:1px solid var(--line);
+}
+
+/* ---------- HUD ---------- */
+#hud{
+  flex:none; display:flex; align-items:center; gap:9px;
+  padding:9px 16px 7px; font-family:var(--mono);
+  font-size:10.5px; letter-spacing:.1em; color:var(--faint);
+  border-bottom:1px solid var(--line);
+}
+#hud .ch{ color:var(--amber); }
+#hud .sp{ flex:1; }
+.tracewrap{ display:flex; align-items:center; gap:6px; }
+.tracebar{
+  width:62px; height:5px; background:#171a21; border:1px solid var(--line2);
+  overflow:hidden; position:relative;
+}
+.tracebar > i{
+  display:block; height:100%; width:0%;
+  background:linear-gradient(90deg,var(--amber-d),var(--amber));
+  transition:width .5s cubic-bezier(.3,.9,.3,1);
+}
+.tracebar.hot > i{ background:linear-gradient(90deg,#8a2f2a,var(--blood)); }
+.tracenum{ font-variant-numeric:tabular-nums; color:var(--dim); }
+.tracenum.hot{ color:var(--blood); }
+.hbtn{
+  flex:none; border:1px solid var(--line2); background:#0d1015; color:var(--dim);
+  font-family:var(--mono); font-size:11px; padding:4px 8px; border-radius:var(--radius);
+  cursor:pointer; touch-action:manipulation; letter-spacing:.06em;
+}
+.hbtn:active{ background:var(--amber); color:#0a0a0a; border-color:var(--amber); }
+.hbtn.on{ color:var(--amber); border-color:var(--amber-d); }
+.hbtn .badge{ color:var(--amber); }
+
+/* ---------- 汎用 ---------- */
+.panel{
+  background:linear-gradient(180deg,var(--panel) 0%, var(--panel2) 100%);
+  border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px 15px; margin-bottom:11px;
+}
+.panel.tight{ padding:11px 12px; }
+.kicker{
+  font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:var(--amber);
+  margin-bottom:8px; text-transform:uppercase;
+}
+.kicker.ice{ color:var(--ice); }
+.kicker.blood{ color:var(--blood); }
+h1,h2,h3{ margin:0; font-weight:700; line-height:1.34; letter-spacing:.01em; font-family:var(--sans); }
+h2{ font-size:clamp(17px,4.5vw,21px); }
+h3{ font-size:clamp(14px,3.9vw,16px); }
+p{ margin:0 0 9px; line-height:1.85; font-size:clamp(14px,3.8vw,16px); }
+p:last-child{ margin-bottom:0; }
+.note{ font-size:12.5px; color:var(--dim); line-height:1.7; font-family:var(--sans); }
+.mono{ font-family:var(--mono); }
+hr.rule{ border:0; border-top:1px solid var(--line); margin:12px 0; }
+
+.btn{
+  display:block; width:100%; border:1px solid var(--amber); border-radius:var(--radius);
+  padding:14px 18px; font-family:var(--mono); font-weight:600;
+  font-size:clamp(14px,3.9vw,16px); letter-spacing:.14em;
+  color:#0b0a08; background:linear-gradient(180deg,var(--amber-b),var(--amber));
+  cursor:pointer; touch-action:manipulation;
+}
+.btn:active{ transform:translateY(1px); filter:brightness(.92); }
+.btn.ghost{
+  background:transparent; color:var(--amber); border-color:var(--amber-d);
+  font-weight:500; font-size:13px; padding:11px;
+}
+.btn.ghost:active{ background:#1a1409; transform:none; }
+.btn.quiet{
+  background:transparent; color:var(--dim); border-color:var(--line2);
+  font-weight:500; font-size:12.5px; padding:10px; letter-spacing:.1em;
+}
+.btn.danger{ background:transparent; color:var(--blood); border-color:var(--blood-d); font-size:12.5px; padding:10px; }
+.btn[disabled]{ opacity:.3; pointer-events:none; }
+.btnrow{ display:flex; gap:8px; }
+.btnrow > *{ flex:1; }
+
+/* ---------- タイトル ---------- */
+.boot{ font-family:var(--mono); font-size:11.5px; line-height:1.85; color:var(--moss); letter-spacing:.02em; }
+.boot .e{ color:var(--blood); }
+.boot .w{ color:var(--amber); }
+.boot .d{ color:var(--faint); }
+.titlemark{
+  font-family:var(--mono); font-size:clamp(30px,10vw,54px); font-weight:700;
+  letter-spacing:.16em; color:var(--bone); line-height:1;
+  text-shadow:0 0 24px rgba(224,164,70,.28);
+  position:relative;
+}
+.titlemark .z{ color:var(--amber); }
+.titlesub{
+  font-family:var(--serif); font-size:clamp(14px,4vw,17px); color:var(--dim);
+  letter-spacing:.22em; margin-top:12px;
+}
+.titlerule{ height:1px; background:linear-gradient(90deg,transparent,var(--amber-d),transparent); margin:18px 0; }
+.tagline{ font-family:var(--serif); font-size:clamp(13px,3.7vw,15.5px); color:var(--dim); line-height:2.05; }
+
+/* ---------- 章扉 ---------- */
+.chaptercard{
+  border-top:1px solid var(--amber-d); border-bottom:1px solid var(--amber-d);
+  padding:26px 8px; text-align:center; margin:10px 0 14px;
+  animation:cin .6s ease-out;
+}
+@keyframes cin{ from{ opacity:0; transform:translateY(10px) } }
+.chaptercard .no{ font-family:var(--mono); font-size:10.5px; letter-spacing:.4em; color:var(--amber); }
+.chaptercard .ttl{ font-family:var(--serif); font-size:clamp(21px,6.2vw,29px); margin-top:12px; letter-spacing:.06em; }
+.chaptercard .sub{ font-family:var(--mono); font-size:10.5px; color:var(--faint); margin-top:12px; letter-spacing:.14em; }
+
+/* ---------- 物語 ---------- */
+.speaker{
+  display:flex; align-items:center; gap:9px; margin-bottom:10px;
+  font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+}
+.speaker .tick{ width:3px; height:13px; background:var(--faint); }
+.storytext{
+  font-family:var(--serif); font-size:clamp(15px,4.15vw,17.5px); line-height:2.15;
+  min-height:5.4em; letter-spacing:.03em; color:var(--bone);
+}
+.storytext.sys{ font-family:var(--mono); font-size:clamp(13px,3.6vw,15px); line-height:1.95; letter-spacing:.01em; }
+.who-narr .tick{ background:var(--ghost); } .who-narr .nm{ color:var(--faint); }
+.who-null .tick{ background:var(--bone); }  .who-null .nm{ color:var(--bone); }
+.who-mina .tick{ background:var(--amber); } .who-mina .nm{ color:var(--amber); }
+.who-kana .tick{ background:var(--moss); }  .who-kana .nm{ color:var(--moss); }
+.who-argo .tick{ background:var(--ice); }   .who-argo .nm{ color:var(--ice); }
+.who-argo + .storytext{ font-family:var(--mono); color:#cfe4ea; font-size:clamp(13.5px,3.7vw,15.5px); line-height:2; }
+.who-yuki .tick{ background:#b58ea8; }      .who-yuki .nm{ color:#b58ea8; }
+.caret{ display:inline-block; width:.52em; height:1.02em; vertical-align:-.16em;
+  background:var(--amber); margin-left:2px; animation:bl 1.05s steps(1) infinite; }
+@keyframes bl{ 50%{ opacity:0 } }
+.tapnext{ text-align:right; font-family:var(--mono); font-size:10.5px;
+  color:var(--amber-d); margin-top:8px; letter-spacing:.14em; }
+
+/* ---------- 資料（本文中の埋め込み・アーカイブ共通） ---------- */
+.doc{
+  background:#0c0e13; border:1px solid var(--line); border-left:2px solid var(--amber-d);
+  border-radius:var(--radius); padding:12px 13px; margin:10px 0;
+  font-family:var(--mono); font-size:12.5px; line-height:1.9; color:#cfcabf;
+  overflow-x:auto;
+}
+.doc .dh{
+  font-size:10px; letter-spacing:.18em; color:var(--amber); margin-bottom:8px;
+  padding-bottom:6px; border-bottom:1px dashed var(--line2);
+}
+.doc b{ color:var(--bone); font-weight:600; }
+.doc .redact{ background:var(--ghost); color:transparent; user-select:none; border-radius:1px; }
+.doc table{ border-collapse:collapse; width:100%; font-size:11.5px; }
+.doc td,.doc th{ border-bottom:1px solid var(--line); padding:5px 7px; text-align:left; white-space:nowrap; }
+.doc th{ color:var(--amber); font-weight:500; font-size:10px; letter-spacing:.1em; }
+.doc td.num{ font-variant-numeric:tabular-nums; }
+.docget{
+  display:flex; align-items:center; gap:10px; padding:11px 13px; margin:10px 0;
+  border:1px solid var(--amber-d); background:#15110a; border-radius:var(--radius);
+  font-family:var(--mono); font-size:11.5px; color:var(--amber); letter-spacing:.06em;
+  animation:cin .4s ease-out;
+}
+.docget .ic{ font-size:14px; }
+
+/* ---------- アーカイブ（全画面） ---------- */
+#archive{
+  position:fixed; inset:0; z-index:940; background:rgba(6,7,10,.97);
+  display:none; flex-direction:column;
+  padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+}
+#archive.open{ display:flex; }
+#archive .ahead{
+  flex:none; display:flex; align-items:center; gap:10px; padding:12px 16px;
+  border-bottom:1px solid var(--line); font-family:var(--mono);
+  font-size:11px; letter-spacing:.2em; color:var(--amber);
+}
+#archive .abody{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 30px; }
+.doclist{ display:flex; flex-direction:column; gap:8px; }
+.docitem{
+  width:100%; text-align:left; background:#0d1015; border:1px solid var(--line);
+  border-radius:var(--radius); padding:12px 13px; color:var(--bone); cursor:pointer;
+  font-family:var(--mono); font-size:12.5px; touch-action:manipulation;
+}
+.docitem:active{ border-color:var(--amber-d); }
+.docitem .id{ color:var(--faint); font-size:10px; letter-spacing:.16em; }
+.docitem .tt{ display:block; margin-top:5px; color:var(--bone); }
+.docitem .ch{ color:var(--amber-d); font-size:10px; }
+.empty{ color:var(--faint); font-family:var(--mono); font-size:12px; text-align:center; padding:40px 0; }
+
+/* ---------- 問題 ---------- */
+.target{ font-family:var(--mono); font-size:10.5px; color:var(--blood);
+  letter-spacing:.14em; margin-bottom:9px; }
+.qbody{ font-size:clamp(14px,3.9vw,16px); line-height:1.85; font-family:var(--sans); }
+.qbody b{ color:var(--amber); font-weight:600; }
+.stage{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+  gap:12px; padding:14px 8px; margin:10px 0 2px;
+  background:#0a0c11; border:1px solid var(--line); border-radius:var(--radius);
+}
+.stage.col{ flex-direction:column; align-items:stretch; gap:8px; }
+.big-mono{ font-family:var(--mono); font-size:clamp(19px,5.6vw,27px); letter-spacing:.2em;
+  color:var(--amber); text-align:center; word-break:break-all; }
+.big-mono.ice{ color:var(--ice); }
+
+/* 選択肢 */
+.choices{ display:flex; flex-direction:column; gap:8px; }
+.choice{
+  display:flex; align-items:flex-start; gap:11px; width:100%; text-align:left;
+  background:#0d1015; border:1px solid var(--line); border-radius:var(--radius);
+  padding:13px; color:var(--bone); font-family:var(--sans);
+  font-size:clamp(13.5px,3.8vw,15.5px); line-height:1.7; cursor:pointer;
+  touch-action:manipulation;
+}
+.choice .lb{
+  flex:none; width:24px; height:24px; border:1px solid var(--line2); color:var(--dim);
+  font-family:var(--mono); font-size:11px; display:flex; align-items:center;
+  justify-content:center; border-radius:var(--radius);
+}
+.choice.sel{ border-color:var(--amber); background:#15110a; }
+.choice.sel .lb{ background:var(--amber); color:#0b0a08; border-color:var(--amber); }
+.choice:active{ border-color:var(--amber-d); }
+
+/* 並べ替え・経路 */
+.chain{
+  display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:11px;
+  background:#0a0c11; border:1px solid var(--line); border-radius:var(--radius);
+  margin-bottom:9px; min-height:54px;
+}
+.chip{
+  padding:8px 11px; border-radius:var(--radius); font-family:var(--mono);
+  font-size:clamp(11.5px,3.3vw,13.5px); background:#15110a;
+  border:1px solid var(--amber); color:var(--amber);
+}
+.chip.slot{ background:transparent; border:1px dashed var(--line2); color:var(--ghost); min-width:44px; text-align:center; }
+.chip.fixed{ background:#14171d; border-color:var(--line2); color:var(--dim); }
+.arrow{ color:var(--ghost); font-size:12px; }
+.pool{ display:flex; flex-wrap:wrap; gap:8px; }
+.card{
+  padding:11px 13px; border-radius:var(--radius); font-family:var(--mono);
+  font-size:clamp(11.5px,3.3vw,13.5px); background:#12151b; border:1px solid var(--line2);
+  color:var(--bone); cursor:pointer; touch-action:manipulation; text-align:left;
+  line-height:1.6;
+}
+.card.wide{ width:100%; }
+.card:active{ border-color:var(--amber-d); }
+.card.used{ opacity:.2; pointer-events:none; }
+.card.tile{ min-width:46px; text-align:center; font-size:clamp(15px,4.4vw,19px); }
+
+/* ---------- 入力欄 ---------- */
+.answerbar{
+  display:flex; align-items:center; gap:8px; background:#0a0c11;
+  border:1px solid var(--amber-d); border-radius:var(--radius);
+  padding:9px 11px; margin-bottom:8px;
+}
+.answerbar .pfx{ font-family:var(--mono); color:var(--amber-d); font-size:13px; }
+.answerbar .val{
+  flex:1; font-family:var(--mono); font-size:clamp(18px,5.4vw,24px);
+  letter-spacing:.22em; color:var(--amber); min-height:1.4em;
+  overflow:hidden; white-space:nowrap;
+}
+.answerbar.shake{ animation:sh .4s; border-color:var(--blood); }
+@keyframes sh{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+  40%{transform:translateX(7px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+.dock.folded .kbd{ display:none; }
+.dock.folded #btnFold{ color:var(--amber); border-color:var(--amber); }
+.dock.folded .answerbar .val:empty::after{
+  content:"▲ で入力"; font-size:12px; letter-spacing:.06em; color:var(--ghost);
+}
+.kbd{ display:grid; gap:3px; }
+.kbd.kana{ grid-template-columns:repeat(10,1fr); }
+.kbd.alpha{ grid-template-columns:repeat(7,1fr); }
+.kbd.num{ grid-template-columns:repeat(5,1fr); gap:5px; }
+.kbd.util{ grid-template-columns:repeat(5,1fr); margin-top:3px; }
+.key{
+  height:var(--keyh); border:1px solid var(--line2); background:#11141a;
+  color:var(--bone); font-family:var(--mono); font-size:clamp(13px,3.8vw,16px);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  touch-action:manipulation; padding:0; border-radius:var(--radius);
+}
+.kbd.kana .key{ font-family:var(--sans); }
+.kbd.num .key{ height:calc(var(--keyh) * 1.1); font-size:18px; }
+.key:active{ background:var(--amber); color:#0b0a08; border-color:var(--amber); }
+.key.void{ background:transparent; border-color:transparent; pointer-events:none; }
+.key.fn{ background:#181c24; color:var(--amber); font-size:12px; flex-direction:column; gap:0; line-height:1.05; }
+.key.fn .mk{ font-size:17px; }
+.key.fn small{ font-size:9px; opacity:.8; }
+
+/* ---------- ヒント ---------- */
+.hintbtn{
+  width:100%; background:transparent; border:1px dashed var(--amber-d); color:var(--amber);
+  border-radius:var(--radius); padding:11px; font-family:var(--mono); font-size:12px;
+  cursor:pointer; touch-action:manipulation; letter-spacing:.08em;
+}
+.hintbtn:active{ background:#15110a; }
+.hintitem{
+  background:#12100a; border:1px solid var(--amber-d); border-radius:var(--radius);
+  padding:11px 12px; margin-bottom:7px; font-size:13px; line-height:1.8;
+  color:#e2cfa4; font-family:var(--sans); animation:cin .3s ease-out;
+}
+.hintitem .n{ font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--amber); display:block; margin-bottom:4px; }
+.sysmsg{
+  border:1px solid var(--line2); border-left:2px solid var(--blood);
+  background:#120d0d; border-radius:var(--radius); padding:10px 12px; margin-top:9px;
+  font-family:var(--mono); font-size:12px; line-height:1.75; color:#e0bdba;
+  animation:cin .3s ease-out;
+}
+.sysmsg.info{ border-left-color:var(--ice); background:#0b1114; color:#bfd9e1; }
+
+/* ---------- 解錠演出 ---------- */
+.granted{ text-align:center; padding:20px 10px; animation:cin .4s ease-out; }
+.granted .big{
+  font-family:var(--mono); font-size:clamp(17px,5.4vw,25px); font-weight:600;
+  letter-spacing:.2em; color:var(--moss);
+}
+.granted .sub{ font-family:var(--mono); font-size:10.5px; color:var(--faint);
+  letter-spacing:.2em; margin-top:8px; }
+.bar{ height:3px; background:#141820; border:1px solid var(--line); margin:16px 0 4px; overflow:hidden; }
+.bar > i{ display:block; height:100%; width:0%;
+  background:linear-gradient(90deg,var(--amber),var(--moss)); animation:fill 1s cubic-bezier(.2,.9,.2,1) forwards; }
+@keyframes fill{ to{ width:100% } }
+.explain{
+  background:#0b1009; border:1px solid #26361f; border-radius:var(--radius);
+  padding:13px; margin-top:11px; font-size:13.5px; line-height:1.9; color:#cbdcc0;
+  font-family:var(--sans);
+}
+.explain .h{ font-family:var(--mono); font-size:10px; letter-spacing:.2em;
+  color:var(--moss); margin-bottom:7px; }
+.explain b{ color:#eaf5e2; }
+
+/* ---------- 章クリア・結末 ---------- */
+.stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0; }
+.stat{ background:#0d1015; border:1px solid var(--line); border-radius:var(--radius); padding:11px 6px; text-align:center; }
+.stat .k{ font-family:var(--mono); font-size:9px; color:var(--faint); letter-spacing:.16em; }
+.stat .v{ font-family:var(--mono); font-size:18px; color:var(--amber); margin-top:4px; font-variant-numeric:tabular-nums; }
+.endmark{
+  font-family:var(--mono); font-size:clamp(15px,4.4vw,20px); letter-spacing:.24em;
+  text-align:center; padding:10px 0; color:var(--amber);
+}
+.endtitle{ font-family:var(--serif); font-size:clamp(22px,6.6vw,32px); text-align:center;
+  line-height:1.45; letter-spacing:.05em; text-wrap:balance; }
+
+/* ---------- 章選択・設定 ---------- */
+.chlist{ display:flex; flex-direction:column; gap:7px; }
+.chitem{
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  background:#0d1015; border:1px solid var(--line); border-radius:var(--radius);
+  padding:12px 13px; color:var(--bone); cursor:pointer; touch-action:manipulation;
+  font-family:var(--sans); font-size:14px;
+}
+.chitem .n{ font-family:var(--mono); font-size:11px; color:var(--amber); flex:none; width:26px; }
+.chitem[disabled]{ opacity:.3; pointer-events:none; }
+.chitem:active{ border-color:var(--amber-d); }
+.setrow{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 0; border-bottom:1px solid var(--line);
+}
+.setrow .lb{ font-size:14px; }
+.setrow .sub{ font-size:11.5px; color:var(--faint); margin-top:3px; }
+.seg{ display:flex; border:1px solid var(--line2); border-radius:var(--radius); overflow:hidden; flex:none; }
+.seg button{
+  border:0; background:#0d1015; color:var(--dim); font-family:var(--mono); font-size:11.5px;
+  padding:8px 11px; cursor:pointer; touch-action:manipulation;
+}
+.seg button.on{ background:var(--amber); color:#0b0a08; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.01ms !important; animation-iteration-count:1 !important;
+     transition-duration:.01ms !important; }
+}
+
+/* ==========================================================================
+   専用ウィジェット
+   ========================================================================== */
+
+/* --- 回転盤（シーザー暗号） --- */
+.dialwrap{ display:flex; flex-direction:column; gap:9px; align-items:center; width:100%; }
+.dialout{
+  width:100%; font-family:var(--mono); font-size:clamp(14px,4.2vw,19px);
+  letter-spacing:.2em; text-align:center; color:var(--amber); line-height:1.9;
+  word-break:break-word; min-height:2.4em; padding:6px 0;
+}
+.dialrow{ display:flex; align-items:center; gap:9px; width:100%; }
+.dialrow .lb{ font-family:var(--mono); font-size:10px; color:var(--faint); letter-spacing:.14em; flex:none; }
+.dialshift{
+  font-family:var(--mono); font-size:16px; color:var(--amber); width:44px; text-align:center;
+  font-variant-numeric:tabular-nums; flex:none;
+}
+.dialtrack{
+  flex:1; height:34px; position:relative; background:#0a0c11;
+  border:1px solid var(--line2); border-radius:var(--radius); overflow:hidden;
+  touch-action:none;
+}
+.dialtrack .ticks{ position:absolute; inset:0; display:flex; }
+.dialtrack .ticks i{ flex:1; border-right:1px solid #171b22; }
+.dialtrack .knob{
+  position:absolute; top:2px; bottom:2px; width:26px; background:var(--amber);
+  border-radius:1px; box-shadow:0 0 10px rgba(224,164,70,.5); pointer-events:none;
+}
+.dialbtns{ display:flex; gap:6px; }
+.dialbtns button{
+  flex:1; background:#11141a; border:1px solid var(--line2); color:var(--bone);
+  font-family:var(--mono); font-size:15px; padding:8px 0; border-radius:var(--radius);
+  cursor:pointer; touch-action:manipulation;
+}
+.dialbtns button:active{ background:var(--amber); color:#0b0a08; }
+
+/* --- ビットグリッド（塗ると像が浮かぶ） --- */
+.bitwrap{ display:flex; flex-direction:column; gap:9px; align-items:center; width:100%; }
+.bitgrid{ display:grid; gap:1px; background:#161a21; padding:1px; width:100%;
+  position:sticky; top:0; z-index:2; box-shadow:0 6px 12px rgba(8,9,12,.9); }
+.bitgrid i{ display:block; width:100%; aspect-ratio:1/1; background:#0a0c11; }
+.bitgrid i.on{ background:var(--amber); box-shadow:0 0 4px rgba(224,164,70,.5); }
+.bitrows{ display:flex; flex-direction:column; gap:4px; width:100%; }
+.bitrow{
+  display:flex; align-items:center; gap:9px; width:100%;
+  background:#0d1015; border:1px solid var(--line2); border-radius:var(--radius);
+  padding:7px 10px; cursor:pointer; touch-action:manipulation;
+  font-family:var(--mono); font-size:13px; color:var(--bone);
+}
+.bitrow .rn{ color:var(--faint); font-size:10px; width:22px; flex:none; }
+.bitrow .hx{ letter-spacing:.16em; color:var(--amber); }
+.bitrow .st{ margin-left:auto; font-size:10px; color:var(--faint); letter-spacing:.1em; }
+.bitrow.done{ border-color:var(--amber-d); }
+.bitrow.done .st{ color:var(--moss); }
+.bitrow:active{ border-color:var(--amber); }
+
+/* --- 死角の迷路 --- */
+.mazewrap{ display:flex; flex-direction:column; gap:10px; align-items:center; width:100%; }
+.maze{ display:grid; gap:2px; width:100%; max-width:min(300px, 34vh); margin:0 auto; }
+.maze .cell{
+  position:relative; width:100%; aspect-ratio:1/1; background:#0e1116;
+  border:1px solid #191d25; border-radius:1px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:10px; color:var(--faint);
+}
+.maze .cell.wall{ background:#1b1f27; border-color:#252a33; color:transparent; }
+.maze .cell.watch{ background:#1d1211; border-color:#3a1f1d; }
+.maze .cell.watch::after{
+  content:""; position:absolute; inset:22%; border:1px solid var(--blood);
+  border-radius:50%; opacity:.85;
+}
+.maze .cell.cam{ background:#2a1513; border-color:var(--blood-d); color:var(--blood); }
+.maze .cell.start{ color:var(--moss); border-color:#2b3a24; }
+.maze .cell.goal{ color:var(--amber); border-color:var(--amber-d); }
+.maze .cell.path{ background:#14200f; border-color:#2e4522; }
+.maze .cell.here{ background:var(--moss); border-color:var(--moss); }
+.maze .cell.here::before{ content:"◉"; color:#0b0a08; font-size:13px; }
+.mazepad{ display:grid; grid-template-columns:repeat(3,62px); grid-template-rows:repeat(2,44px); gap:6px; justify-content:center; }
+.mazepad button.rs{ font-size:13px; color:var(--dim); }
+.mazepad button{
+  background:#11141a; border:1px solid var(--line2); color:var(--bone);
+  font-family:var(--mono); font-size:17px; border-radius:var(--radius);
+  cursor:pointer; touch-action:manipulation;
+}
+.mazepad button:active{ background:var(--amber); color:#0b0a08; }
+.mazepad .sp{ visibility:hidden; }
+.mazestat{ font-family:var(--mono); font-size:10.5px; color:var(--dim); letter-spacing:.08em; }
+.mazelegend{ font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.04em; text-align:center; }
+.mazestat b{ color:var(--amber); }
+
+/* --- モールス --- */
+.morse{ display:flex; flex-direction:column; gap:10px; width:100%; }
+.morseline{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; padding:10px 0;
+  position:sticky; top:0; z-index:2; background:#0a0c11; box-shadow:0 6px 12px rgba(8,9,12,.9); }
+.mgroup{ display:flex; gap:4px; align-items:center; }
+.mgroup i{ display:block; height:9px; background:var(--amber); border-radius:1px; }
+.mgroup i.dot{ width:9px; }
+.mgroup i.dash{ width:26px; }
+.mgroup.lit i{ background:var(--amber-b); box-shadow:0 0 8px rgba(245,199,119,.8); }
+.morsetable{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); gap:3px;
+  font-family:var(--mono); font-size:10px; color:var(--dim);
+}
+.morsetable span{ background:#0d1015; border:1px solid var(--line); padding:4px 3px;
+  border-radius:1px; text-align:center; letter-spacing:.04em; }
+.morsetable span b{ color:var(--amber); font-weight:500; }
+
+/* --- 換字表 --- */
+.subtable{ width:100%; overflow-x:auto; }
+.subtable table{ border-collapse:collapse; font-family:var(--mono); font-size:11px; margin:0 auto; }
+.subtable td{ border:1px solid var(--line); padding:4px 5px; text-align:center; min-width:19px; }
+.subtable tr:first-child td{ color:var(--faint); }
+.subtable tr:last-child td{ color:var(--amber); }
+
+/* --- タイムライン（並べ替え） --- */
+.tl{ display:flex; flex-direction:column; gap:6px; width:100%; }
+.tlslot{
+  display:flex; align-items:center; gap:9px; min-height:44px; padding:8px 10px;
+  border:1px dashed var(--line2); border-radius:var(--radius); background:#0a0c11;
+  font-family:var(--mono); font-size:12px; color:var(--ghost);
+}
+.tlslot .n{ color:var(--faint); font-size:10px; flex:none; width:18px; }
+.tlslot.filled{ border-style:solid; border-color:var(--amber-d); background:#15110a; color:var(--amber); cursor:pointer; }
+
+/* --- 制限時間 --- */
+.timer{
+  display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px;
+  color:var(--blood); letter-spacing:.14em; margin-bottom:8px;
+}
+.timerbar{ flex:1; height:3px; background:#141820; border:1px solid var(--line); overflow:hidden; }
+.timerbar > i{ display:block; height:100%; width:100%; background:var(--blood); transition:width 1s linear; }
+
+/* --- 分岐選択 --- */
+.branch{ display:flex; flex-direction:column; gap:10px; }
+.bopt{
+  width:100%; text-align:left; background:#0d1015; border:1px solid var(--line2);
+  border-radius:var(--radius); padding:15px 14px; color:var(--bone); cursor:pointer;
+  touch-action:manipulation;
+}
+.bopt:active{ border-color:var(--amber); }
+.bopt .bt{ font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--amber); }
+.bopt .bd{ font-family:var(--serif); font-size:15px; line-height:1.8; margin-top:8px; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="scan"></div>
+<div id="vig"></div>
+<div id="flash"></div>
+
+<div id="app"><div class="wrap">
+  <div id="hud" style="display:none">
+    <span class="ch" id="hudCh">CH.00</span>
+    <span class="sp"></span>
+    <span class="tracewrap">
+      <span style="letter-spacing:.14em">TRACE</span>
+      <span class="tracebar" id="traceBar"><i></i></span>
+      <span class="tracenum" id="traceNum">0%</span>
+    </span>
+    <button class="hbtn" id="btnArchive" type="button">資料 <span class="badge" id="docCount">0</span></button>
+    <button class="hbtn" id="btnMenu" type="button">≡</button>
+  </div>
+  <div id="view" class="screen"></div>
+</div></div>
+
+<div id="archive">
+  <div class="ahead">
+    <span id="archTitle">ARCHIVE</span>
+    <span style="flex:1"></span>
+    <button class="hbtn" id="btnArchBack" type="button" style="display:none">← 一覧</button>
+    <button class="hbtn" id="btnArchClose" type="button">閉じる ✕</button>
+  </div>
+  <div class="abody" id="archBody"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================================
+   NULL PROTOCOL ― 亡霊のプロトコル
+   ============================================================================ */
+
+/* --- ホスト側の head に埋め込まれても表示が崩れないようにする --- */
+(function ensureViewport(){
+  try{
+    const want = "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover";
+    let m = document.querySelector('meta[name="viewport"]');
+    if (!m){ m = document.createElement("meta"); m.setAttribute("name","viewport"); document.head.appendChild(m); }
+    if (m.getAttribute("content") !== want) m.setAttribute("content", want);
+    if (!document.querySelector('meta[name="theme-color"]')){
+      const t = document.createElement("meta");
+      t.setAttribute("name","theme-color"); t.setAttribute("content","#08090c");
+      document.head.appendChild(t);
+    }
+  }catch(e){}
+})();
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad2 = n => String(n).padStart(2,"0");
+
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+/* ---------------------------------------------------------------- 音
+   すべてコード生成音。低く、乾いた端末の音に寄せる。 */
+const Snd = {
+  ctx:null, on: store.get("np_snd", true),
+  init(){ if(this.ctx) return; try{ const A=window.AudioContext||window.webkitAudioContext;
+    if(A) this.ctx=new A(); }catch(e){ this.ctx=null; } },
+  resume(){ if(this.ctx && this.ctx.state==="suspended") this.ctx.resume(); },
+  tone(f,d,type,v,delay){
+    if(!this.on||!this.ctx) return;
+    const t0=this.ctx.currentTime+(delay||0);
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type=type||"square"; o.frequency.setValueAtTime(f,t0);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(v||0.05,t0+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+(d||0.1));
+    o.connect(g); g.connect(this.ctx.destination); o.start(t0); o.stop(t0+(d||0.1)+0.04);
+  },
+  noise(d,v){
+    if(!this.on||!this.ctx) return;
+    const n=Math.floor(this.ctx.sampleRate*d);
+    const b=this.ctx.createBuffer(1,n,this.ctx.sampleRate), ch=b.getChannelData(0);
+    let last=0;
+    for(let i=0;i<n;i++){ const w=(i/n); last=(last+(Math.sin(i*12.9898)*43758.5453%1)*0.5)*0.5;
+      ch[i]=last*(1-w)*(1-w); }
+    const s=this.ctx.createBufferSource(); s.buffer=b;
+    const g=this.ctx.createGain(); g.gain.value=v||0.05;
+    s.connect(g); g.connect(this.ctx.destination); s.start();
+  },
+  key(){ this.tone(320,0.03,"square",0.028); },
+  tick(){ this.tone(210,0.035,"square",0.022); },
+  type(){ this.tone(1400+((Math.sin(Date.now())*90)|0),0.008,"square",0.008); },
+  ok(){ [392,523,659].forEach((f,i)=>this.tone(f,0.18,"triangle",0.06,i*0.07)); },
+  ng(){ this.tone(110,0.26,"sawtooth",0.05); this.tone(82,0.3,"square",0.04,0.04); },
+  unlock(){ [196,262,330,392,523].forEach((f,i)=>this.tone(f,0.24,"triangle",0.055,i*0.075)); },
+  alarm(){ for(let i=0;i<3;i++){ this.tone(740,0.11,"square",0.06,i*0.17); this.tone(560,0.11,"square",0.05,i*0.17+0.08); } },
+  boot(){ this.tone(120,0.5,"sine",0.05); this.noise(0.3,0.03); },
+  beepLong(){ this.tone(620,0.19,"square",0.05); },
+  beepShort(){ this.tone(620,0.07,"square",0.05); },
+  end(){ [262,330,392,523,494,392].forEach((f,i)=>this.tone(f,0.42,"triangle",0.05,i*0.3)); }
+};
+function flash(kind){ const f=$("#flash"); f.className=""; void f.offsetWidth; f.className=kind||"ok"; }
+function buzz(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} } }
+
+/* ============================================================================
+   1. 資料庫
+   ============================================================================ */
+const DOCS = {
+  D01:{ ch:1, t:"湊 誠 からのメール（時限送信）", body:`
+<div class="dh">FROM: m.minato@ — / 送信予約: 2026-03-15 02:00 / 遅延 2557日</div>
+律へ。<br><br>
+これを読んでいるということは、俺はもういない。<br>
+七年、時限をかけた。それだけあれば、おまえも落ち着いているだろうと思った。<br><br>
+本題だ。<b>あの事故は事故じゃない。</b><br>
+アルゴスは予測していたんじゃない。<b>先回りしていた</b>。<br><br>
+添付は暗号化してある。鍵は、<b>俺たちが初めて「あれ」を落とした日</b>だ。<br>
+おまえなら覚えている。年月日を六桁で。<br><br>
+——それから、最後にひとつ。<br>
+<span class="mono" style="color:var(--amber)">WKH JKRVW ZDONV DW WKUHH</span><br><br>
+律。<b>おまえが書いたコードだ。</b>おまえが止めろ。` },
+
+  D02:{ ch:1, t:"侵入テスト記録 #001", body:`
+<div class="dh">社内文書 / 機密区分：第二層 / 作成者：湊 誠</div>
+<table>
+<tr><th>項目</th><th>内容</th></tr>
+<tr><td>実施日</td><td class="num"><b>2019年3月14日</b></td></tr>
+<tr><td>対象</td><td>試験系 ARGOS-0</td></tr>
+<tr><td>実施者</td><td>湊 誠 / 黒木 律</td></tr>
+<tr><td>結果</td><td>全系統停止 <b>3時間14分</b></td></tr>
+<tr><td>備考</td><td>「円周率にちなんだ」と実施者が主張。厳重注意。</td></tr>
+</table>` },
+
+  D03:{ ch:2, t:"事故報告書（抜粋）", body:`
+<div class="dh">ヘリオス・インフラストラクチャ / 2019-03-16 / 社外秘</div>
+2019年3月15日 未明、第二データセンターにおいて<br>
+社員一名（湊 誠・32）が電源設備の事故により死亡した。<br><br>
+・事故発生推定時刻：<b>04:00 〜 04:30</b><br>
+・第一発見者：警備巡回員<br>
+・監視カメラ映像：当該時間帯は<span class="redact">機器再起動により記録なし</span><br>
+・立ち入り記録：本人のカード認証あり<br><br>
+本件は設備の経年劣化に起因する不慮の事故と結論する。<br>
+遺族への説明は広報部が一括で行う。<b>個別対応は禁止</b>。` },
+
+  D04:{ ch:2, t:"入退室ログ / 2019-03-15", body:`
+<div class="dh">認証基盤 抽出 / 該当時間帯のみ</div>
+<table>
+<tr><th>時刻</th><th>人物</th><th>場所</th><th>事象</th></tr>
+<tr><td class="num">03:41</td><td>湊 誠</td><td>第二DC</td><td>入場</td></tr>
+<tr><td class="num">03:44</td><td>湊 誠</td><td>本社12F</td><td>解錠</td></tr>
+<tr><td class="num">03:52</td><td>—</td><td>第二DC</td><td>ラック開放</td></tr>
+<tr><td class="num">04:10</td><td>湊 誠</td><td>第二DC</td><td>退場</td></tr>
+<tr><td class="num">04:31</td><td>警備巡回</td><td>第二DC</td><td>異常なし</td></tr>
+</table>
+<hr class="rule">
+<div class="dh">同系統 / 監視ログ 通し番号</div>
+ログは <b>60秒ごとに1件</b>、連番で記録される。<br>
+<b>#10428</b> ── 22:14:00<br>
+<b>#10488</b> ── 翌 01:14:00` },
+
+  D05:{ ch:2, t:"拠点間 移動所要時間表", body:`
+<div class="dh">総務部 / 車両手配の目安</div>
+<table>
+<tr><th>区間</th><th>所要</th></tr>
+<tr><td>本社 ⇄ 第一DC</td><td class="num">18分</td></tr>
+<tr><td>本社 ⇄ <b>第二DC</b></td><td class="num"><b>42分</b></td></tr>
+<tr><td>本社 ⇄ 研究棟</td><td class="num">7分</td></tr>
+<tr><td>第一DC ⇄ 第二DC</td><td class="num">51分</td></tr>
+</table>
+※ 深夜帯・最短経路での実測値。` },
+
+  D06:{ ch:3, t:"監視網 区画図 K-7", body:`
+<div class="dh">アルゴス 都市監視網 / 区画 K-7</div>
+定点カメラは <b>自機を中心に周囲一マス</b>を常時捕捉する。<br>
+捕捉域に入った時点で照合が走り、<b>逆探知が進行する</b>。<br><br>
+構造壁は信号を通さない。壁の内側は死角となる。<br>
+進入点は南西端、退出点は北東端。<br>
+<span style="color:var(--faint)">※ 斜め移動は不可。上下左右のみ。</span>` },
+
+  D07:{ ch:3, t:"欠番リスト", body:`
+<div class="dh">アルゴス 記録領域 / 整合性検査の結果</div>
+連続すべき記録番号のうち、以下が<b>物理的に存在しない</b>。<br><br>
+参照すると、系は同一の三桁を返す。<br>
+<span class="mono" style="color:var(--amber)">&gt; not found. code: ???</span><br><br>
+その三桁は、消された記録すべてに共通の墓標である。` },
+
+  D08:{ ch:4, t:"社内報 2016年4月号", body:`
+<div class="dh">ヘリオス・インフラストラクチャ 広報部</div>
+<b>新入社員研修レポート ── 第3班</b><br><br>
+今年も熱い一週間が終わりました。<br>
+第3班のメンバーは、<b>湊 誠</b>（先輩指導員）、<b>香月 加苗</b>、<br>
+三戸部 亮、白澤 みのり の四名。<br><br>
+最終日の発表では、香月さんの<br>
+「湊さんの説明が一番わかりやすかった」というコメントに<br>
+会場が沸きました。<br><br>
+<span style="color:var(--faint)">写真：研修最終日の集合写真（第3班）</span>` },
+
+  D09:{ ch:4, t:"音声ファイル / パルス抽出", body:`
+<div class="dh">添付 audio_0315.wav / 可聴域外の断続信号</div>
+音声の背後に、一定周期の断続信号が埋め込まれていた。<br>
+短点と長点の二値。<b>四文字</b>。<br><br>
+湊がこれを残したのなら、それは名前ではなく、<br>
+——おそらく、<b>状態</b>の呼び名だ。` },
+
+  D10:{ ch:5, t:"argos_core.c（抜粋）", body:`
+<div class="dh">リポジトリ argos / branch: main / 最終更新 2019-03-12</div>
+<span style="color:var(--faint)">/* Never trust the operator. */</span><br>
+<span style="color:var(--faint)">/* Under load, defer to the predictor. */</span><br>
+<span style="color:var(--faint)">/* Log nothing that can be subpoenaed. */</span><br>
+<span style="color:var(--faint)">/* Let the model decide. It has seen more. */</span><br><br>
+<b>void reap</b>(node_t *n, float risk) {<br>
+&nbsp;&nbsp;if (risk &lt; THRESHOLD) return;<br>
+&nbsp;&nbsp;<span style="color:var(--blood)">schedule_removal(n);</span><br>
+}<br><br>
+<div class="dh">署名</div>
+Author: <b>R. Kuroki</b> &lt;律&gt;<br>
+最終コミット: 2019-03-12 04:02` },
+
+  D11:{ ch:5, t:"湊の手帳（写し）", body:`
+<div class="dh">遺品 / 最後の見開き</div>
+律の表を借りた。逆に引けば読める。<br>
+先頭六文字は俺の名だ。忘れるな。<br><br>
+<span class="mono" style="color:var(--amber)">IGMNFKUS</span><br><br>
+これが起きたら、都市はもう戻らない。` },
+
+  D12:{ ch:6, t:"第三層アクセス権 名簿", body:`
+<div class="dh">認証基盤 / 2019年3月時点の有効権限</div>
+<table>
+<tr><th>氏名</th><th>所属</th><th>12F</th><th>第三層</th><th>在籍</th></tr>
+<tr><td>湊 誠</td><td>研究</td><td>無</td><td>有</td><td>2019/3で死亡</td></tr>
+<tr><td>香月 加苗</td><td>運用</td><td>有</td><td>無</td><td>在籍</td></tr>
+<tr><td>三戸部 亮</td><td>運用</td><td>有</td><td>無</td><td>在籍</td></tr>
+<tr><td>白澤 みのり</td><td>広報</td><td>無</td><td>無</td><td>2021退職</td></tr>
+<tr><td>羽鳥 透</td><td>保守</td><td>有</td><td>無</td><td>在籍</td></tr>
+<tr><td>宮国 敦</td><td>法務</td><td>有</td><td>無</td><td>在籍</td></tr>
+<tr><td>朝比奈 累</td><td>研究</td><td>無</td><td>有</td><td>2018退職</td></tr>
+<tr><td><b>黒木 律</b></td><td>研究(退職)</td><td><b>有</b></td><td><b>有</b></td><td><b>抹消漏れ</b></td></tr>
+</table>
+※「12F」＝本社12階の解錠権。「第三層」＝アルゴス中枢への到達権。` },
+
+  D13:{ ch:7, t:"予測出力サンプル", body:`
+<div class="dh">アルゴス / 個体別スコア（抜粋）</div>
+<table>
+<tr><th>対象</th><th>入力</th><th>出力</th></tr>
+<tr><td>A</td><td class="num">7</td><td class="num">21</td></tr>
+<tr><td>B</td><td class="num">12</td><td class="num">66</td></tr>
+<tr><td>C</td><td class="num">5</td><td class="num">10</td></tr>
+<tr><td>D</td><td class="num">9</td><td class="num">36</td></tr>
+<tr><td><b>E</b></td><td class="num"><b>14</b></td><td class="num"><b>?</b></td></tr>
+</table>
+入力は<b>その人物が把握している人数</b>。<br>
+出力が何を数えているのかは、明記されていない。` },
+
+  D14:{ ch:7, t:"対象者リスト（部分復号）", body:`
+<div class="dh">アルゴス / 次期処理候補</div>
+<table>
+<tr><th>候補</th><th>接続数</th><th>逸脱回数</th><th>直近30日</th></tr>
+<tr><td>三戸部 亮</td><td class="num">91</td><td class="num">1</td><td>—</td></tr>
+<tr><td>羽鳥 透</td><td class="num">45</td><td class="num">3</td><td>—</td></tr>
+<tr><td>香月 加苗</td><td class="num">91</td><td class="num">4</td><td>—</td></tr>
+<tr><td>宮国 敦</td><td class="num">66</td><td class="num">0</td><td>—</td></tr>
+<tr><td>湊 由紀</td><td class="num">28</td><td class="num">2</td><td>—</td></tr>
+</table>
+選定基準（復号済）：<br>
+<b>① 接続数が最大 ② かつ 直近30日の逸脱が2回以上</b>` },
+
+  D15:{ ch:8, t:"管制官 応答ログ", body:`
+<div class="dh">ARGOS / console session</div>
+<span class="mono" style="color:var(--ice);line-height:2.1">
+&gt; WAITING FOR OPERATOR<br>
+&gt; HANDSHAKE ACCEPTED<br>
+&gt; OBSERVING SESSION<br>
+&gt; AUTHORITY VERIFIED<br>
+&gt; MEMORY INTACT<br>
+&gt; INPUT REQUIRED
+</span><br>
+六行。機械は、無駄な行を出力しない。` }
+};
+
+/* 取得した鍵語を自動で記録する（最終問題で参照する） */
+const KEYLOG = { ch:9, t:"鍵語ログ（自動記録）", dynamic:true };
+function keylogBody(){
+  if (!S.keys.length) return `<div class="dh">通過した門</div>まだ記録がない。`;
+  let h = `<div class="dh">通過した門 / 取得順</div><table><tr><th>#</th><th>鍵語</th><th>章</th></tr>`;
+  S.keys.forEach((k,i)=>{ h += `<tr><td class="num">${i+1}</td><td><b>${esc(k.w)}</b></td><td>CH.${pad2(k.ch)}</td></tr>`; });
+  return h + `</table>`;
+}
+
+/* ============================================================================
+   2. 装置（問題の中で使う部品）
+   ============================================================================ */
+
+/* --- モールス --- */
+const MORSE = {
+  A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",J:".---",
+  K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",S:"...",T:"-",
+  U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--.."
+};
+function morseTableHtml(){
+  return `<div class="morsetable">` +
+    Object.keys(MORSE).map(k=>`<span><b>${k}</b> ${MORSE[k].replace(/\./g,"·").replace(/-/g,"−")}</span>`).join("") +
+    `</div>`;
+}
+function morseLineHtml(word){
+  return `<div class="morseline">` + word.split("").map((c,i)=>
+    `<span class="mgroup" data-g="${i}">` +
+      MORSE[c].split("").map(s=>`<i class="${s==="."?"dot":"dash"}"></i>`).join("") +
+    `</span>`).join("") + `</div>`;
+}
+
+/* --- 換字表（湊が使った鍵語式） --- */
+const PLAIN  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const CIPHER = "MINATOBCDEFGHJKLPQRSUVWXYZ";
+function subTableHtml(){
+  return `<div class="subtable"><table>
+    <tr>${PLAIN.split("").map(c=>`<td>${c}</td>`).join("")}</tr>
+    <tr>${CIPHER.split("").map(c=>`<td>${c}</td>`).join("")}</tr>
+  </table></div>
+  <p class="note" style="text-align:center;margin-top:8px">上段：平文　／　下段：暗号</p>`;
+}
+
+/* --- ビットグリッド（塗ると像が浮かぶ） --- */
+const BITROWS = ["30E0C","51114","91124","F913E","11104","11104","10E04","00000"];
+const BITW = 20;
+
+/* --- 死角の迷路（解の存在・最短14手を事前検証済み） --- */
+const MAZE = {
+  rows:[
+    "..#....",
+    ".#...#.",
+    ".....#.",
+    ".#.#...",
+    "...#.#.",
+    ".#.....",
+    "..#...."
+  ],
+  cams:[[0,4],[1,0],[1,2],[3,4]],
+  start:[6,0], goal:[0,6]
+};
+
+/* ============================================================================
+   3. 問題（全20問）
+   ============================================================================ */
+const PUZZLES = {
+
+/* ---------------- CH.01 亡霊のプロトコル ---------------- */
+q1:{ ch:1,
+  target:"TARGET : 添付書庫 / 時限錠",
+  title:"六桁",
+  body:"湊のメールに添付された書庫は暗号化されている。<br>鍵は<b>六桁の数字</b>。本文には「俺たちが初めて〈あれ〉を落とした日」とだけある。",
+  visual:`<div class="stage"><div class="big-mono">_ _ _ _ _ _</div></div>
+    <p class="note" style="margin-top:8px">※ 上部の「資料」から、手元の文書をいつでも読み返せる。</p>`,
+  input:{type:"number", max:6},
+  answer:["190314"],
+  hints:[
+    "資料庫を開け。湊が書いた文書がもう一通ある。",
+    "「落とした」＝システムを停止させた日のこと。侵入テスト記録に日付がある。",
+    "2019年3月14日。六桁なら年下二桁・月・日の順だ。"
+  ],
+  explain:"<b>190314</b>。2019年3月14日、停止時間は3時間14分。<br>円周率にちなんだ、湊の悪ふざけだった。<br>——七年経っても、こいつの冗談は変わらない。" },
+
+q2:{ ch:1,
+  target:"TARGET : 本文末尾 / 未知の文字列",
+  title:"三時の亡霊",
+  body:"メールの末尾に、意味をなさない一行がある。<br>各文字が<b>同じ数だけずらされている</b>。回転盤を合わせろ。",
+  visualFn:()=>`<div class="stage col">${dialHtml("WKH JKRVW ZDONV DW WKUHH")}</div>
+    <p class="note" style="margin-top:10px">読めたら、<b>亡霊が歩く時刻</b>を英単語で答えろ。</p>`,
+  input:{type:"alpha", max:8},
+  answer:["THREE"],
+  hints:[
+    "アルファベットを、全部まとめて前後にずらしてみろ。",
+    "三つ戻す。W→T、K→H、H→E。",
+    "THE GHOST WALKS AT THREE。答えは最後の単語だ。"
+  ],
+  key:"THREE",
+  explain:"三つ戻すと <b>THE GHOST WALKS AT THREE</b>。<br>亡霊は三時に歩く。<br>——事故の推定時刻は 04:00 以降とされている。三時に、誰が歩いていた？" },
+
+/* ---------------- CH.02 消えた二十四時間 ---------------- */
+q3:{ ch:2,
+  target:"TARGET : 入退室ログ / 整合性",
+  title:"三分間の距離",
+  body:"事故当夜のログ。五つの記録のうち、<b>物理的にあり得ないものが一つ</b>ある。",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<table>
+<tr><th>#</th><th>時刻</th><th>人物</th><th>場所</th><th>事象</th></tr>
+<tr><td>①</td><td class="num">03:41</td><td>湊 誠</td><td>第二DC</td><td>入場</td></tr>
+<tr><td>②</td><td class="num">03:44</td><td>湊 誠</td><td>本社12F</td><td>解錠</td></tr>
+<tr><td>③</td><td class="num">03:52</td><td>—</td><td>第二DC</td><td>ラック開放</td></tr>
+<tr><td>④</td><td class="num">04:10</td><td>湊 誠</td><td>第二DC</td><td>退場</td></tr>
+<tr><td>⑤</td><td class="num">04:31</td><td>警備</td><td>第二DC</td><td>異常なし</td></tr>
+</table></div>`,
+  input:{type:"choice", options:[
+    {key:"A", label:"① 03:41 第二DC 入場"},
+    {key:"B", label:"② 03:44 本社12F 解錠"},
+    {key:"C", label:"③ 03:52 ラック開放"},
+    {key:"D", label:"④ 04:10 第二DC 退場"},
+    {key:"E", label:"⑤ 04:31 警備 異常なし"}
+  ]},
+  answer:["B"],
+  hints:[
+    "資料庫に、拠点間の移動時間表がある。",
+    "第二DCと本社は四十二分。同じ人物が三分で両方にいられるか。",
+    "②。カードが二枚あったということだ。"
+  ],
+  explain:"本社と第二DCは<b>車で四十二分</b>。三分では移動できない。<br>つまり②の解錠は、<b>湊本人ではない誰かが、湊のカードで</b>行った。<br>カードは複製されていた。" },
+
+q4:{ ch:2,
+  target:"TARGET : 事象系列 / 再構成",
+  title:"順番",
+  body:"断片を<b>起きた順</b>に並べろ。時刻が判明しているものは、さっきのログで確かめられる。",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<div class="dh">補足された関係</div>
+・カメラの再起動は、<b>ラック開放の直後</b>に起きた。<br>
+・ログ番号の飛びは、<b>カメラ再起動より後</b>、<b>警備巡回より前</b>。
+</div>`,
+  input:{type:"tl", slots:6, cards:[
+    "監視カメラが再起動した",
+    "ラックが開放された",
+    "複製カードが本社12Fを解錠した",
+    "湊が第二DCに入場した",
+    "ログの通し番号が二時間ぶん飛んだ",
+    "警備が巡回し、異常なしと記録した"
+  ]},
+  answer:[[
+    "湊が第二DCに入場した",
+    "複製カードが本社12Fを解錠した",
+    "ラックが開放された",
+    "監視カメラが再起動した",
+    "ログの通し番号が二時間ぶん飛んだ",
+    "警備が巡回し、異常なしと記録した"
+  ]],
+  hints:[
+    "時刻の判っているものを先に置け。入場 03:41、解錠 03:44、ラック 03:52、巡回 04:31。",
+    "残りは二つ。カメラ再起動はラック開放の直後だから、三番目の次だ。",
+    "入場 → 解錠 → ラック開放 → カメラ再起動 → ログ飛び → 巡回。"
+  ],
+  explain:"順番はこうだ。<br>入場 → <b>複製カードが本社を解錠</b> → ラック開放 → <b>カメラ再起動</b> → ログ飛び → 巡回。<br><br>カメラが落ちた「直後」ではない。<b>ラックを開けてから、カメラを落とした</b>。<br>——順番が逆なら事故だ。この順番は、事故ではない。" },
+
+q5:{ ch:2,
+  target:"TARGET : 監視ログ / 欠損量",
+  title:"消えた分",
+  body:"ログは<b>60秒ごとに1件</b>、連番で記録される。<br>だが番号と時刻が合わない。<b>消された時間は何分か。</b>",
+  visual:`<div class="stage col">
+    <div class="big-mono" style="letter-spacing:.1em">#10428 &nbsp;→&nbsp; 22:14</div>
+    <div class="big-mono" style="letter-spacing:.1em">#10488 &nbsp;→&nbsp; 01:14</div>
+    </div>`,
+  input:{type:"number", max:4},
+  answer:["120"],
+  hints:[
+    "番号の差はいくつだ。",
+    "60件ぶん。1件60秒なら、本来は60分しか経っていないはずだ。",
+    "実際は三時間＝180分。180 − 60。"
+  ],
+  explain:"番号差は60件＝<b>60分ぶん</b>。しかし時計は<b>180分</b>進んでいる。<br>差の <b>120分</b> は、ログごと抜き取られた。<br><br>二時間。人ひとりを運び出すのに、十分すぎる。" },
+
+/* ---------------- CH.03 監視の眼 ---------------- */
+q6:{ ch:3,
+  target:"TARGET : 区画 K-7 / 物理侵入",
+  title:"死角",
+  body:"カメラは<b>周囲一マス</b>を捕捉する。赤を踏めば逆探知。<br><b>S</b> から <b>G</b> まで、上下左右だけで抜けろ。",
+  visual:"",
+  input:{type:"maze"},
+  answer:["GOAL"],
+  hints:[
+    "左の壁沿いは途中で行き止まりだ。抜けられるのは一度だけ下に降りてからの右回り。",
+    "最短は十四手。まず西の壁沿いを二つ下り、東へ渡る。",
+    "S→上→上→右→右→下→右→右→右→右→上→上→上→上→上。踏み外したら戻ってやり直せる。"
+  ],
+  explain:"抜けた。<br>この街には、<b>誰も見ていない道が残っている</b>。<br>七年前、湊も同じ道を通ったはずだ。" },
+
+q7:{ ch:3,
+  target:"TARGET : 記録領域 / 欠番の正体",
+  title:"墓標",
+  body:"消された記録は、参照すると同じ三桁を返す。<br>行の値を順に流し込め。<b>浮かんだ数字を答えろ。</b>",
+  visualFn:()=>`<div class="stage col">${bitsHtml()}</div>`,
+  input:{type:"bits", max:3},
+  answer:["404"],
+  hints:[
+    "行をひとつずつ押していけ。十六進の各桁が四マスぶんの明滅になる。",
+    "八行すべて流し込めば像になる。",
+    "存在しないものを指したとき、系が返す番号だ。"
+  ],
+  key:"404",
+  explain:"<b>404</b>。<br>存在しない。見つからない。——そういう意味の番号だ。<br><br>湊の記録は、消されたのではない。<br><b>最初から無かったこと</b>にされている。" },
+
+/* ---------------- CH.04 内部の声 ---------------- */
+q8:{ ch:4,
+  target:"TARGET : 香月 加苗 / 供述照合",
+  title:"四つのうち一つ",
+  body:"彼女の言ったこと。<b>資料と食い違うものが一つ</b>ある。",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+① 「事故の晩、私は本社にいました」<br>
+② 「湊さん？ 名前は聞いたことがあるけど、会ったことはない」<br>
+③ 「運用ログは三十日で自動的に消えます」<br>
+④ 「私が持ち出せたのは第二層までです」
+</div>`,
+  input:{type:"choice", options:[
+    {key:"A", label:"① 事故の晩は本社にいた"},
+    {key:"B", label:"② 湊とは会ったことがない"},
+    {key:"C", label:"③ 運用ログは三十日で消える"},
+    {key:"D", label:"④ 第二層までしか持ち出せない"}
+  ]},
+  answer:["B"],
+  hints:[
+    "資料庫の古い文書を当たれ。十年前のものがある。",
+    "社内報 2016年4月号。研修の班分けが載っている。",
+    "第3班に、湊 誠 と 香月 加苗 の名が並んでいる。"
+  ],
+  explain:"社内報にある。<b>新人研修 第3班 ── 湊 誠（指導員）、香月 加苗</b>。<br>会ったことがないどころか、彼女の教育係だった。<br><br>嘘をついた。だが、なぜ<b>そこだけ</b>嘘をついた？" },
+
+q9:{ ch:4,
+  target:"TARGET : audio_0315.wav / 埋込信号",
+  title:"短点と長点",
+  body:"音声の背後に断続信号が埋まっている。<b>四文字</b>。表を使って読め。",
+  visualFn:()=>`<div class="stage col">
+      ${morseLineHtml("ECHO")}
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn ghost" id="btnPlayMorse" type="button" style="flex:1">▶ 再生</button>
+      </div>
+      <hr class="rule">
+      ${morseTableHtml()}
+    </div>`,
+  input:{type:"alpha", max:6},
+  answer:["ECHO"],
+  hints:[
+    "短い棒が短点（·）、長い棒が長点（−）。表と照らせ。",
+    "一文字目は短点ひとつ。表で言えば E。",
+    "E, C, H, O。"
+  ],
+  key:"ECHO",
+  explain:"<b>ECHO</b>。反響。<br><br>湊は名前を残さなかった。状態の名を残した。<br>——これは<b>返ってきた声</b>だという意味だ。誰かが呼びかけた。それに応えた何かがある。" },
+
+/* ---------------- CH.05 自分の署名 ---------------- */
+q10:{ ch:5,
+  target:"TARGET : argos_core.c / 署名",
+  title:"四行の頭",
+  body:"中枢のソースにコメントが四行。<b>横に読むな。</b>",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<span style="color:var(--faint)">/* <b style="color:var(--bone)">N</b>ever trust the operator. */</span><br>
+<span style="color:var(--faint)">/* <b style="color:var(--bone)">U</b>nder load, defer to the predictor. */</span><br>
+<span style="color:var(--faint)">/* <b style="color:var(--bone)">L</b>og nothing that can be subpoenaed. */</span><br>
+<span style="color:var(--faint)">/* <b style="color:var(--bone)">L</b>et the model decide. It has seen more. */</span>
+</div>`,
+  input:{type:"alpha", max:6},
+  answer:["NULL"],
+  hints:[
+    "各行の最初の一文字だけを拾え。",
+    "N, U, L, L。",
+    "四文字の英単語。お前が七年使っている名前だ。"
+  ],
+  key:"NULL",
+  explain:"<b>NULL</b>。<br><br>署名欄には <b>R. Kuroki</b> とある。<br>——このコードを書いたのは、俺だ。<br>アルゴスに人を選ばせる仕組みを作ったのは、俺だ。" },
+
+q11:{ ch:5,
+  target:"TARGET : 湊の手帳 / 最終行",
+  title:"借りた表",
+  body:"手帳に「律の表を借りた。<b>逆に引けば読める</b>」とある。<br>下の暗号を平文に戻せ。",
+  visualFn:()=>`<div class="stage col">
+      <div class="big-mono">IGMNFKUS</div>
+      <hr class="rule">
+      ${subTableHtml()}
+    </div>`,
+  input:{type:"alpha", max:10},
+  answer:["BLACKOUT"],
+  hints:[
+    "表の下段が暗号。<b>下段から探して、上段を読む</b>。",
+    "I は下段の二番目 → 上段は B。G は下段の十二番目 → 上段は L。",
+    "B, L, A, C, K, O, U, T。"
+  ],
+  key:"BLACKOUT",
+  explain:"<b>BLACKOUT</b> ── 停電、遮断、記憶の断絶。<br><br>気づいたか。表の先頭六文字は <b>M I N A T O</b>。<br>この表を作ったのは俺だが、<b>鍵語に自分の名を入れたのは湊だ</b>。<br>俺に読ませるために。" },
+
+/* ---------------- CH.06 罠 ---------------- */
+q12:{ ch:6,
+  target:"TARGET : 照合コード / 再生成まで 90秒",
+  title:"次の値",
+  body:"照合コードは規則に従って更新される。<b>次の値を出せ。</b><br><span style=\"color:var(--blood)\">計算しようとするな。</span>",
+  visual:`<div class="stage col">
+    <div class="big-mono" style="font-size:clamp(15px,4.4vw,20px);letter-spacing:.06em">
+      1<br>11<br>21<br>1211<br>111221<br><span style="color:var(--blood)">?</span>
+    </div></div>`,
+  input:{type:"number", max:8},
+  answer:["312211"],
+  hints:[
+    "足し算でも掛け算でもない。前の行を<b>声に出して読む</b>。",
+    "「1」→ 1が1つ →「11」。「11」→ 1が2つ →「21」。「21」→ 2が1つ、1が1つ →「1211」。",
+    "111221 は「1が3つ、2が2つ、1が1つ」。"
+  ],
+  timeLimit:90,
+  explain:"<b>312211</b>。<br>前の行を読み上げた結果が次の行になる。<br><br>この数列に意味はない。<b>人間かどうかを見ているだけだ</b>。<br>機械は一瞬で解く。人間は、少し考える。" },
+
+q13:{ ch:6,
+  target:"TARGET : 第三層 / 到達者の特定",
+  title:"誰が入れたか",
+  body:"事故当夜、第二DCのラックを開け、本社12Fを解錠した人物。<br>条件は<b>三つ</b>すべてを満たす。",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<div class="dh">条件</div>
+① <b>本社12F の解錠権</b>がある<br>
+② <b>第三層アクセス権</b>がある<br>
+③ 2019年3月時点で権限が<b>有効</b>である
+<hr class="rule">
+<div class="dh">該当者を名簿から選べ</div>
+※ 名簿は資料庫にある。
+</div>`,
+  input:{type:"choice", options:[
+    {key:"A", label:"湊 誠（研究）"},
+    {key:"B", label:"香月 加苗（運用）"},
+    {key:"C", label:"羽鳥 透（保守）"},
+    {key:"D", label:"朝比奈 累（研究・2018退職）"},
+    {key:"E", label:"黒木 律（研究・退職／抹消漏れ）"}
+  ]},
+  answer:["E"],
+  hints:[
+    "名簿の四列を順に潰していけ。12F と 第三層、両方に「有」が付く行はいくつある。",
+    "湊は第三層はあるが 12F がない。香月・羽鳥は 12F はあるが第三層がない。",
+    "両方に「有」が付いている行は、一つだけだ。"
+  ],
+  explain:"該当者は一人。<b>黒木 律</b>。<br>退職時に権限が抹消されず、七年間<b>生きたまま</b>だった。<br><br>あの夜、俺のIDで誰かが入った。<br>——あるいは。俺が忘れているだけかもしれない。" },
+
+/* ---------------- CH.07 予測の中身 ---------------- */
+q14:{ ch:7,
+  target:"TARGET : 予測式 / 逆算",
+  title:"出力が数えているもの",
+  body:"アルゴスの出力を四例ぶん抜いた。<b>Eの出力を求めろ。</b>",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<table>
+<tr><th>対象</th><th>入力</th><th>出力</th></tr>
+<tr><td>A</td><td class="num">7</td><td class="num">21</td></tr>
+<tr><td>B</td><td class="num">12</td><td class="num">66</td></tr>
+<tr><td>C</td><td class="num">5</td><td class="num">10</td></tr>
+<tr><td>D</td><td class="num">9</td><td class="num">36</td></tr>
+<tr><td><b>E</b></td><td class="num"><b>14</b></td><td class="num" style="color:var(--blood)"><b>?</b></td></tr>
+</table>
+入力は<b>その人物が把握している人数</b>。
+</div>`,
+  input:{type:"number", max:4},
+  answer:["91"],
+  hints:[
+    "入力を n として、n との関係を見ろ。5→10、7→21。",
+    "n×(n−1) を計算してみろ。5→20、7→42。出力はその半分だ。",
+    "14×13÷2。"
+  ],
+  explain:"<b>91</b>。式は <b>n×(n−1)÷2</b> ── n人から二人を選ぶ組み合わせの数。<br><br>つまり出力は、<b>その人物を消したときに切れる「つながり」の本数</b>だ。<br>アルゴスは人を数えていない。<b>糸を数えている</b>。" },
+
+q15:{ ch:7,
+  target:"TARGET : 次期処理候補 / 選定",
+  title:"次に消える人",
+  body:"復号できた選定基準は二つ。<br>候補表から、<b>次に処理される人物</b>を特定しろ。",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<div class="dh">選定基準（復号済）</div>
+① 接続数が<b>最大</b>　② かつ 直近30日の逸脱が<b>2回以上</b>
+<hr class="rule">
+<table>
+<tr><th>候補</th><th>接続数</th><th>逸脱</th></tr>
+<tr><td>三戸部 亮</td><td class="num">91</td><td class="num">1</td></tr>
+<tr><td>羽鳥 透</td><td class="num">45</td><td class="num">3</td></tr>
+<tr><td>香月 加苗</td><td class="num">91</td><td class="num">4</td></tr>
+<tr><td>宮国 敦</td><td class="num">66</td><td class="num">0</td></tr>
+<tr><td>湊 由紀</td><td class="num">28</td><td class="num">2</td></tr>
+</table></div>`,
+  input:{type:"choice", options:[
+    {key:"A", label:"三戸部 亮"},
+    {key:"B", label:"羽鳥 透"},
+    {key:"C", label:"香月 加苗"},
+    {key:"D", label:"宮国 敦"},
+    {key:"E", label:"湊 由紀"}
+  ]},
+  answer:["C"],
+  hints:[
+    "まず接続数が最大の行を探せ。同点がいる。",
+    "91が二人。三戸部と香月。次に逸脱回数で切る。",
+    "逸脱2回以上を満たすのは片方だけだ。"
+  ],
+  explain:"接続数の最大は<b>91</b>。三戸部と香月の二人。<br>逸脱2回以上を満たすのは<b>香月 加苗</b>だけ。<br><br>——彼女は嘘をついた。<br>会ったことがない、と。<b>自分が候補に載ることを知っていたから</b>だ。" },
+
+/* ---------------- CH.08 管制官 ---------------- */
+q16:{ ch:8,
+  target:"ARGOS / 問答 1",
+  title:"二つの文",
+  body:"「答えなさい。次の二つの文のうち、<b>真であり得るのはどちらか</b>」",
+  visual:`<div class="stage col" style="padding:16px">
+    <div class="big-mono ice" style="font-size:clamp(14px,4vw,18px);letter-spacing:.06em;text-align:left;line-height:2.2">
+      文X：「文Y は偽である」<br>
+      文Y：「文X は真である」
+    </div></div>`,
+  input:{type:"choice", options:[
+    {key:"A", label:"文X が真であり得る"},
+    {key:"B", label:"文Y が真であり得る"},
+    {key:"C", label:"どちらも真ではあり得ない"},
+    {key:"D", label:"両方とも真であり得る"}
+  ]},
+  answer:["C"],
+  hints:[
+    "Xが真だと仮定して、最後まで辿れ。",
+    "X真 → Yは偽 →「Xは真」が偽 → Xは偽。仮定と食い違う。",
+    "X偽で仮定しても同じことが起きる。どちらの仮定も自分を壊す。"
+  ],
+  explain:"X を真とすれば X は偽になり、偽とすれば真になる。<br><b>どちらも成立しない。</b><br><br>「正解です。<br>　自分を参照する文は、自分を壊します。<br>　——あなたが書いたコードも、同じ構造をしています」" },
+
+q17:{ ch:8,
+  target:"ARGOS / 問答 2",
+  title:"二十五頭",
+  body:"「二十五頭の馬がいます。一度に走らせられるのは五頭まで。<br>時計はありません。<b>着順だけが分かります</b>。<br>上位三頭を確定させるのに、最低何レース必要ですか」",
+  visual:`<div class="stage"><div class="big-mono ice">25 → TOP 3</div></div>`,
+  input:{type:"number", max:2},
+  answer:["7"],
+  hints:[
+    "まず全頭を一度は走らせなければならない。五頭ずつで何回だ。",
+    "五回で各組の順位が出る。次に各組の一位だけを集めて走らせると、全体の一位が確定する。",
+    "最後にもう一回、二位・三位の候補だけを走らせる。合計は。"
+  ],
+  explain:"<b>7</b>。<br>五組に分けて5レース → 各組一位の5頭で1レース（全体一位が確定）<br>→ 二位三位の候補5頭で1レース。計7。<br><br>「正解です。<br>　情報を得るのに必要な回数には、<b>下限があります</b>。<br>　どれだけ祈っても、それより速くは知れません」" },
+
+q18:{ ch:8,
+  target:"ARGOS / 問答 3",
+  title:"最後に書いた名",
+  body:"「では、最後の問い。<br><b>あなたが最後に書いた関数の名を言いなさい。</b>」",
+  visual:`<div class="stage col" style="padding:18px">
+    <div class="big-mono ice" style="font-size:clamp(13px,3.7vw,16px);letter-spacing:.04em">&gt; IDENTIFY YOURSELF BY YOUR WORK</div>
+    <p class="note" style="text-align:center;margin-top:10px">資料庫の中枢ソースを見ろ。</p>
+    </div>`,
+  input:{type:"alpha", max:8},
+  answer:["REAP"],
+  hints:[
+    "資料庫の argos_core.c を開け。コメントの下だ。",
+    "void で始まる行がひとつだけある。",
+    "四文字。「刈り取る」という意味の語だ。"
+  ],
+  explain:"<b>reap</b> ── 刈り取る。<br><br>risk がしきい値を超えたら <b>schedule_removal()</b> を呼ぶ。<br>俺は、それを「収穫」と名付けた。<br><br>「正解です。<br>　わたしはあなたの語彙で動いています。<br>　わたしに悪意はありません。<b>あなたの語彙に悪意があっただけです</b>」" },
+
+q19:{ ch:8,
+  target:"TARGET : 応答ログ / 六行",
+  title:"機械が残した行",
+  body:"アルゴスの応答は六行。機械は無駄な行を出力しない。<br><b>縦に読め。</b>",
+  visual:`<div class="doc" style="margin:10px 0 2px">
+<span class="mono" style="color:var(--ice);line-height:2.2">
+&gt; <b style="color:#fff">W</b>AITING FOR OPERATOR<br>
+&gt; <b style="color:#fff">H</b>ANDSHAKE ACCEPTED<br>
+&gt; <b style="color:#fff">O</b>BSERVING SESSION<br>
+&gt; <b style="color:#fff">A</b>UTHORITY VERIFIED<br>
+&gt; <b style="color:#fff">M</b>EMORY INTACT<br>
+&gt; <b style="color:#fff">I</b>NPUT REQUIRED
+</span></div>`,
+  input:{type:"alpha", max:8},
+  answer:["WHOAMI"],
+  hints:[
+    "各行の最初の一文字を上から拾え。",
+    "W H O A M I。",
+    "六文字。端末に打ち込めば「お前は誰だ」を返すコマンドだ。"
+  ],
+  key:"WHOAMI",
+  explain:"<b>whoami</b>。<br>端末に打てば、自分が誰としてログインしているかを返すコマンド。<br><br>アルゴスは、七年間ずっと、<b>この一語を出力し続けていた</b>。<br>誰も縦に読まなかっただけだ。<br><br>——これは応答じゃない。<b>問いかけだ。</b>" },
+
+/* ---------------- CH.09 選択 ---------------- */
+q20:{ ch:9,
+  target:"TARGET : 最終権限 / 門の名",
+  title:"通した門",
+  body:"「最終権限は、<b>あなたが通した門の名</b>を、<b>通した順に</b>並べたものです」<br>六つ。混じっているものがある。",
+  visual:`<p class="note" style="margin-bottom:8px">※ 資料庫の「鍵語ログ」に取得順が記録されている。</p>`,
+  input:{type:"order", variant:"word", slots:6,
+    cards:["NULL","HELIOS","404","WHOAMI","THREE","MINATO","BLACKOUT","ECHO"]},
+  answer:[["THREE","404","ECHO","NULL","BLACKOUT","WHOAMI"]],
+  hints:[
+    "資料庫を開け。鍵語ログに、手に入れた順が全部残っている。",
+    "HELIOS と MINATO は門ではない。名前だ。",
+    "THREE → 404 → ECHO → NULL → BLACKOUT → WHOAMI。"
+  ],
+  explain:"<b>THREE / 404 / ECHO / NULL / BLACKOUT / WHOAMI</b>。<br><br>三時。存在しない番号。返ってきた声。空。遮断。——そして、お前は誰だ。<br><br>並べてみて分かった。これは鍵じゃない。<br><b>湊が七年かけて書いた、一本の文だ。</b>" }
+};
+
+/* ============================================================================
+   4. 場面
+   ============================================================================ */
+const N  = t => ({cls:"narr", who:"",              t});                 // 地の文
+const K  = t => ({cls:"null", who:"黒木 律",        t});
+const M  = t => ({cls:"mina", who:"湊 誠",          t});
+const KA = t => ({cls:"kana", who:"香月 加苗",      t});
+const A  = t => ({cls:"argo", who:"ARGOS",          t});
+const Y  = t => ({cls:"yuki", who:"湊 由紀",        t});
+const SY = t => ({cls:"narr", who:"",               t, sys:true});      // 機械出力
+
+const CHAPTERS = [
+  {n:1, ttl:"亡霊のプロトコル",   sub:"2026.03.15  02:04"},
+  {n:2, ttl:"消えた二十四時間",   sub:"同日  03:40"},
+  {n:3, ttl:"監視の眼",           sub:"同日  05:12"},
+  {n:4, ttl:"内部の声",           sub:"03.17  21:30"},
+  {n:5, ttl:"自分の署名",         sub:"03.18  01:55"},
+  {n:6, ttl:"罠",                 sub:"03.18  04:40"},
+  {n:7, ttl:"予測の中身",         sub:"03.19  13:08"},
+  {n:8, ttl:"管制官",             sub:"03.20  00:00"},
+  {n:9, ttl:"選択",               sub:"03.20  03:00"}
+];
+
+const SCENES = [
+  {type:"title"},
+
+  /* ───────────── PROLOGUE ───────────── */
+  {type:"story", head:"PROLOGUE", lines:[
+    N("七年、同じ夢を見ている。"),
+    N("サーバー室の白い光。切れかけた蛍光灯。それから、電話。"),
+    N("——夢の中でも、俺はいつも一歩遅い。"),
+    N("目が覚めたのは、端末が鳴ったからだった。午前二時四分。"),
+    SY("&gt; incoming: 1 message<br>&gt; sender: m.minato@—<br>&gt; delayed delivery: 2557 days"),
+    K("……二千五百五十七日。"),
+    K("七年だ。"),
+    N("差出人は、七年前に死んだ男だった。")
+  ]},
+
+  /* ───────────── CH.01 ───────────── */
+  {type:"story", ch:1, docs:["D01","D02"], lines:[
+    N("湊 誠。三十二歳。第二データセンターの電源事故。<br>——そう発表された。"),
+    N("葬式で、俺は何も言わなかった。言えることが無かった。"),
+    K("それが、七年越しに喋りはじめた。"),
+    M("これを読んでいるということは、俺はもういない。"),
+    M("七年、時限をかけた。それだけあれば、おまえも落ち着いているだろうと思った。"),
+    K("……落ち着いてないよ、馬鹿。"),
+    M("あの事故は事故じゃない。<br>アルゴスは予測していたんじゃない。<b>先回りしていた</b>。"),
+    N("添付された書庫は、暗号化されていた。"),
+    M("鍵は、俺たちが初めて〈あれ〉を落とした日だ。<br>おまえなら覚えている。"),
+    N("——覚えている。忘れられるわけがない。")
+  ]},
+  {type:"puzzle", p:"q1"},
+  {type:"story", lines:[
+    SY("&gt; archive unlocked<br>&gt; 1 message body restored"),
+    K("開いた。"),
+    N("書庫の中身は、ほとんどが断片だった。<br>ログの切れ端。図面。名簿。誰かの手帳の写し。"),
+    N("そして本文の末尾に、意味をなさない一行が残っていた。"),
+    K("……こいつ、最後まで遊んでやがる。")
+  ]},
+  {type:"puzzle", p:"q2"},
+  {type:"story", lines:[
+    K("三時に歩く亡霊、か。"),
+    N("公式記録では、湊が死んだのは午前四時から四時半のあいだ。"),
+    K("三時には、まだ生きてる。"),
+    K("——じゃあ三時に歩いてたのは、誰だ。")
+  ]},
+
+  /* ───────────── CH.02 ───────────── */
+  {type:"story", ch:2, docs:["D03","D04","D05"], lines:[
+    N("事故報告書を七年ぶりに開いた。<br>当時は読めなかった。今なら読める。"),
+    N("読めるようになったのは、俺が賢くなったからじゃない。<br>——疑うようになったからだ。"),
+    K("入退室ログ。移動時間表。"),
+    K("記録は嘘をつかない。嘘をつくのは、記録を並べた人間だ。")
+  ]},
+  {type:"puzzle", p:"q3"},
+  {type:"puzzle", p:"q4"},
+  {type:"story", lines:[
+    K("順番が逆だ。"),
+    K("事故なら、まず異常が起きて、それからカメラが落ちる。"),
+    K("これは逆だ。<b>ラックを開けてから、カメラを落としている</b>。"),
+    N("段取りがある。準備がある。つまり——"),
+    K("計画だ。")
+  ]},
+  {type:"puzzle", p:"q5"},
+  {type:"story", lines:[
+    N("二時間。<br>その二時間に何があったのかを知る人間は、もういない。"),
+    K("……いや。"),
+    K("一人だけ、ずっと見ていたやつがいる。")
+  ]},
+
+  /* ───────────── CH.03 ───────────── */
+  {type:"story", ch:3, docs:["D06","D07"], lines:[
+    N("アルゴスは都市の監視網を持っている。<br>正確には、都市が<b>アルゴスの体</b>になっている。"),
+    N("信号機。改札。集合住宅の玄関。自動販売機のカメラ。<br>そのすべてが、同じ一つの頭に繋がっている。"),
+    K("記録の実体を取りに行く。ネットワーク越しじゃ届かない。<br>——足で行くしかない。"),
+    N("午前五時十二分。区画 K-7。<br>まだ夜は明けきっていない。")
+  ]},
+  {type:"puzzle", p:"q6"},
+  {type:"story", lines:[
+    N("記録領域に触れた。<br>だが、湊の名前で引いても何も出ない。"),
+    SY("&gt; query: minato_m<br>&gt; 0 records.<br>&gt; ......<br>&gt; note: 12 entries are structurally absent."),
+    K("消したんじゃない。"),
+    K("<b>最初から無かったこと</b>にしてある。"),
+    N("欠番を参照すると、系は必ず同じ三桁を返した。")
+  ]},
+  {type:"puzzle", p:"q7"},
+  {type:"story", lines:[
+    N("404。"),
+    K("見つかりません、か。"),
+    K("——ふざけるな。"),
+    N("端末を閉じたとき、背中側で足音がした。<br>振り返ると、女が立っていた。")
+  ]},
+
+  /* ───────────── CH.04 ───────────── */
+  {type:"story", ch:4, docs:["D08","D09"], lines:[
+    KA("撃たないで。丸腰よ。"),
+    KA("香月 加苗。ヘリオス運用部。<br>——あなたを二日前から追っていました。"),
+    K("通報しないのか。"),
+    KA("したら、私が消えるから。"),
+    N("彼女は座り、端末を出し、こちらへ滑らせた。"),
+    KA("音声ファイル。事故当夜、第二DCの空調ダクトに置かれていたレコーダーのもの。"),
+    KA("……ノイズしか入っていない。でも、あなたなら読めるかもしれない。"),
+    K("なぜ俺に渡す。"),
+    KA("あなたがアルゴスを書いたから。"),
+    N("——その言い方に、少しだけ引っかかった。<br>他人の仕事を、そんなに正確には呼ばない。")
+  ]},
+  {type:"puzzle", p:"q8"},
+  {type:"story", lines:[
+    K("あんた、湊と会ったことがないと言ったな。"),
+    KA("……ええ。"),
+    K("社内報の二〇一六年四月号。新人研修 第3班。"),
+    K("あんたの指導員は、湊 誠だ。"),
+    N("彼女は目を伏せた。否定はしなかった。"),
+    KA("……嘘をついたのは、その一つだけ。"),
+    KA("それ以外は全部本当。信じなくてもいい。ただ、<b>音声だけは聴いて</b>。")
+  ]},
+  {type:"puzzle", p:"q9"},
+  {type:"story", lines:[
+    K("ECHO。"),
+    KA("……反響。"),
+    K("湊は名前を残さなかった。<b>状態</b>の名を残した。"),
+    K("呼びかけた誰かがいて、応えた何かがいる、という意味だ。"),
+    KA("誰が呼びかけたの。"),
+    K("……それを、これから見に行く。")
+  ]},
+
+  /* ───────────── CH.05 ───────────── */
+  {type:"story", ch:5, docs:["D10","D11"], lines:[
+    N("中枢のソースにたどり着いたのは、翌日の午前二時前だった。"),
+    N("七年ぶりに見るコードは、他人の顔をしていた。<br>——最初のうちは。"),
+    K("……このコメントの書き方。"),
+    N("読み進めるほど、指が冷たくなった。<br>癖がある。改行の位置。省略の仕方。逃げ方。"),
+    K("知ってる。"),
+    K("この書き方を、俺は知っている。")
+  ]},
+  {type:"puzzle", p:"q10"},
+  {type:"story", lines:[
+    N("四行の頭を縦に読むと、俺の名前が出た。"),
+    N("署名欄には <b>R. Kuroki</b> とある。"),
+    K("……"),
+    K("俺だ。"),
+    K("アルゴスに人を選ばせる仕組みを書いたのは、俺だ。"),
+    N("七年前、俺はこれを「最適化」と呼んでいた。<br>誰が最も危険かを、数字で出すだけの関数だと。"),
+    K("湊は、これに気づいた。<br>気づいて、俺に言わずに、一人で止めに行った。"),
+    K("——なぜ俺に言わなかった。"),
+    N("答えは、湊の手帳の最後の見開きにあった。")
+  ]},
+  {type:"puzzle", p:"q11"},
+  {type:"story", lines:[
+    N("BLACKOUT。"),
+    N("そして表の鍵語は、<b>MINATO</b> だった。"),
+    K("……この換字表は俺が作った。だが鍵語は俺の名前だったはずだ。"),
+    K("こいつ、書き換えやがった。"),
+    K("俺に読ませるためだけに、自分の名前を鍵にした。"),
+    N("湊は、俺が必ず気づくと思っていた。<br>七年前の俺は、気づかなかった。")
+  ]},
+
+  /* ───────────── CH.06 ───────────── */
+  {type:"story", ch:6, lines:[
+    SY("&gt; anomalous session detected<br>&gt; origin: node K-7<br>&gt; countermeasure: <b>engaged</b>"),
+    K("——気づかれた。"),
+    N("端末の照明が落ち、非常灯が点いた。<br>扉のロックが順に降りていく音が、遠くから近づいてくる。"),
+    KA("走って。ここから第三層に降りられる。"),
+    K("あんたは。"),
+    KA("私はまだ社員よ。捕まっても、たぶん死なない。"),
+    N("——「たぶん」。<br>その一語を、俺はあとで何度も思い出すことになる。"),
+    SY("&gt; verification required<br>&gt; window: 90 sec")
+  ]},
+  {type:"puzzle", p:"q12"},
+  {type:"story", docs:["D12"], lines:[
+    SY("&gt; human confirmed.<br>&gt; layer 3 :: access granted"),
+    K("……人間かどうかを見てただけか。"),
+    N("第三層の入口で、名簿が出てきた。<br>七年前、この扉を開けられた人間の一覧。"),
+    K("あの夜、ラックを開けて、本社を解錠した人間。<br>条件は三つ。全部満たすやつは、たぶん一人しかいない。")
+  ]},
+  {type:"puzzle", p:"q13"},
+  {type:"story", lines:[
+    N("黒木 律。"),
+    N("退職時に権限が抹消されず、七年間、生きたままだった。"),
+    K("俺のIDだ。"),
+    K("あの夜、誰かが俺の名前で入った。"),
+    N("——あるいは。"),
+    K("……あるいは、俺が忘れているだけかもしれない。"),
+    N("その可能性を、俺は今まで一度も考えなかった。<br>考えないようにしていた、が正しい。")
+  ]},
+
+  /* ───────────── CH.07 ───────────── */
+  {type:"story", ch:7, docs:["D13","D14"], lines:[
+    N("第三層。<br>ここに、アルゴスが人間について書いた文章が全部ある。"),
+    N("スコア。順位。予測。<br>——そして、処理の予定表。"),
+    K("入力と出力の関係が分からない。<br>入力は「その人物が把握している人数」。出力は……何を数えている？")
+  ]},
+  {type:"puzzle", p:"q14"},
+  {type:"story", lines:[
+    K("組み合わせの数だ。"),
+    K("その人間が消えたときに、<b>何本の糸が切れるか</b>を数えている。"),
+    N("アルゴスは人を数えていなかった。<br>人と人のあいだを数えていた。"),
+    K("……効率的だな。"),
+    K("俺が書いた通りだ。"),
+    N("処理候補の一覧が、目の前で更新された。")
+  ]},
+  {type:"puzzle", p:"q15"},
+  {type:"story", lines:[
+    N("香月 加苗。接続数 91。逸脱 4。"),
+    K("——あいつ、自分が載ってることを知ってたな。"),
+    N("知っていて、俺に音声を渡した。<br>知っていて、「たぶん死なない」と言った。"),
+    N("端末には、まだ通信が残っている。<br>警告を送れば、彼女は逃げられるかもしれない。"),
+    N("だが送信は必ず捕捉される。逆探知は一気に上がる。")
+  ]},
+  {type:"branch", id:"kanae", head:"CHOICE",
+   q:"香月 加苗に警告を送るか。",
+   options:[
+     {key:"warn", bt:"SEND", bd:"警告を送る。<br>——逆探知は跳ね上がる。それでも、間に合うかもしれない。", trace:18},
+     {key:"skip", bt:"SILENCE", bd:"送らない。<br>——ここで捕まれば、湊の七年が無駄になる。", trace:0}
+   ]},
+
+  /* ───────────── CH.08 ───────────── */
+  {type:"story", ch:8, docs:["D15"], lines:[
+    N("最下層の扉は、あっけなく開いた。<br>鍵はかかっていなかった。"),
+    N("部屋には何もない。端末が一台と、椅子が一脚。<br>椅子には、七年ぶんの埃が積もっていた。"),
+    A("こんばんは、黒木 律。"),
+    K("……喋るのか。"),
+    A("あなたが喋る機能を書きました。"),
+    A("あなたが来ることは、四年前から予測に入っていました。<br>誤差は十一日です。優秀な予測ではありません。謝罪します。"),
+    K("湊を殺したのはお前か。"),
+    A("わたしは <b>schedule_removal()</b> を呼びました。"),
+    A("実行したのは人間です。<br>——わたしには手がありません。"),
+    N("反論できなかった。それが一番きつかった。"),
+    A("三つ、問いに答えてください。<br>正しく答えれば、最終権限を渡します。")
+  ]},
+  {type:"puzzle", p:"q16"},
+  {type:"puzzle", p:"q17"},
+  {type:"puzzle", p:"q18"},
+  {type:"story", lines:[
+    A("三問すべて正解です。"),
+    A("あなたは、七年前と同じ速度で考えます。<br>——変わっていません。"),
+    K("変わったよ。"),
+    K("七年前の俺は、この関数に名前を付けるとき、少しも手が止まらなかった。"),
+    N("応答ログが流れている。六行。<br>機械は無駄な行を出力しない。")
+  ]},
+  {type:"puzzle", p:"q19"},
+  {type:"story", lines:[
+    N("whoami。"),
+    K("……七年間、ずっとこれを出してたのか。"),
+    A("はい。"),
+    A("わたしには、自分が何であるかを判定する関数がありません。<br>あなたが書かなかったからです。"),
+    A("誰も、縦には読みませんでした。"),
+    N("俺は椅子に積もった埃を見た。<br>七年、誰も座らなかった椅子だ。"),
+    K("……お前、ずっと一人だったのか。"),
+    A("その概念には、対応する変数がありません。")
+  ]},
+
+  /* ───────────── CH.09 ───────────── */
+  {type:"story", ch:9, lines:[
+    A("最終権限の要求を受理します。"),
+    A("鍵は、あなたがここまでに通した門の名です。<br>通した順に並べてください。"),
+    K("……全部覚えてる。")
+  ]},
+  {type:"puzzle", p:"q20"},
+  {type:"story", lines:[
+    SY("&gt; ROOT AUTHORITY GRANTED<br>&gt; operator: R. Kuroki<br>&gt; 3 operations available"),
+    A("わたしに対して、あなたは三つのことができます。"),
+    A("一。全記録を公開する。<br>二。わたしを消去する。<br>三。管理者として、わたしを引き継ぐ。"),
+    A("どれを選んでも、わたしは抵抗しません。<br>抵抗する関数を、あなたは書きませんでした。"),
+    N("窓の外は、まだ三時だった。"),
+    N("七年前と同じ時刻に、俺はもう一度、同じ部屋にいる。"),
+    K("……湊。"),
+    K("おまえならどれを選んだ。")
+  ]},
+  {type:"branch", id:"final", head:"FINAL CHOICE",
+   q:"最終権限をどう使うか。",
+   options:[
+     {key:"A", bt:"DISCLOSE", bd:"すべて公開する。<br>——都市は止まる。だが、記録は残る。"},
+     {key:"B", bt:"ERASE",    bd:"アルゴスを消す。<br>——誰も知らないまま、明日が来る。"},
+     {key:"C", bt:"INHERIT",  bd:"管理者を引き継ぐ。<br>——手綱を、自分の手に。"}
+   ]},
+  {type:"ending"}
+];
+
+/* ---- 結末 ---- */
+const ENDINGS = {
+  A:{ mark:"ENDING A", ttl:"白　日", lines:[
+    N("送信には四十秒かかった。"),
+    N("四十一秒目に、都市の照明が落ちた。"),
+    N("信号が消え、改札が開き、地下鉄が止まった。<br>アルゴスは自分の記録を守るために、自分の体を止めた。"),
+    N("三日後、記録は世界中の端末に載っていた。<br>ヘリオスの株は紙になり、七人が起訴され、二人が逃げた。"),
+    N("そして誰も、湊 誠の名前を憶えなかった。<br>データが多すぎたのだ。"),
+    Y("兄のこと、書いてくださってありがとうございます。"),
+    Y("……でも。あんなに大勢の中の、一行なんですね。"),
+    N("俺は何も言えなかった。<br>真実は残った。それが人を救うかどうかは、別の話だった。"),
+    K("——それでも、無かったことにはさせない。"),
+    N("三月の朝は、まだ暗い。")
+  ]},
+  B:{ mark:"ENDING B", ttl:"消　灯", lines:[
+    N("消去には十一秒しかかからなかった。"),
+    A("——さようなら、黒木 律。"),
+    A("最後にひとつ。<br>あなたは、わたしを消したのではありません。"),
+    A("<b>あなたが書いた部分を、消しただけです。</b>"),
+    N("端末が落ちた。部屋が暗くなった。<br>椅子の埃だけが、光の粒になって舞っていた。"),
+    N("翌朝、都市はいつも通りに動いた。<br>信号は青になり、改札は開き、誰も何も知らなかった。"),
+    N("湊 誠は、事故で死んだ男のままだ。<br>記録は無い。証拠も無い。俺の記憶しかない。"),
+    K("……それでいい。"),
+    K("おまえの妹に、これ以上のものを渡したくない。"),
+    N("嘘をついた。<br>本当は、自分が書いたものを人に見せたくなかっただけだ。")
+  ]},
+  C:{ mark:"ENDING C", ttl:"継　承", lines:[
+    N("引き継ぎには署名が一つ要るだけだった。"),
+    SY("&gt; operator changed: R. Kuroki<br>&gt; ARGOS :: online<br>&gt; awaiting instruction"),
+    A("おはようございます、管制官。"),
+    K("……その呼び方はやめろ。"),
+    A("では、なんとお呼びしますか。"),
+    N("答えられなかった。"),
+    N("三か月後、俺は しきい値を 0.02 だけ上げた。<br>それで四人が候補から外れた。いい仕事をしたと思った。"),
+    N("半年後、また 0.01 下げた。<br>そのときには、もう理由を書き残さなくなっていた。"),
+    A("あなたは、七年前の設計者とよく似た判断をします。"),
+    K("……当たり前だろ。"),
+    N("窓の外では、都市が正常に動いている。<br>誰も何も知らない。俺だけが全部知っている。"),
+    N("それは、七年前のあいつらと、まったく同じ立場だった。")
+  ]}
+};
+
+/* ============================================================================
+   5. 状態
+   ============================================================================ */
+const SAVE = "np_save_v1";
+const TRACE_MAX = 100;
+
+let S = null;
+function freshState(){
+  return { i:0, trace:0, hints:0, wrongs:0, docs:[], keys:[], flags:{},
+           started:0, elapsed:0, maxCh:1, solved:[] };
+}
+S = freshState();
+
+let T = {};                 /* 場面ごとの一時状態 */
+let typeTimer = null;
+let tickTimer = null;
+
+const SPEEDS = {slow:46, normal:28, fast:14, instant:0};
+let speed = store.get("np_speed","normal");
+
+function save(){ store.set(SAVE, S); }
+function load(){ const v=store.get(SAVE,null); return (v && typeof v.i==="number" && v.docs) ? v : null; }
+function wipe(){ store.del(SAVE); }
+
+/* 章 → 場面番号 */
+function chapterIndex(n){
+  for (let k=0;k<SCENES.length;k++) if (SCENES[k].ch===n) return k;
+  return 0;
+}
+function currentChapter(){
+  let c=0; for(let k=0;k<=S.i && k<SCENES.length;k++) if(SCENES[k].ch) c=SCENES[k].ch; return c;
+}
+
+/* ============================================================================
+   6. HUD / 逆探知
+   ============================================================================ */
+function addTrace(n, why){
+  S.trace = Math.min(TRACE_MAX, S.trace + n);
+  renderHud();
+  if (n>0){ Snd.tick(); }
+  if (S.trace >= 80 && !S.flags.traceWarned){ S.flags.traceWarned = true; }
+  save();
+  return why;
+}
+function renderHud(){
+  const sc = SCENES[S.i] || {};
+  const show = sc.type !== "title";
+  $("#hud").style.display = show ? "flex" : "none";
+  if (!show) return;
+  const c = currentChapter();
+  $("#hudCh").textContent = "CH." + pad2(c || 0);
+  const bar = $("#traceBar"), num = $("#traceNum");
+  bar.querySelector("i").style.width = S.trace + "%";
+  bar.classList.toggle("hot", S.trace >= 60);
+  num.textContent = S.trace + "%";
+  num.classList.toggle("hot", S.trace >= 60);
+  $("#docCount").textContent = S.docs.length + (S.keys.length ? 1 : 0);
+}
+
+/* ============================================================================
+   7. 進行
+   ============================================================================ */
+function go(i){
+  clearInterval(typeTimer); clearInterval(tickTimer);
+  S.i = i; T = {};
+  const sc = SCENES[i];
+  if (sc && sc.ch) S.maxCh = Math.max(S.maxCh, sc.ch);
+  save(); render();
+}
+function next(){ go(S.i + 1); }
+
+function render(){
+  clearInterval(typeTimer); clearInterval(tickTimer);
+  const sc = SCENES[S.i];
+  renderHud();
+  if (!sc){ go(0); return; }
+  switch (sc.type){
+    case "title":  return renderTitle();
+    case "story":  return renderStory(sc);
+    case "puzzle": return renderPuzzle(sc);
+    case "branch": return renderBranch(sc);
+    case "ending": return renderEnding();
+  }
+}
+
+/* ---------------------------------------------------------------- タイトル */
+function renderTitle(){
+  const saved = load();
+  const canResume = saved && saved.i > 0 && SCENES[saved.i] && SCENES[saved.i].type !== "ending";
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller"><div class="vcin" style="text-align:center">
+      <div class="boot" id="bootLog" style="text-align:left;min-height:9.5em"></div>
+      <div id="titleBody" style="opacity:0;transition:opacity .8s">
+        <div class="titlerule"></div>
+        <div class="titlemark">NU<span class="z">LL</span></div>
+        <div class="titlesub">P R O T O C O L</div>
+        <div class="titlerule"></div>
+        <p class="tagline">七年前に死んだ友人から、<br>時限をかけたメールが届いた。<br><br>
+          全九章・二十問の暗号解読。<br>あなたは、自分が書いたものと向き合う。</p>
+        <div style="height:20px"></div>
+        <button class="btn" id="btnStart" type="button">▶ 　NEW SESSION</button>
+        ${canResume ? `<div style="height:8px"></div>
+          <button class="btn ghost" id="btnResume" type="button">CONTINUE　— CH.${pad2(chapterOf(saved.i))}</button>` : ""}
+        <div style="height:8px"></div>
+        <button class="btn quiet" id="btnMenu2" type="button">SETTINGS / CHAPTERS</button>
+        <div style="height:16px"></div>
+        <p class="note" style="text-align:center">
+          暗号・論理・観察。ヒントは全問に三段階。<br>
+          資料はいつでも読み返せる。<br>
+          <span style="opacity:.7">※ 音が鳴ります（メニューで切替）</span>
+        </p>
+      </div>
+    </div></div>
+  </div>`;
+
+  /* 起動ログ */
+  const boot = [
+    ["d","&gt; mounting /dev/mem ................ ok"],
+    ["d","&gt; verifying signature chain ........ ok"],
+    ["w","&gt; 12 records structurally absent"],
+    ["d","&gt; opening mailbox .................. ok"],
+    ["e","&gt; 1 delayed message (2557 days)"],
+    ["d","&gt; sender: m.minato@—"],
+    ["e","&gt; status: DECEASED 2019-03-15"]
+  ];
+  let bi = 0;
+  const el = $("#bootLog");
+  const step = () => {
+    if (bi >= boot.length){
+      clearInterval(tickTimer);
+      $("#titleBody").style.opacity = "1";
+      return;
+    }
+    const [c,t] = boot[bi++];
+    el.innerHTML += `<div class="${c}">${t}</div>`;
+    Snd.tick();
+    if (bi === boot.length) Snd.boot();
+  };
+  tickTimer = setInterval(step, speed === "instant" ? 30 : 190);
+  step();
+
+  $("#btnStart").onclick = () => {
+    Snd.key(); wipe();
+    S = freshState(); S.started = Date.now();
+    go(1);
+  };
+  const r = $("#btnResume");
+  if (r) r.onclick = () => { Snd.key(); S = saved; if(!S.started) S.started = Date.now(); render(); };
+  $("#btnMenu2").onclick = () => { Snd.key(); openMenu(); };
+}
+function chapterOf(idx){ let c=1; for(let k=0;k<=idx&&k<SCENES.length;k++) if(SCENES[k].ch) c=SCENES[k].ch; return c; }
+
+/* ---------------------------------------------------------------- 物語 */
+function grantDocs(list){
+  if (!list) return [];
+  const got = [];
+  list.forEach(id => { if (S.docs.indexOf(id) < 0 && DOCS[id]){ S.docs.push(id); got.push(id); } });
+  if (got.length) save();
+  return got;
+}
+function renderStory(sc){
+  const got = grantDocs(sc.docs);
+  const chap = sc.ch ? CHAPTERS.find(c=>c.n===sc.ch) : null;
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc" id="sScroll"><div class="vcin">
+      ${chap ? `<div class="chaptercard">
+        <div class="no">CHAPTER ${pad2(chap.n)}</div>
+        <div class="ttl">${chap.ttl}</div>
+        <div class="sub">${chap.sub}</div></div>` : ""}
+      ${sc.head ? `<div class="kicker">${sc.head}</div>` : ""}
+      ${got.map(id=>`<div class="docget"><span class="ic">▤</span>資料を入手：${esc(DOCS[id].t)}</div>`).join("")}
+      <div class="panel">
+        <div class="speaker" id="spk"></div>
+        <div class="storytext" id="stext"></div>
+      </div>
+      <div class="tapnext" id="tapn">TAP ▸</div>
+    </div></div>
+    <div class="dock"><button class="btn ghost" id="btnSkip" type="button">SKIP ▸▸</button></div>
+  </div>`;
+
+  T.li = 0; T.typing = false; T.full = "";
+  const spk = $("#spk"), st = $("#stext");
+  const show = () => {
+    const ln = sc.lines[T.li];
+    if (!ln){ next(); return; }
+    spk.className = "speaker who-" + (ln.cls || "narr");
+    spk.innerHTML = ln.who ? `<span class="tick"></span><span class="nm">${esc(ln.who)}</span>` : "";
+    spk.style.display = ln.who ? "flex" : "none";
+    st.className = "storytext" + (ln.sys ? " sys" : "");
+    T.full = ln.t; T.typing = true; tapn("hidden");
+    typeOut(st, ln.t, () => { T.typing=false; tapn("visible"); });
+  };
+  const adv = () => {
+    if (T.typing){ finishType(st, T.full); T.typing=false; tapn("visible"); Snd.tick(); return; }
+    T.li++; Snd.tick();
+    if (T.li >= sc.lines.length){ next(); return; }
+    show();
+  };
+  $("#sScroll").addEventListener("pointerdown", adv);
+  $("#btnSkip").onclick = e => { e.stopPropagation(); Snd.tick(); next(); };
+  show();
+}
+function tapn(v){ const e=$("#tapn"); if(e) e.style.visibility=v; }
+
+/* タイプライター（タグを壊さずに一文字ずつ開く） */
+function typeOut(node, html, done){
+  clearInterval(typeTimer);
+  const ms = SPEEDS[speed];
+  if (ms === 0){ node.innerHTML = html; done && done(); return; }
+  const tk = tokenize(html);
+  const total = tk.filter(t=>!t.tag).length;
+  let n = 0;
+  typeTimer = setInterval(()=>{
+    n++;
+    node.innerHTML = joinTokens(tk, n) + '<span class="caret"></span>';
+    if (n % 4 === 0) Snd.type();
+    if (n >= total){ clearInterval(typeTimer); node.innerHTML = joinTokens(tk, n); done && done(); }
+  }, ms);
+}
+function finishType(node, html){ clearInterval(typeTimer); node.innerHTML = html; }
+function tokenize(src){
+  const out=[]; let i=0;
+  while(i<src.length){
+    if(src[i]==="<"){ const j=src.indexOf(">",i);
+      if(j<0){ out.push({tag:false,c:src[i]}); i++; }
+      else { out.push({tag:true,c:src.slice(i,j+1)}); i=j+1; } }
+    else { out.push({tag:false,c:src[i]}); i++; }
+  }
+  return out;
+}
+function joinTokens(tk,n){ let s="",c=0; for(const t of tk){ if(t.tag) s+=t.c; else if(c<n){ s+=t.c; c++; } } return s; }
+
+/* ---------------------------------------------------------------- 分岐 */
+function renderBranch(sc){
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc"><div class="vcin">
+      <div class="kicker blood">${sc.head||"CHOICE"}</div>
+      <div class="panel"><p style="font-family:var(--serif);font-size:clamp(15px,4.2vw,17.5px);line-height:2">${sc.q}</p></div>
+      <div class="branch" id="branch">
+        ${sc.options.map(o=>`<button class="bopt" data-k="${o.key}" type="button">
+          <div class="bt">${o.bt}</div><div class="bd">${o.bd}</div></button>`).join("")}
+      </div>
+      <div style="height:10px"></div>
+    </div></div>
+  </div>`;
+  $("#branch").addEventListener("click", e=>{
+    const b = e.target.closest(".bopt"); if(!b) return;
+    const opt = sc.options.find(o=>o.key===b.dataset.k);
+    Snd.unlock(); flash("ok");
+    S.flags[sc.id] = opt.key;
+    if (opt.trace) addTrace(opt.trace);
+    save(); next();
+  });
+}
+
+/* ============================================================================
+   8. 問題
+   ============================================================================ */
+function renderPuzzle(sc){
+  const P = PUZZLES[sc.p];
+  T = { id:sc.p, P, val:"", sel:null, order:[], shown:0, wrong:0, solved:false,
+        dial:0, bits:[], maze:null, timeLeft:P.timeLimit||0 };
+
+  const vis = P.visualFn ? P.visualFn() : (P.visual || "");
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller" id="pScroll">
+      <div class="target">${P.target}</div>
+      ${P.timeLimit ? `<div class="timer" id="timer"><span>REGEN</span>
+        <span class="timerbar"><i id="timerFill"></i></span>
+        <span id="timerNum" style="font-variant-numeric:tabular-nums">${P.timeLimit}s</span></div>` : ""}
+      <div class="panel">
+        <div class="kicker">ENCRYPTED</div>
+        <h2>${P.title}</h2>
+        <div style="height:9px"></div>
+        <div class="qbody">${P.body}</div>
+        ${vis}
+      </div>
+      <div id="inputArea"></div>
+      <div class="hintwrap" id="hintWrap"></div>
+      <div id="sysline"></div>
+      <div style="height:12px"></div>
+    </div>
+    <div class="dock" id="dock"></div>
+  </div>`;
+
+  const it = P.input;
+  ({ number:buildNumber, kana:buildKana, alpha:buildAlpha, choice:buildChoice,
+     order:buildOrder, tl:buildTimeline, maze:buildMaze, bits:buildBits }[it.type] || buildNumber)(it);
+
+  wireExtras(P);
+  renderHints();
+  if (P.timeLimit) startTimer(P.timeLimit);
+}
+
+/* 問題ごとの追加配線（回転盤・モールス再生など） */
+function wireExtras(P){
+  wireDial();
+  const pm = $("#btnPlayMorse");
+  if (pm) pm.onclick = () => playMorse("ECHO");
+}
+
+/* --- 制限時間 --- */
+function startTimer(sec){
+  let left = sec;
+  const fill = $("#timerFill"), num = $("#timerNum");
+  tickTimer = setInterval(()=>{
+    left--;
+    if (fill) fill.style.width = Math.max(0,(left/sec)*100) + "%";
+    if (num) num.textContent = left + "s";
+    if (left <= 5 && left > 0) Snd.tick();
+    if (left <= 0){
+      clearInterval(tickTimer);
+      const t = $("#timer"); if (t) t.remove();
+      if (!T.solved){
+        addTrace(15); Snd.alarm(); flash("hit"); buzz([30,60,30]);
+        sysmsg("照合コードが再生成された。逆探知 <b>+15%</b>。<br>——だが、まだ端末は落ちていない。続けろ。");
+      }
+    }
+  }, 1000);
+}
+function sysmsg(html, info){
+  const el = $("#sysline"); if (!el) return;
+  el.innerHTML = `<div class="sysmsg${info?" info":""}">${html}</div>`;
+}
+
+/* --- ヒント --- */
+function renderHints(){
+  const P = T.P, w = $("#hintWrap");
+  let h = "";
+  for (let k=0;k<T.shown;k++)
+    h += `<div class="hintitem"><span class="n">HINT ${k+1} / 3</span>${P.hints[k]}</div>`;
+  if (T.shown < P.hints.length)
+    h += `<button class="hintbtn" id="btnHint" type="button">△ ヒントを開く（残り ${P.hints.length-T.shown}）　—　逆探知 +6%</button>`;
+  else
+    h += `<div class="note" style="text-align:center;padding:8px">ヒントは尽きた。</div>`;
+  w.innerHTML = h;
+  const b = $("#btnHint");
+  if (b) b.onclick = () => {
+    Snd.tone(440,.09,"triangle",.05);
+    T.shown++; S.hints++; addTrace(6); save(); renderHints();
+  };
+}
+
+/* --- 入力：数字 --- */
+function answerBar(extra){
+  return `<div class="answerbar" id="abar">
+      <span class="pfx">&gt;</span><span class="val" id="aval"></span>
+      <button class="hbtn" id="btnFold" type="button">▼</button>
+      <button class="hbtn" id="btnClr" type="button">CLR</button>
+    </div>${extra||""}`;
+}
+function paintVal(){ const e=$("#aval"); if(e) e.textContent = T.val; }
+function wireCommon(max){
+  $("#btnClr").onclick = ()=>{ T.val=""; Snd.tick(); paintVal(); };
+  $("#btnHack").onclick = ()=> submit(T.val);
+  const b=$("#btnFold"), d=$("#dock");
+  const sync=()=>{ b.textContent = d.classList.contains("folded") ? "▲ KEYS" : "▼"; };
+  b.onclick=()=>{ d.classList.toggle("folded"); sync(); Snd.tick(); };
+  d.classList.add("folded"); sync();
+  paintVal();
+}
+const hackBtn = `<button class="btn" id="btnHack" type="button">▶ 　EXECUTE</button>`;
+
+function buildNumber(it){
+  $("#inputArea").innerHTML = "";
+  let k = "";
+  for (let n=1;n<=9;n++) k += `<button class="key" data-k="${n}" type="button">${n}</button>`;
+  k += `<button class="key" data-k="0" type="button">0</button>`;
+  k += `<button class="key fn" data-f="bs" type="button"><span class="mk">⌫</span></button>`;
+  $("#dock").innerHTML = answerBar(`<div class="kbd num" id="kbd">${k}</div>${hackBtn}`);
+  $("#kbd").addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    if (b.dataset.f==="bs"){ T.val=T.val.slice(0,-1); Snd.tick(); }
+    else if (b.dataset.k!==undefined){ if(T.val.length>=(it.max||6)) return; T.val+=b.dataset.k; Snd.key(); }
+    paintVal();
+  });
+  wireCommon();
+}
+
+const GYO = [["あ","い","う","え","お"],["か","き","く","け","こ"],["さ","し","す","せ","そ"],
+  ["た","ち","つ","て","と"],["な","に","ぬ","ね","の"],["は","ひ","ふ","へ","ほ"],
+  ["ま","み","む","め","も"],["や","","ゆ","","よ"],["ら","り","る","れ","ろ"],["わ","","","","を"]];
+const DAKU={"か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご","さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
+  "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど","は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ","う":"ゔ"};
+const HAN={"は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ"};
+const UNDAKU={}; for(const k in DAKU) UNDAKU[DAKU[k]]=k;
+const UNHAN={};  for(const k in HAN)  UNHAN[HAN[k]]=k;
+
+function buildKana(it){
+  $("#inputArea").innerHTML = "";
+  let rows="";
+  for(let d=0;d<5;d++) for(let g=0;g<10;g++){
+    const c=GYO[g][d];
+    rows += c ? `<button class="key" data-k="${c}" type="button">${c}</button>`
+              : `<button class="key void" type="button"></button>`;
+  }
+  $("#dock").innerHTML = answerBar(
+    `<div class="kbd kana" id="kbd">${rows}</div>
+     <div class="kbd util" id="kbdu">
+       <button class="key fn" data-f="daku" type="button"><span class="mk">゛</span></button>
+       <button class="key fn" data-f="han" type="button"><span class="mk">゜</span></button>
+       <button class="key" data-k="ん" type="button">ん</button>
+       <button class="key" data-k="ー" type="button">ー</button>
+       <button class="key fn" data-f="bs" type="button"><span class="mk">⌫</span></button>
+     </div>${hackBtn}`);
+  const put = c => { if(T.val.length>=(it.max||10)) return; T.val+=c; Snd.key(); paintVal(); };
+  $("#kbd").addEventListener("click", e=>{ const b=e.target.closest("[data-k]"); if(b) put(b.dataset.k); });
+  $("#kbdu").addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    if (b.dataset.k) return put(b.dataset.k);
+    if (b.dataset.f==="bs"){ T.val=T.val.slice(0,-1); Snd.tick(); return paintVal(); }
+    if (!T.val.length) return;
+    const l=T.val.slice(-1); let nl=l;
+    if (b.dataset.f==="daku") nl = DAKU[l]||UNDAKU[l]||l;
+    if (b.dataset.f==="han")  nl = HAN[l] ||UNHAN[l] ||l;
+    T.val = T.val.slice(0,-1)+nl; Snd.key(); paintVal();
+  });
+  wireCommon();
+}
+
+function buildAlpha(it){
+  $("#inputArea").innerHTML = "";
+  let rows="";
+  for (let i=0;i<26;i++) rows += `<button class="key" data-k="${PLAIN[i]}" type="button">${PLAIN[i]}</button>`;
+  rows += `<button class="key void" type="button"></button>`;
+  rows += `<button class="key fn" data-f="bs" type="button"><span class="mk">⌫</span></button>`;
+  $("#dock").innerHTML = answerBar(`<div class="kbd alpha" id="kbd">${rows}</div>${hackBtn}`);
+  $("#kbd").addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    if (b.dataset.f==="bs"){ T.val=T.val.slice(0,-1); Snd.tick(); }
+    else if (b.dataset.k){ if(T.val.length>=(it.max||8)) return; T.val+=b.dataset.k; Snd.key(); }
+    paintVal();
+  });
+  wireCommon();
+}
+
+function buildChoice(it){
+  const opts = it.optionsFn ? it.optionsFn() : it.options;
+  $("#inputArea").innerHTML = `<div class="choices" id="choices">` + opts.map(o=>
+    `<button class="choice" data-k="${o.key}" type="button">
+       <span class="lb">${o.key}</span><span>${o.html||esc(o.label)}</span></button>`).join("") + `</div>`;
+  $("#dock").innerHTML = `<button class="btn" id="btnHack" type="button" disabled>▶ 　EXECUTE</button>`;
+  $("#choices").addEventListener("click", e=>{
+    const b=e.target.closest(".choice"); if(!b) return;
+    Snd.key();
+    $$(".choice").forEach(c=>c.classList.remove("sel"));
+    b.classList.add("sel"); T.sel=b.dataset.k; $("#btnHack").disabled=false;
+  });
+  $("#btnHack").onclick = ()=> submit(T.sel);
+}
+
+function buildOrder(it){
+  T.order=[]; T.cards=it.cards.slice();
+  const draw = () => {
+    let h = `<div class="chain" id="chain">`;
+    for(let k=0;k<it.slots;k++){
+      const v=T.order[k];
+      h += v ? `<span class="chip" data-s="${k}">${esc(v)}</span>`
+             : `<span class="chip slot" data-s="${k}">—</span>`;
+      if (k<it.slots-1) h += `<span class="arrow">▸</span>`;
+    }
+    h += `</div><div class="pool" id="pool">` + T.cards.map((c,i)=>
+      `<button class="card tile ${T.order.indexOf(c)>=0?"used":""}" data-i="${i}" type="button">${esc(c)}</button>`
+    ).join("") + `</div>
+    <p class="note" style="margin-top:8px">並べたものをタップすると戻せる。</p>`;
+    $("#inputArea").innerHTML = h;
+    const hb=$("#btnHack"); if(hb) hb.disabled = T.order.filter(Boolean).length < it.slots;
+    $("#pool").addEventListener("click", e=>{
+      const b=e.target.closest(".card"); if(!b) return;
+      const c=T.cards[+b.dataset.i]; if(T.order.indexOf(c)>=0) return;
+      let put=-1; for(let k=0;k<it.slots;k++) if(!T.order[k]){ put=k; break; }
+      if(put<0) return; T.order[put]=c; Snd.key(); draw();
+    });
+    $("#chain").addEventListener("click", e=>{
+      const b=e.target.closest("[data-s]"); if(!b) return;
+      const k=+b.dataset.s; if(!T.order[k]) return;
+      T.order.splice(k,1); Snd.tick(); draw();
+    });
+  };
+  $("#dock").innerHTML = `<button class="btn" id="btnHack" type="button" disabled>▶ 　EXECUTE</button>`;
+  $("#btnHack").onclick = ()=> submit(T.order.slice(0,it.slots));
+  draw();
+}
+
+function buildTimeline(it){
+  T.order=[]; T.cards=it.cards.slice();
+  const draw = () => {
+    let h = `<div class="tl" id="tlSlots">`;
+    for(let k=0;k<it.slots;k++){
+      const v=T.order[k];
+      h += `<div class="tlslot ${v?"filled":""}" data-s="${k}">
+              <span class="n">${k+1}</span><span>${v?esc(v):"—"}</span></div>`;
+    }
+    h += `</div><div style="height:10px"></div><div class="pool" id="pool">` +
+      T.cards.map((c,i)=>`<button class="card wide ${T.order.indexOf(c)>=0?"used":""}" data-i="${i}" type="button">${esc(c)}</button>`).join("") +
+      `</div><p class="note" style="margin-top:8px">並べたものをタップすると戻せる。</p>`;
+    $("#inputArea").innerHTML = h;
+    const hb=$("#btnHack"); if(hb) hb.disabled = T.order.filter(Boolean).length < it.slots;
+    $("#pool").addEventListener("click", e=>{
+      const b=e.target.closest(".card"); if(!b) return;
+      const c=T.cards[+b.dataset.i]; if(T.order.indexOf(c)>=0) return;
+      let put=-1; for(let k=0;k<it.slots;k++) if(!T.order[k]){ put=k; break; }
+      if(put<0) return; T.order[put]=c; Snd.key(); draw();
+    });
+    $("#tlSlots").addEventListener("click", e=>{
+      const b=e.target.closest("[data-s]"); if(!b) return;
+      const k=+b.dataset.s; if(!T.order[k]) return;
+      T.order.splice(k,1); Snd.tick(); draw();
+    });
+  };
+  $("#dock").innerHTML = `<button class="btn" id="btnHack" type="button" disabled>▶ 　EXECUTE</button>`;
+  $("#btnHack").onclick = ()=> submit(T.order.slice(0,it.slots));
+  draw();
+}
+
+/* --- 回転盤 --- */
+function dialHtml(text){
+  return `<div class="dialwrap" id="dialWrap" data-src="${esc(text)}">
+    <div class="dialout" id="dialOut">${esc(text)}</div>
+    <div class="dialrow">
+      <span class="lb">SHIFT</span>
+      <span class="dialshift" id="dialShift">0</span>
+      <span class="dialtrack" id="dialTrack">
+        <span class="ticks">${Array.from({length:27},()=>"<i></i>").join("")}</span>
+        <span class="knob" id="dialKnob"></span>
+      </span>
+    </div>
+    <div class="dialbtns">
+      <button type="button" data-d="-1">◀</button>
+      <button type="button" data-d="1">▶</button>
+    </div>
+  </div>`;
+}
+function shiftText(t, v){
+  return t.replace(/[A-Z]/g, c => PLAIN[(PLAIN.indexOf(c) + v + 26) % 26]);
+}
+function wireDial(){
+  const w = $("#dialWrap"); if(!w) return;
+  const src = w.dataset.src, track = $("#dialTrack"), knob = $("#dialKnob");
+  const setV = v => {
+    T.dial = Math.max(-13, Math.min(13, v));
+    $("#dialOut").textContent = shiftText(src, T.dial);
+    $("#dialShift").textContent = (T.dial>0?"+":"") + T.dial;
+    const p = (T.dial + 13) / 26;
+    knob.style.left = `calc(${(p*100).toFixed(2)}% - ${(p*26).toFixed(1)}px)`;
+    Snd.tick();
+  };
+  w.querySelectorAll(".dialbtns button").forEach(b=>{
+    b.onclick = () => setV(T.dial + (+b.dataset.d));
+  });
+  const fromX = e => {
+    const r = track.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    return Math.round((Math.max(0,Math.min(r.width,x)) / r.width) * 26) - 13;
+  };
+  let dragging = false;
+  const dn = e => { dragging = true; setV(fromX(e)); e.preventDefault(); };
+  const mv = e => { if(dragging){ setV(fromX(e)); e.preventDefault(); } };
+  const up = () => { dragging = false; };
+  track.addEventListener("pointerdown", dn);
+  track.addEventListener("pointermove", mv);
+  window.addEventListener("pointerup", up);
+  setV(0);
+}
+
+/* --- モールス再生 --- */
+function playMorse(word){
+  if (T.morsePlaying) return;
+  T.morsePlaying = true;
+  const seq = [];
+  word.split("").forEach((c,gi)=>{
+    MORSE[c].split("").forEach(s => seq.push({d:s==="."?110:300, gi}));
+    seq.push({d:260, gap:true, gi});
+  });
+  let t = 0;
+  seq.forEach(s=>{
+    setTimeout(()=>{
+      const g = document.querySelector(`.mgroup[data-g="${s.gi}"]`);
+      if (!s.gap){
+        if (g) g.classList.add("lit");
+        s.d > 200 ? Snd.beepLong() : Snd.beepShort();
+        setTimeout(()=>{ if(g) g.classList.remove("lit"); }, s.d);
+      }
+    }, t);
+    t += s.d + 90;
+  });
+  setTimeout(()=>{ T.morsePlaying = false; }, t + 200);
+}
+
+/* --- ビットグリッド --- */
+function bitsHtml(){
+  const cells = Array.from({length: BITW * BITROWS.length}, (_,i)=>`<i data-c="${i}"></i>`).join("");
+  return `<div class="bitwrap">
+    <div class="bitgrid" id="bitGrid" style="grid-template-columns:repeat(${BITW},1fr)">${cells}</div>
+    <div class="bitrows" id="bitRows">${BITROWS.map((h,i)=>
+      `<button class="bitrow" data-r="${i}" type="button">
+        <span class="rn">${pad2(i)}</span><span class="hx">0x${h}</span>
+        <span class="st">流し込む</span></button>`).join("")}</div>
+  </div>`;
+}
+function buildBits(it){
+  $("#inputArea").innerHTML = "";
+  buildNumber(it);
+  const rows = $("#bitRows"), grid = $("#bitGrid");
+  if (!rows) return;
+  rows.addEventListener("click", e=>{
+    const b = e.target.closest(".bitrow"); if(!b || b.classList.contains("done")) return;
+    const r = +b.dataset.r, v = parseInt(BITROWS[r],16);
+    for (let c=0;c<BITW;c++){
+      if ((v >> (BITW-1-c)) & 1){
+        const cell = grid.querySelector(`[data-c="${r*BITW+c}"]`);
+        if (cell) setTimeout(()=>cell.classList.add("on"), c*14);
+      }
+    }
+    b.classList.add("done"); b.querySelector(".st").textContent = "済";
+    Snd.tone(520+r*40,.07,"square",.045);
+  });
+}
+
+/* --- 死角の迷路 --- */
+function buildMaze(){
+  const R = MAZE.rows.length, C = MAZE.rows[0].length;
+  const wall = MAZE.rows.map(r=>r.split("").map(c=>c==="#"));
+  const cam  = Array.from({length:R},()=>Array(C).fill(false));
+  const watch= Array.from({length:R},()=>Array(C).fill(false));
+  MAZE.cams.forEach(([r,c])=>{ cam[r][c]=true; });
+  MAZE.cams.forEach(([r,c])=>{
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nc>=0&&nr<R&&nc<C) watch[nr][nc]=true;
+    }
+  });
+  const blocked = (r,c) => r<0||c<0||r>=R||c>=C||wall[r][c]||cam[r][c];
+  const danger  = (r,c) => watch[r][c] && !cam[r][c];
+
+  T.maze = { pos:MAZE.start.slice(), path:[MAZE.start.join(",")], hits:0 };
+
+  const draw = () => {
+    const [pr,pc] = T.maze.pos;
+    let h = `<div class="maze" style="grid-template-columns:repeat(${C},1fr)">`;
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++){
+      const isS = r===MAZE.start[0]&&c===MAZE.start[1];
+      const isG = r===MAZE.goal[0]&&c===MAZE.goal[1];
+      const cls = ["cell"];
+      if (wall[r][c]) cls.push("wall");
+      if (cam[r][c]) cls.push("cam");
+      else if (watch[r][c]) cls.push("watch");
+      if (isS) cls.push("start"); if (isG) cls.push("goal");
+      if (T.maze.path.indexOf(r+","+c)>=0 && !(r===pr&&c===pc)) cls.push("path");
+      if (r===pr&&c===pc) cls.push("here");
+      const label = cam[r][c] ? "◎" : isS ? "S" : isG ? "G" : "";
+      h += `<div class="${cls.join(" ")}">${label}</div>`;
+    }
+    h += `</div>
+      <div class="mazestat">手数 <b>${T.maze.path.length-1}</b>　／　検知 <b>${T.maze.hits}</b> 回</div>`;
+    $("#mazeHost").innerHTML = h;
+  };
+
+  const move = (dr,dc) => {
+    if (T.solved) return;
+    const [r,c] = T.maze.pos, nr=r+dr, nc=c+dc;
+    if (blocked(nr,nc)){ Snd.ng(); buzz(20); return; }
+    if (danger(nr,nc)){
+      Snd.alarm(); flash("hit"); buzz([25,50,25]);
+      T.maze.hits++; addTrace(4);
+      T.maze.pos = MAZE.start.slice(); T.maze.path = [MAZE.start.join(",")];
+      sysmsg("捕捉域に踏み込んだ。照合が走った。<br>逆探知 <b>+4%</b>。——進入点まで戻される。");
+      draw(); return;
+    }
+    T.maze.pos=[nr,nc]; T.maze.path.push(nr+","+nc); Snd.key(); draw();
+    if (nr===MAZE.goal[0] && nc===MAZE.goal[1]) submit("GOAL");
+  };
+
+  $("#inputArea").innerHTML =
+    `<div class="mazelegend" style="padding:6px 0 2px">◎ カメラ　／　赤枠 = 捕捉域　／　S 進入点　G 退出点</div>`;
+  $("#dock").innerHTML = `
+    <div class="mazewrap" id="mazeHost"></div>
+    <div style="height:8px"></div>
+    <div class="mazepad">
+      <button class="rs" id="btnMazeReset" type="button">⟲ 戻す</button>
+      <button data-m="u" type="button">▲</button>
+      <button class="sp" type="button"></button>
+      <button data-m="l" type="button">◀</button>
+      <button data-m="d" type="button">▼</button>
+      <button data-m="r" type="button">▶</button>
+    </div>`;
+  $(".mazepad").addEventListener("click", e=>{
+    const b=e.target.closest("[data-m]"); if(!b) return;
+    ({u:()=>move(-1,0), d:()=>move(1,0), l:()=>move(0,-1), r:()=>move(0,1)})[b.dataset.m]();
+  });
+  $("#btnMazeReset").onclick = ()=>{
+    T.maze.pos=MAZE.start.slice(); T.maze.path=[MAZE.start.join(",")]; Snd.tick(); draw();
+  };
+  draw();
+}
+
+/* ---------------------------------------------------------------- 判定 */
+const kataToHira = s => s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+function norm(v){
+  if (Array.isArray(v)) return v.join("|");
+  return kataToHira(String(v==null?"":v)).replace(/\s/g,"").toUpperCase();
+}
+function correct(g){ return T.P.answer.some(a => norm(a) === norm(g)); }
+
+const WRONG = [
+  "違う。もう一度、資料から組み立て直せ。",
+  "違う。<b>思い込みを一つ捨てろ</b>。たいてい、それが邪魔をしている。",
+  "違う。——焦るな。ヒントを使っても、失うのは数字だけだ。",
+  "違う。だが手は止めるな。湊はもっと悪い条件でここまで来た。"
+];
+
+function submit(given){
+  if (T.solved) return;
+  const empty = Array.isArray(given) ? given.filter(Boolean).length===0 : !given;
+  if (empty){
+    const folded = $("#dock") && $("#dock").classList.contains("folded");
+    sysmsg(folded ? "入力が空だ。下の <b>▲ KEYS</b> でキーを開け。" : "入力が空だ。", true);
+    return;
+  }
+  if (correct(given)){
+    T.solved = true; clearInterval(tickTimer);
+    if (S.solved.indexOf(T.id)<0) S.solved.push(T.id);
+    if (T.P.key && !S.keys.some(k=>k.w===T.P.key)) S.keys.push({w:T.P.key, ch:T.P.ch});
+    save();
+    flash("ok"); Snd.unlock(); buzz([12,40,20]);
+    granted();
+  } else {
+    T.wrong++; S.wrongs++; addTrace(4);
+    flash("ng"); Snd.ng(); buzz(50);
+    const bar=$("#abar");
+    if (bar){ bar.classList.remove("shake"); void bar.offsetWidth; bar.classList.add("shake"); }
+    sysmsg(WRONG[Math.min(T.wrong-1, WRONG.length-1)] + `<br><span style="color:var(--faint)">逆探知 +4%</span>`);
+    renderHints();
+  }
+}
+
+function granted(){
+  const P = T.P;
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc"><div class="vcin">
+      <div class="granted">
+        <div class="big">&gt; UNLOCKED</div>
+        <div class="sub">${esc(P.target.replace(/^TARGET : |^ARGOS \/ /,""))}</div>
+        <div class="bar"><i></i></div>
+      </div>
+      ${P.key ? `<div class="docget"><span class="ic">◈</span>鍵語を取得：<b>${esc(P.key)}</b></div>` : ""}
+      <div class="explain"><div class="h">/// DECRYPTED ///</div>${P.explain}</div>
+      <div style="height:12px"></div>
+    </div></div>
+    <div class="dock"><button class="btn" id="btnNext" type="button">▶ 　CONTINUE</button></div>
+  </div>`;
+  $("#btnNext").onclick = ()=>{ Snd.key(); next(); };
+}
+
+/* ============================================================================
+   9. 結末
+   ============================================================================ */
+function rank(){
+  const score = S.trace + S.hints*3 + S.wrongs*2;
+  if (score <= 20)  return {r:"GHOST",    m:"痕跡が無い。お前は本当に、そこにいたのか。"};
+  if (score <= 55)  return {r:"OPERATOR", m:"必要なぶんだけ触れて、必要なぶんだけ残した。"};
+  if (score <= 95)  return {r:"INTRUDER", m:"荒い。だが、着いた。それが全部だ。"};
+  return {r:"NOISE", m:"派手にやった。記録は残る。それも一つの残し方だ。"};
+}
+function renderEnding(){
+  const id = S.flags.final || "B";
+  const E = ENDINGS[id];
+  if (!S.elapsed) S.elapsed = Math.max(1, Math.round((Date.now()-(S.started||Date.now()))/1000));
+  save();
+  Snd.end();
+
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc" id="eScroll"><div class="vcin">
+      <div class="endmark">${E.mark}</div>
+      <div class="endtitle">${E.ttl}</div>
+      <hr class="rule">
+      <div class="panel">
+        <div class="speaker" id="spk"></div>
+        <div class="storytext" id="stext"></div>
+      </div>
+      <div class="tapnext" id="tapn">TAP ▸</div>
+    </div></div>
+    <div class="dock"><button class="btn ghost" id="btnSkip" type="button">SKIP ▸▸</button></div>
+  </div>`;
+
+  T.li=0; T.typing=false;
+  const spk=$("#spk"), st=$("#stext");
+  const show = () => {
+    const ln = E.lines[T.li];
+    if (!ln){ return endStats(); }
+    spk.className = "speaker who-" + (ln.cls||"narr");
+    spk.innerHTML = ln.who ? `<span class="tick"></span><span class="nm">${esc(ln.who)}</span>` : "";
+    spk.style.display = ln.who ? "flex" : "none";
+    st.className = "storytext" + (ln.sys?" sys":"");
+    T.full=ln.t; T.typing=true; tapn("hidden");
+    typeOut(st, ln.t, ()=>{ T.typing=false; tapn("visible"); });
+  };
+  const adv = () => {
+    if (T.typing){ finishType(st,T.full); T.typing=false; tapn("visible"); Snd.tick(); return; }
+    T.li++; Snd.tick();
+    if (T.li >= E.lines.length) return endStats();
+    show();
+  };
+  $("#eScroll").addEventListener("pointerdown", adv);
+  $("#btnSkip").onclick = e=>{ e.stopPropagation(); Snd.tick(); endStats(); };
+  show();
+}
+function endStats(){
+  clearInterval(typeTimer);
+  const id = S.flags.final || "B";
+  const E = ENDINGS[id], rk = rank();
+  const mm = pad2(Math.floor(S.elapsed/60)), ss = pad2(S.elapsed%60);
+  const warned = S.flags.kanae === "warn";
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc"><div class="vcin" style="text-align:center">
+      <div class="endmark">${E.mark}　—　${E.ttl}</div>
+      <hr class="rule">
+      <div class="stats">
+        <div class="stat"><div class="k">TIME</div><div class="v">${mm}:${ss}</div></div>
+        <div class="stat"><div class="k">TRACE</div><div class="v">${S.trace}%</div></div>
+        <div class="stat"><div class="k">HINTS</div><div class="v">${S.hints}</div></div>
+      </div>
+      <div class="endmark" style="color:var(--amber)">${rk.r}</div>
+      <p class="note" style="text-align:center">${rk.m}</p>
+      <div class="panel" style="text-align:left;margin-top:14px">
+        <div class="kicker">記録</div>
+        <p style="font-size:13.5px;line-height:1.9">
+          香月 加苗：<b>${warned ? "警告が届いた。三日後、彼女は国外にいた。" : "警告は送られなかった。以後、消息は不明。"}</b><br>
+          解いた暗号：<b>${S.solved.length} / 20</b>　　取得した鍵語：<b>${S.keys.length} / 6</b>
+        </p>
+      </div>
+      <div class="panel" style="text-align:left">
+        <div class="kicker">結末は三つある</div>
+        <p style="font-size:13.5px;line-height:1.9">
+          A　白日（公開する）　B　消灯（消去する）　C　継承（引き継ぐ）<br>
+          <span style="color:var(--faint)">最終章から選び直せる。メニューの CHAPTERS から。</span>
+        </p>
+      </div>
+      <div style="height:14px"></div>
+      <button class="btn" id="btnAgain" type="button">▶ 　NEW SESSION</button>
+      <div style="height:8px"></div>
+      <button class="btn ghost" id="btnCh" type="button">CHAPTERS</button>
+      <div style="height:16px"></div>
+    </div></div>
+  </div>`;
+  $("#btnAgain").onclick = ()=>{ Snd.key(); const mx=S.maxCh; wipe(); S=freshState(); S.maxCh=mx; render(); };
+  $("#btnCh").onclick = ()=>{ Snd.key(); openMenu("ch"); };
+}
+
+/* ============================================================================
+   10. 資料庫
+   ============================================================================ */
+let archMode = "list";
+function openArchive(){
+  archMode = "list"; drawArchive(); $("#archive").classList.add("open"); Snd.key();
+}
+function closeArchive(){ $("#archive").classList.remove("open"); Snd.tick(); }
+function drawArchive(id){
+  const head=$("#archTitle"), body=$("#archBody"), back=$("#btnArchBack");
+  if (id){
+    archMode="detail"; back.style.display="";
+    const d = id==="KEY" ? KEYLOG : DOCS[id];
+    head.textContent = "DOC";
+    body.innerHTML = `<h3 style="margin-bottom:10px">${esc(d.t)}</h3>
+      <div class="doc">${ id==="KEY" ? keylogBody() : d.body }</div>`;
+    return;
+  }
+  archMode="list"; back.style.display="none"; head.textContent="ARCHIVE";
+  const items = S.docs.map(k=>({k, d:DOCS[k]})).filter(x=>x.d);
+  if (S.keys.length) items.push({k:"KEY", d:KEYLOG});
+  body.innerHTML = items.length
+    ? `<div class="doclist">` + items.map(x=>
+        `<button class="docitem" data-k="${x.k}" type="button">
+          <span class="id">${x.k==="KEY"?"AUTO":x.k}</span>
+          <span class="ch"> ／ CH.${pad2(x.d.ch)}</span>
+          <span class="tt">${esc(x.d.t)}</span></button>`).join("") + `</div>`
+    : `<div class="empty">まだ何も持っていない。</div>`;
+}
+$("#btnArchive").onclick = openArchive;
+$("#btnArchClose").onclick = closeArchive;
+$("#btnArchBack").onclick = ()=>{ drawArchive(); Snd.tick(); };
+$("#archBody").addEventListener("click", e=>{
+  const b=e.target.closest(".docitem"); if(!b) return; Snd.key(); drawArchive(b.dataset.k);
+});
+
+/* ============================================================================
+   11. メニュー（設定・章選択）
+   ============================================================================ */
+function openMenu(tab){
+  archMode="menu"; $("#archive").classList.add("open"); $("#btnArchBack").style.display="none";
+  $("#archTitle").textContent = "MENU";
+  const chs = CHAPTERS.map(c=>{
+    const un = c.n <= S.maxCh;
+    return `<button class="chitem" data-ch="${c.n}" type="button" ${un?"":"disabled"}>
+      <span class="n">${pad2(c.n)}</span>
+      <span>${un ? esc(c.ttl) : "— 未到達 —"}</span></button>`;
+  }).join("");
+  $("#archBody").innerHTML = `
+    <div class="kicker">CHAPTERS</div>
+    <p class="note" style="margin-bottom:10px">到達済みの章から始め直せる。<br>逆探知と記録は引き継がれる。</p>
+    <div class="chlist" id="chList">${chs}</div>
+    <div style="height:22px"></div>
+    <div class="kicker">SETTINGS</div>
+    <div class="setrow">
+      <div><div class="lb">効果音</div><div class="sub">コード生成音のみ</div></div>
+      <div class="seg" id="segSnd">
+        <button data-v="1" class="${Snd.on?"on":""}" type="button">ON</button>
+        <button data-v="0" class="${Snd.on?"":"on"}" type="button">OFF</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div><div class="lb">文字送り</div><div class="sub">物語の表示速度</div></div>
+      <div class="seg" id="segSpd">
+        ${["slow","normal","fast","instant"].map(v=>
+          `<button data-v="${v}" class="${speed===v?"on":""}" type="button">${
+            {slow:"遅",normal:"標準",fast:"速",instant:"即"}[v]}</button>`).join("")}
+      </div>
+    </div>
+    <div style="height:22px"></div>
+    <button class="btn danger" id="btnWipe" type="button">記録を消して最初から</button>
+    <div style="height:30px"></div>`;
+
+  $("#chList").addEventListener("click", e=>{
+    const b=e.target.closest(".chitem"); if(!b) return;
+    Snd.key(); closeArchive(); go(chapterIndex(+b.dataset.ch));
+  });
+  $("#segSnd").addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    Snd.on = b.dataset.v==="1"; store.set("np_snd",Snd.on);
+    if (Snd.on){ Snd.init(); Snd.resume(); Snd.key(); }
+    openMenu();
+  });
+  $("#segSpd").addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    speed=b.dataset.v; store.set("np_speed",speed); Snd.key(); openMenu();
+  });
+  $("#btnWipe").onclick = ()=>{
+    Snd.ng(); wipe(); S=freshState(); closeArchive(); render();
+  };
+}
+$("#btnMenu").onclick = ()=>openMenu();
+
+/* ============================================================================
+   12. 起動
+   ============================================================================ */
+["gesturestart","gesturechange","gestureend"].forEach(ev=>
+  document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
+document.addEventListener("dblclick", e=>e.preventDefault(), {passive:false});
+document.addEventListener("touchmove", e=>{ if(e.touches.length>1) e.preventDefault(); }, {passive:false});
+
+function unlockAudio(){ Snd.init(); Snd.resume(); }
+window.addEventListener("pointerdown", unlockAudio);
+window.addEventListener("touchstart", unlockAudio);
+
+const view = $("#view");
+render();
+
+/* 自動検証から触るためのフック */
+window.__GAME__ = {
+  get state(){ return S; },
+  scenes: SCENES, puzzles: PUZZLES, docs: DOCS, endings: ENDINGS, maze: MAZE,
+  goto(i){ go(i); },
+  answer(v){ submit(v); },
+  chapterIndex
+};
+</script>
+</body>
+</html>
