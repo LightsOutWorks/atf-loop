@@ -6,6 +6,25 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-009 — 2Dアクションゲームを一回限りの例外として実行する。戦略は変更しない
+
+- **Date**: 2026-08-11
+- **Authority**: ヒロのTask Contract「ブロスタ風の２Dアクションゲームを作ってほしい」に対し、Claudeが `OS.md` Current Identity / D-001 Decision 2 / `CURRENT_STATE.md` §7-0 / HI-10 との矛盾を提示して停止（`CLAUDE.md` §2）。**ヒロが提示3案から「例外として1本作る（戦略は変えない）」を明示選択**（`AskUserQuestion` 応答）。採択はヒロの本PR merge。
+- **Decision**:
+  1. `sandbox/prism-arena/` に、見下ろし型3v3アリーナアクション **PRISM ARENA** を単一HTMLで置く。機械検証 `verify.mjs`（17項目）を同梱する。
+  2. **これは戦略変更ではない。** D-001 Decision 2（Browser-Toy Production Route = HOLD）、`CURRENT_STATE.md` §7-0（現在の戦略「ゼロから作らない」/ 現在のベット / 現在の位相 = 探索期）、`DESIRES.md`、HI-10の7条件は**いずれも変更しない**。
+  3. **E番号を与えない。** 本成果物はMajor Desireへ因果接続しないため、`experiments/INDEX.md` に登録しない（`DESIRES.md` §4: 接続を説明できないactivityはNO_ACTION候補である、という判定を維持したまま、Human裁定で一回限りの例外として実行した、と記録する）。
+  4. **`works/` とは無関係である。** SEED 001〜024、`factory.yml`、`smoke.mjs`、ルート `index.html`（Pagesカタログ）には一切触れていない。`CONSTRAINTS.md` Part II はBrowser-Toy Production Route専用契約であり本成果物には適用されない（同Part冒頭のScope）。ただしPart Iに由来する境界——外部通信・外部アセットの不使用、第三者の名称・キャラクター・ロゴの不使用——は自主的に満たし、`verify.mjs` で機械検証している。
+  5. 追加のゲーム、続編、`works/` への移設、Pagesカタログへの掲載、`factory.yml` の再enableは**本decisionに含まれない**。
+- **Why**:
+  - 依頼はHI-11の「Humanへ戻してよい9件」のうち **1（戦略またはMajor Betの変更）** と **5（解消不能な正本矛盾）** に該当し、Claudeの戦術権限では判断できなかった。
+  - 戦略を書き換えずに一回限りの例外として実行する形を選べば、`CURRENT_STATE.md` §7-0 のCommitment（筋のいい一点への集中投下）を毀損せずに依頼を満たせる。
+  - 成果物の置き場所をcanonical tree（`works/` / `experiments/`）の外にしたのは、D-001の「Why」——**新しいセッションが過去のGame成果物からMissionを誤認するリスクの排除**——を再発させないため。`sandbox/prism-arena/README.md` に同趣旨を明記した。
+- **Supersedes**: 無し。D-001〜D-008、`CONSTRAINTS.md`、`OS.md`、`DESIRES.md`、`CURRENT_STATE.md` はいずれも変更していない。**本recordは現在のMissionをゲーム制作へ戻すものではない。**
+- **Rollback**: 本PRのrevertで `sandbox/` と本recordが消える。canonical fileへの変更が本record以外に無く、外部作用も伴わないため単一revertで完結する。
+
+---
+
 ## D-008 — 取得規律（HI-12）を置く。Contextの上限と字数境界を正本化する
 
 - **Date**: 2026-08-10
