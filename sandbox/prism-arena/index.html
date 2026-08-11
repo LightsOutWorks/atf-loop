@@ -5,6 +5,38 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PRISM ARENA">
+<script>
+// この1ファイルは「そのまま開く」場合と、外側に <head> を持つ土台へ本文として埋め込まれる場合の
+// 両方で使う。後者では上の meta が body 側に落ち、iOSでビューポート指定（width=device-width と
+// viewport-fit=cover）が効かなくなる。解析直後に head へ「移す」ことで両方の置かれ方に対応する。
+// 移動なので重複しない。土台側が既に viewport を持つ場合は、後から入るこちらが優先される。
+(function () {
+  try {
+    var head = document.head || document.getElementsByTagName('head')[0];
+    if (!head) return;
+    // 解析済みで head に入っていないもの = このファイル自身のタグが body 側へ落ちた状態。
+    // そのまま足すと土台側の <title> が tree order で先に来て勝つため、同じ指定を外してから入れる。
+    var own = [], nodes = document.querySelectorAll('title, meta');
+    for (var i = 0; i < nodes.length; i++) if (nodes[i].parentNode !== head) own.push(nodes[i]);
+    for (var j = 0; j < own.length; j++) {
+      var el = own[j], nm = el.getAttribute('name');
+      var sel = el.tagName === 'TITLE' ? 'title' : (nm ? 'meta[name="' + nm + '"]' : null);
+      if (sel) {
+        var dup = head.querySelectorAll(sel);
+        for (var k = 0; k < dup.length; k++) head.removeChild(dup[k]);
+      }
+      head.appendChild(el);
+    }
+    if (!head.querySelector('meta[name="viewport"]')) {
+      var m = document.createElement('meta');
+      m.setAttribute('name', 'viewport');
+      m.setAttribute('content',
+        'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no');
+      head.appendChild(m);
+    }
+  } catch (e) { /* 移せない環境ではそのまま続行する */ }
+})();
+</script>
 <style>
   :root {
     --sa-t: env(safe-area-inset-top, 0px);

@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -79,7 +80,7 @@ function loadPlaywright() {
 
 const pw = loadPlaywright();
 if (!pw) {
-  record('06-20 動的検査（起動・操作・状態遷移・iOS適合）', 'SKIP', 'playwright が見つからない');
+  record('06-21 動的検査（起動・操作・状態遷移・iOS適合）', 'SKIP', 'playwright が見つからない');
   summarize();
 } else {
   await dynamic(pw);
@@ -292,7 +293,38 @@ async function dynamic(playwright) {
     check('19 iPhone / iPad 相当の5ビューポートで起動・操作でき、アリーナが画面を覆う',
       devFails.length === 0, devFails.join(' | ') || `${DEVICES.length} 構成を実行`);
 
-    check('20 実行中にJavaScript例外が発生しない', errors.length === 0,
+    // --- 外側に <head> を持つ土台へ本文として埋め込まれても成立するか ---
+    // 公開ホスティングによっては、このファイルが <head> 済みの雛形の body 側へ差し込まれる。
+    // そのときビューポート指定が body に落ちるとiOSのレイアウトが崩れるため、実際に包んで確かめる。
+    const wrapPath = path.join(os.tmpdir(), 'prism-arena-embedded-check.html');
+    fs.writeFileSync(wrapPath,
+      '<!doctype html><html><head><meta charset="utf-8"><title>host page</title>' +
+      '<style>*{box-sizing:border-box}body{margin:0}</style></head><body>' + html + '</body></html>');
+    const ep = await browser.newPage({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
+    const embErrors = [];
+    ep.on('pageerror', e => embErrors.push(e.message));
+    ep.on('console', m => { if (m.type() === 'error') embErrors.push(m.text()); });
+    await ep.goto(pathToFileURL(wrapPath).href, { waitUntil: 'load' });
+    await ep.waitForFunction(() => !!window.__ARENA, null, { timeout: 8000 });
+    const emb = await ep.evaluate(() => {
+      const vp = document.head.querySelector('meta[name="viewport"]');
+      return {
+        headViewport: !!vp && /width=device-width/.test(vp.content) && /viewport-fit=cover/.test(vp.content),
+        strayInBody: document.body.querySelectorAll('meta').length,
+        title: document.title
+      };
+    });
+    await ep.tap('#startBtn');
+    await ep.waitForTimeout(450);
+    const embPlay = await ep.evaluate(() => ({ state: window.__ARENA.state, vp: window.__ARENA.viewport }));
+    check('20 外側に <head> を持つ土台へ埋め込んでも成立する',
+      emb.headViewport && emb.strayInBody === 0 && emb.title === 'PRISM ARENA — 3v3 クリスタルラッシュ' &&
+      embPlay.state === 'play' && embErrors.length === 0,
+      `head内viewport=${emb.headViewport} body残り=${emb.strayInBody} title=${JSON.stringify(emb.title)} state=${embPlay.state} err=${embErrors.length}`);
+    await ep.close();
+    fs.unlinkSync(wrapPath);
+
+    check('21 実行中にJavaScript例外が発生しない', errors.length === 0,
       errors.length ? errors.slice(0, 4).join(' | ') : '例外なし');
   } catch (e) {
     record('動的検査', 'FAIL', e.message);
