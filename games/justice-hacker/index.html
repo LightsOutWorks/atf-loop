@@ -528,6 +528,23 @@ p:last-child{ margin-bottom:0; }
 /* ============================================================
    0. ちいさな道具
    ============================================================ */
+
+/* このファイルが ホスト側の head つきで うめこまれても（Artifact等）
+   スマホの ひょうじが くずれないように、viewport を じぶんで ほしょうする。 */
+(function ensureViewport(){
+  try{
+    const want = "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover";
+    let m = document.querySelector('meta[name="viewport"]');
+    if (!m){ m = document.createElement("meta"); m.setAttribute("name","viewport"); document.head.appendChild(m); }
+    if (m.getAttribute("content") !== want) m.setAttribute("content", want);
+    if (!document.querySelector('meta[name="theme-color"]')){
+      const t = document.createElement("meta");
+      t.setAttribute("name","theme-color"); t.setAttribute("content","#04060f");
+      document.head.appendChild(t);
+    }
+  }catch(e){}
+})();
+
 const $  = (s, r=document) => r.querySelector(s);
 const view = $("#view");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
