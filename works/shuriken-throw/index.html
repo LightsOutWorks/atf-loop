@@ -225,6 +225,21 @@
 'use strict';
 
 /* ==========================================================================
+   0a. viewport guard
+   When this file is embedded somewhere that supplies its own document head
+   (a preview pane, a hosted page), our <meta name="viewport"> is dropped and
+   mobile browsers fall back to a 980px layout viewport — the whole game then
+   renders zoomed out. Re-insert it if it is missing; a no-op standalone.
+   ========================================================================== */
+if (document.head && !document.querySelector('meta[name="viewport"]')) {
+  const mv = document.createElement('meta');
+  mv.setAttribute('name', 'viewport');
+  mv.setAttribute('content',
+    'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover');
+  document.head.appendChild(mv);
+}
+
+/* ==========================================================================
    0. small helpers
    ========================================================================== */
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
