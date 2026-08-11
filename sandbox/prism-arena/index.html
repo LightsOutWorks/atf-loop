@@ -1,7 +1,17 @@
 <title>PRISM ARENA — 3v3 クリスタルラッシュ</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PRISM ARENA">
 <style>
+  :root {
+    --sa-t: env(safe-area-inset-top, 0px);
+    --sa-r: env(safe-area-inset-right, 0px);
+    --sa-b: env(safe-area-inset-bottom, 0px);
+    --sa-l: env(safe-area-inset-left, 0px);
+  }
   *, *::before, *::after { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
@@ -9,17 +19,35 @@
     font-family: sans-serif;
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
     overscroll-behavior: none; touch-action: none;
   }
-  #stage { position: fixed; inset: 0; }
-  canvas { display: block; width: 100%; height: 100%; }
+  /* iOS Safari はツールバーの伸縮でビューポート高さが変わる。実寸はJS側で visualViewport から入れる */
+  #stage { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  /* env() の実測値をJSから読むためのプローブ。描画には出さない */
+  #safeProbe {
+    position: fixed; top: 0; left: 0; width: 0; height: 0;
+    visibility: hidden; pointer-events: none;
+    padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l);
+  }
 
   .overlay {
-    position: fixed; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 20px; gap: 18px; overflow-y: auto;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;                       /* タイトル・リザルトだけは縦スクロールを許可する */
+    padding:
+      max(20px, var(--sa-t)) max(20px, var(--sa-r))
+      max(24px, var(--sa-b)) max(20px, var(--sa-l));
     background: radial-gradient(120% 90% at 50% 0%, #1b2740 0%, #0b0f16 62%);
     z-index: 10;
+  }
+  /* 中央寄せは内側で行う。overlay 側で中央寄せするとスクロール時に上端が切れて戻れない */
+  .sheet {
+    min-height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
   }
   .overlay[hidden] { display: none; }
 
@@ -64,8 +92,10 @@
 
   .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .chip {
-    padding: 8px 16px; border-radius: 999px; background: #141c2b; border: 2px solid #223049;
-    font-size: 12px; font-weight: 700; letter-spacing: .1em; cursor: pointer; color: #9fb2ce;
+    /* Apple HIG のタップ領域下限に合わせて44px以上を確保する */
+    min-height: 44px; padding: 8px 20px; border-radius: 999px;
+    background: #141c2b; border: 2px solid #223049;
+    font-size: 13px; font-weight: 700; letter-spacing: .1em; cursor: pointer; color: #9fb2ce;
     font-family: inherit;
   }
   .chip[aria-pressed="true"] { border-color: #4da3ff; color: #eef3fb; background: #17253c; }
@@ -79,8 +109,18 @@
   .btn:active { transform: translateY(2px); }
   .btn.ghost { background: #1b2436; color: #b9c9e2; box-shadow: none; }
 
-  .help { max-width: 620px; font-size: 11.5px; line-height: 1.85; color: #7f93b1; text-align: center; }
+  .help { max-width: 620px; font-size: 11.5px; line-height: 1.8; color: #7f93b1; text-align: center; }
   .help b { color: #b9c9e2; font-weight: 700; }
+  .help > span { display: block; }
+  .help > span + span { margin-top: 6px; }
+  @media (pointer: coarse) { .help .pc { display: none; } }
+  @media (pointer: fine)   { .help .tp { display: none; } }
+
+  /* 選択中ファイターの説明。狭い画面でカードを1行化したときの受け皿 */
+  .detail {
+    display: none; margin: 0; max-width: 420px; min-height: 34px;
+    font-size: 11.5px; line-height: 1.6; color: #8fa2c0; text-align: center;
+  }
 
   #outcome { font-size: clamp(34px, 9vw, 62px); font-weight: 900; letter-spacing: .1em; margin: 0; }
   .stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
@@ -88,24 +128,61 @@
   .stat .k { font-size: 10px; letter-spacing: .16em; color: #6d829f; }
   .stat .v { font-size: 25px; font-weight: 800; margin-top: 3px; }
   .final { font-size: 14px; color: #8fa2c0; letter-spacing: .08em; }
+
+  .hint {
+    max-width: 460px; margin: 0; padding: 9px 16px; border-radius: 10px;
+    background: #16233a; border: 1px solid #2b4067;
+    font-size: 11.5px; line-height: 1.7; color: #9fb6d8; text-align: center;
+  }
+  .hint[hidden] { display: none; }
+
+  /* 端末が狭いとき（iPhone想定）: カードを2列で幅いっぱいに使い、余白を詰める */
+  @media (max-width: 560px) {
+    .sheet { gap: 12px; }
+    .cards { gap: 8px; width: 100%; }
+    .card {
+      width: calc(50% - 4px); max-width: 220px; padding: 9px 10px;
+      display: flex; align-items: center; gap: 9px;
+    }
+    .card .emblem { width: 32px; height: 32px; margin: 0; flex: 0 0 auto; }
+    .card .emblem::after { width: 11px; height: 11px; }
+    .card .nm { font-size: 13px; }
+    .card .rl { font-size: 10px; }
+    .card .ds, .card .st { display: none; }
+    .detail { display: block; }
+    .btn { padding: 16px 40px; width: 100%; max-width: 320px; }
+    .stat { padding: 10px 16px; min-width: 92px; }
+    .hint { font-size: 11px; padding: 8px 12px; }
+  }
+  /* 高さが足りないとき（iPhone横持ち想定）: 縦を圧縮する */
+  @media (max-height: 480px) {
+    .sheet { gap: 9px; }
+    .card { padding: 8px 10px 9px; }
+    .card .ds { display: none; }
+    .help { font-size: 10.5px; line-height: 1.6; }
+    .btn { padding: 12px 40px; }
+  }
 </style>
 
+<div id="safeProbe" aria-hidden="true"></div>
 <div id="stage"><canvas id="cv"></canvas></div>
 
-<div class="overlay" id="titleScreen">
+<div class="overlay" id="titleScreen"><div class="sheet">
   <div>
     <h1>PRISM ARENA</h1>
     <p class="sub">3 vs 3 &nbsp;/&nbsp; クリスタルラッシュ</p>
   </div>
+  <p class="hint" id="iosHint" hidden></p>
   <p class="section-label">ファイターを選ぶ</p>
   <div class="cards" id="cards"></div>
+  <p class="detail" id="fighterDetail"></p>
   <p class="section-label">難易度</p>
   <div class="row" id="diffRow"></div>
   <button class="btn" id="startBtn">バトル開始</button>
   <p class="help" id="helpText"></p>
-</div>
+</div></div>
 
-<div class="overlay" id="resultScreen" hidden>
+<div class="overlay" id="resultScreen" hidden><div class="sheet">
   <h2 id="outcome">勝利</h2>
   <p class="final" id="finalScore"></p>
   <div class="stats">
@@ -117,7 +194,7 @@
     <button class="btn" id="rematchBtn">もう一度</button>
     <button class="btn ghost" id="backBtn">ファイター選択へ</button>
   </div>
-</div>
+</div></div>
 
 <script>
 'use strict';
@@ -198,6 +275,27 @@ const DIFFICULTY = {
   hard:   { key: 'hard',   label: 'むずかしい', react: 0.13, err: 0.055, aggr: 1.18, dmgTaken: 1.12 }
 };
 
+// ---------------------------------------------------------------- 描画品質
+// Canvas 2D の shadowBlur はiOSで特に重く、粒子1つごとに掛けるとiPhone/iPadで簡単にフレームが落ちる。
+// 粒子側のglowはタッチ端末で最初から切り、それでも重い場合は実測フレーム時間で段階的に落とす。
+const Perf = {
+  glow: true,            // 弾・クリスタルのglow（数が少ないので残す）
+  glowParticles: true,   // 粒子のglow（数が多いのでタッチ端末では切る）
+  maxParts: 620, trailEvery: 0.034, burstScale: 1, maxDpr: 2, mobile: false
+};
+function applyMobileQuality() {
+  if (Perf.mobile) return;
+  Perf.mobile = true;
+  Perf.glowParticles = false;
+  Perf.maxParts = 280; Perf.trailEvery = 0.055; Perf.burstScale = 0.62;
+}
+function degradeQuality() {
+  if (!Perf.glow && Perf.burstScale <= 0.4) return;
+  Perf.glow = false; Perf.glowParticles = false;
+  Perf.maxParts = Math.min(Perf.maxParts, 180);
+  Perf.burstScale = 0.4; Perf.trailEvery = 0.075;
+}
+
 // ---------------------------------------------------------------- 汎用ユーティリティ
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -215,7 +313,7 @@ const pick = arr => arr[(rng() * arr.length) | 0];
 
 // ---------------------------------------------------------------- 効果音（コード生成）
 const Sfx = {
-  ctx: null, master: null, muted: false,
+  ctx: null, master: null, muted: false, unlocked: false,
   init() {
     if (this.ctx) return;
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -225,7 +323,20 @@ const Sfx = {
     this.master.gain.value = 0.32;
     this.master.connect(this.ctx.destination);
   },
-  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+  resume() {
+    if (!this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    // iOSはユーザー操作の中で一度でも音源を鳴らすまでWebAudioを解錠しない。無音1サンプルで解錠する。
+    if (!this.unlocked) {
+      this.unlocked = true;
+      try {
+        const b = this.ctx.createBuffer(1, 1, 22050);
+        const src = this.ctx.createBufferSource();
+        src.buffer = b; src.connect(this.ctx.destination); src.start(0);
+      } catch (e) { /* 解錠できなくても無音のまま続行する */ }
+    }
+  },
+  suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
   tone(freq, dur, type, vol, slideTo) {
     if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
@@ -449,16 +560,17 @@ const G = {
   time: 0, matchT: 0, over: false,
   units: [], shots: [], gems: [], parts: [], texts: [], fields: [], fx: [],
   gemTimer: 0, score: [0, 0], count: [0, 0], countActive: [false, false],
-  shake: 0, msg: '', msgT: 0, winner: -1,
+  shake: 0, msg: '', msgT: 0, winner: -1, paused: false,
   player: null, diff: DIFFICULTY.normal, playerFighter: 'scatter',
   reduceMotion: false
 };
 
 function addPart(x, y, vx, vy, r, life, color, glow) {
-  if (G.parts.length > 620) return;
+  if (G.parts.length > Perf.maxParts) return;
   G.parts.push({ x, y, vx, vy, r, life, max: life, color, glow: !!glow });
 }
-function burst(x, y, n, color, spd, size) {
+function burst(x, y, count, color, spd, size) {
+  const n = Math.max(3, Math.round(count * Perf.burstScale));
   for (let i = 0; i < n; i++) {
     const a = rng() * TAU, s = spd * (0.35 + rng() * 0.8);
     addPart(x, y, Math.cos(a) * s, Math.sin(a) * s, size * (0.5 + rng()), 0.3 + rng() * 0.35, color, true);
@@ -1045,7 +1157,7 @@ function updateShots(dt) {
     const nx = s.x + s.vx * dt, ny = s.y + s.vy * dt;
     // 軌跡は毎フレーム出さない。散弾は一度に5発飛ぶため、そのままだと弾自体が見えなくなる。
     s.trail = (s.trail || 0) + dt;
-    if (s.trail >= 0.034) { s.trail = 0; addPart(s.x, s.y, 0, 0, s.r * 0.42, 0.10, s.color, true); }
+    if (s.trail >= Perf.trailEvery) { s.trail = 0; addPart(s.x, s.y, 0, 0, s.r * 0.42, 0.10, s.color, true); }
 
     // 壁
     const tx = (nx / TILE) | 0, ty = (ny / TILE) | 0;
@@ -1193,13 +1305,16 @@ const Input = {
 const STICK_R = 62;
 
 function superBtnRect() {
-  const m = 26, s = 74;
-  return { x: view.w - m - s / 2, y: view.h - m - s / 2, r: s / 2 };
+  // タッチ操作では指の面積に合わせて大きくし、ホームインジケータとノッチの外へ逃がす
+  const touch = Input.hasTouch || Perf.mobile;
+  const s = touch ? 96 : 74, m = touch ? 18 : 26;
+  return { x: view.w - safe.r - m - s / 2, y: view.h - safe.b - m - s / 2, r: s / 2 };
 }
 
 function onPointerDown(e) {
   Sfx.init(); Sfx.resume();
-  if (e.pointerType === 'touch') Input.hasTouch = true;
+  if (e.pointerType === 'touch') { Input.hasTouch = true; applyMobileQuality(); }
+  if (G.paused) { G.paused = false; last = 0; acc = 0; Sfx.resume(); return; }
   if (G.state !== 'play') return;
   const x = e.clientX, y = e.clientY;
 
@@ -1319,23 +1434,58 @@ function updatePlayer(u, dt) {
 // ---------------------------------------------------------------- 描画
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
+const stage = document.getElementById('stage');
+const safeProbe = document.getElementById('safeProbe');
 const view = { w: 800, h: 600, scale: 1 };
 const cam = { x: WORLD_W / 2, y: WORLD_H / 2 };
+let mineGrd = null;
+
+// ノッチ・Dynamic Island・ホームインジケータの占有量。CSSの env() を実測して読む。
+const safe = { t: 0, r: 0, b: 0, l: 0 };
+function readSafeArea() {
+  const cs = getComputedStyle(safeProbe);
+  safe.t = parseFloat(cs.paddingTop) || 0;
+  safe.r = parseFloat(cs.paddingRight) || 0;
+  safe.b = parseFloat(cs.paddingBottom) || 0;
+  safe.l = parseFloat(cs.paddingLeft) || 0;
+}
 
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  view.w = Math.max(1, window.innerWidth);
-  view.h = Math.max(1, window.innerHeight);
-  cv.width = Math.floor(view.w * dpr);
-  cv.height = Math.floor(view.h * dpr);
+  readSafeArea();
+  // iOS Safari はツールバーの出入りで表示領域が変わる。visualViewport があればそれを実寸とする。
+  const vv = window.visualViewport;
+  const w = Math.max(1, Math.round(vv ? vv.width : window.innerWidth));
+  const h = Math.max(1, Math.round(vv ? vv.height : window.innerHeight));
+  view.w = w; view.h = h;
+
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  for (const el of document.querySelectorAll('.overlay')) {
+    el.style.width = w + 'px'; el.style.height = h + 'px';
+  }
+
+  const dpr = Math.min(window.devicePixelRatio || 1, Perf.maxDpr);
+  cv.width = Math.floor(w * dpr);
+  cv.height = Math.floor(h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mineGrd = null;                                  // Canvasのリサイズでコンテキストが作り直されるため
+
   // 見たい広さ（desired）を基準にしつつ、アリーナが画面を覆う倍率（cover）を下限にする。
   // これを入れないと縦長端末でアリーナより視界が広くなり、上下に黒帯が出る。
-  const desired = clamp(Math.min(view.w, view.h) / 740, 0.42, 1.25);
-  const cover = Math.max(view.w / WORLD_W, view.h / WORLD_H);
+  const desired = clamp(Math.min(w, h) / 740, 0.42, 1.25);
+  const cover = Math.max(w / WORLD_W, h / WORLD_H);
   view.scale = Math.max(desired, cover);
+
+  updateHints();
 }
 window.addEventListener('resize', resize);
+// 回転直後はSafariの報告値がまだ古いことがあるため、少し置いて測り直す
+window.addEventListener('orientationchange', () => {
+  resize(); setTimeout(resize, 260); setTimeout(resize, 650);
+});
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
 
 function screenToWorld(sx, sy) {
   return { x: (sx - view.w / 2) / view.scale + cam.x, y: (sy - view.h / 2) / view.scale + cam.y };
@@ -1377,11 +1527,17 @@ function drawArena() {
   // 鉱脈
   const pulse = 0.5 + Math.sin(G.time * 2.6) * 0.5;
   ctx.save();
-  const grd = ctx.createRadialGradient(MINE_X, MINE_Y, 4, MINE_X, MINE_Y, 120);
-  grd.addColorStop(0, 'rgba(169,123,255,' + (0.34 + pulse * 0.18) + ')');
-  grd.addColorStop(1, 'rgba(169,123,255,0)');
-  ctx.fillStyle = grd;
+  // グラデーションは毎フレーム作らず使い回す（濃淡は globalAlpha で付ける）。
+  // CanvasGradient の座標は描画時のユーザー空間で解釈されるため、カメラが動いても正しい位置に出る。
+  if (!mineGrd) {
+    mineGrd = ctx.createRadialGradient(MINE_X, MINE_Y, 4, MINE_X, MINE_Y, 120);
+    mineGrd.addColorStop(0, 'rgba(169,123,255,1)');
+    mineGrd.addColorStop(1, 'rgba(169,123,255,0)');
+  }
+  ctx.globalAlpha = 0.34 + pulse * 0.18;
+  ctx.fillStyle = mineGrd;
   ctx.fillRect(MINE_X - 130, MINE_Y - 130, 260, 260);
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = 'rgba(201,166,255,' + (0.4 + pulse * 0.3) + ')';
   ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(MINE_X, MINE_Y, 34 + pulse * 5, 0, TAU); ctx.stroke();
@@ -1436,7 +1592,7 @@ function drawGems() {
     const bob = Math.sin((G.time + g.born) * 4) * 3;
     ctx.save();
     ctx.translate(g.x, g.y + bob);
-    ctx.shadowBlur = 14; ctx.shadowColor = '#a97bff';
+    if (Perf.glow) { ctx.shadowBlur = 14; ctx.shadowColor = '#a97bff'; }
     ctx.fillStyle = '#c9a6ff';
     ctx.beginPath();
     ctx.moveTo(0, -10); ctx.lineTo(8, -1); ctx.lineTo(0, 11); ctx.lineTo(-8, -1);
@@ -1536,7 +1692,8 @@ function drawShots() {
       ctx.setLineDash([4, 6]);
       ctx.beginPath(); ctx.arc(L.tx, L.ty, s.splash, 0, TAU); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.save(); ctx.shadowBlur = 12; ctx.shadowColor = s.color;
+      ctx.save();
+      if (Perf.glow) { ctx.shadowBlur = 12; ctx.shadowColor = s.color; }
       ctx.fillStyle = s.color;
       ctx.beginPath(); ctx.arc(s.x, s.y - (s.z || 0), 9, 0, TAU); ctx.fill();
       ctx.restore();
@@ -1545,7 +1702,7 @@ function drawShots() {
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.rotate(Math.atan2(s.vy, s.vx));
-    ctx.shadowBlur = 10; ctx.shadowColor = s.color;
+    if (Perf.glow) { ctx.shadowBlur = 10; ctx.shadowColor = s.color; }
     ctx.fillStyle = s.color;
     roundRect(ctx, -s.r * 1.9, -s.r * 0.62, s.r * 3.8, s.r * 1.24, s.r * 0.6); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.75)';
@@ -1596,7 +1753,7 @@ function drawFx() {
   for (const p of G.parts) {
     const a = clamp(p.life / p.max, 0, 1);
     ctx.globalAlpha = a;
-    if (p.glow) { ctx.shadowBlur = 8; ctx.shadowColor = p.color; }
+    if (p.glow && Perf.glowParticles) { ctx.shadowBlur = 8; ctx.shadowColor = p.color; }
     ctx.fillStyle = p.color;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.4 + a * 0.8), 0, TAU); ctx.fill();
     ctx.shadowBlur = 0;
@@ -1619,7 +1776,7 @@ function drawHud() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
   // 上部バー
-  const bw = Math.min(400, view.w - 28), bx = view.w / 2 - bw / 2, by = 12;
+  const bw = Math.min(400, view.w - 28 - safe.l - safe.r), bx = view.w / 2 - bw / 2, by = 12 + safe.t;
   ctx.fillStyle = 'rgba(8,12,20,.90)';
   roundRect(ctx, bx, by, bw, 54, 14); ctx.fill();
 
@@ -1659,7 +1816,7 @@ function drawHud() {
   if (!p) return;
 
   // 弾数
-  const ax = 24, ay = view.h - 46;
+  const ax = 24 + safe.l, ay = view.h - 46 - safe.b;
   for (let i = 0; i < 3; i++) {
     const fill = clamp(p.ammo - i, 0, 1);
     const x = ax + i * 34;
@@ -1697,7 +1854,7 @@ function drawHud() {
   ctx.restore();
 
   // 仮想スティック
-  if (Input.hasTouch) {
+  if (Input.hasTouch || Perf.mobile) {
     for (const s of [Input.moveStick, Input.aimStick]) {
       if (!s.active) continue;
       ctx.save();
@@ -1719,7 +1876,7 @@ function drawHud() {
   } else {
     ctx.fillStyle = 'rgba(255,255,255,.28)';
     ctx.font = '600 11px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('WASD 移動 / クリック 攻撃 / E・Shift スーパー', view.w - 20, view.h - 124);
+    ctx.fillText('WASD 移動 / クリック 攻撃 / E・Shift スーパー', view.w - 20 - safe.r, view.h - 124 - safe.b);
     ctx.textAlign = 'center';
   }
 
@@ -1742,6 +1899,14 @@ function drawHud() {
     ctx.fillStyle = '#ffe08a';
     ctx.fillText(G.msg, view.w / 2, view.h * 0.26);
     ctx.globalAlpha = 1;
+  }
+
+  if (G.paused) {
+    ctx.fillStyle = 'rgba(4,8,14,.74)'; ctx.fillRect(0, 0, view.w, view.h);
+    ctx.fillStyle = '#eef3fb'; ctx.font = '800 26px sans-serif';
+    ctx.fillText('一時停止', view.w / 2, view.h / 2 - 16);
+    ctx.font = '700 14px sans-serif'; ctx.fillStyle = '#9fb2ce';
+    ctx.fillText('画面をタップして再開', view.w / 2, view.h / 2 + 20);
   }
 
   if (G.over) {
@@ -1781,6 +1946,12 @@ const resultScreen = document.getElementById('resultScreen');
 let selectedFighter = 'scatter';
 let selectedDiff = 'normal';
 
+// 狭い画面ではカードを1行に畳むため、説明はここにまとめて出す
+function showFighterDetail(b) {
+  const el = document.getElementById('fighterDetail');
+  if (el && b) el.textContent = b.desc;
+}
+
 function buildTitle() {
   const wrap = document.getElementById('cards');
   wrap.textContent = '';
@@ -1792,8 +1963,8 @@ function buildTitle() {
     const bars = b.bars.map(v => '<i><b style="width:' + Math.round(v * 100) + '%"></b></i>').join('');
     el.innerHTML =
       '<div class="emblem"></div>' +
-      '<div class="nm"></div><div class="rl"></div><div class="ds"></div>' +
-      '<div class="st">' + bars + '</div>';
+      '<div class="txt"><div class="nm"></div><div class="rl"></div></div>' +
+      '<div class="ds"></div><div class="st">' + bars + '</div>';
     el.querySelector('.nm').textContent = b.name;
     el.querySelector('.rl').textContent = b.role;
     el.querySelector('.ds').textContent = b.desc;
@@ -1801,10 +1972,12 @@ function buildTitle() {
       selectedFighter = b.id;
       for (const c of wrap.children) c.setAttribute('aria-pressed', 'false');
       el.setAttribute('aria-pressed', 'true');
+      showFighterDetail(b);
       Sfx.init(); Sfx.resume(); Sfx.tone(720, 0.06, 'sine', 0.12);
     });
     wrap.appendChild(el);
   }
+  showFighterDetail(FIG[selectedFighter] || FIGHTERS[0]);
 
   const dr = document.getElementById('diffRow');
   dr.textContent = '';
@@ -1822,10 +1995,11 @@ function buildTitle() {
   }
 
   document.getElementById('helpText').innerHTML =
-    '中央の鉱脈から出る<b>クリスタル</b>を拾い、チームで <b>' + GEM_GOAL + '個</b> 保持して <b>' + COUNTDOWN + '秒</b> 耐えれば勝ち。' +
-    '倒されると持っているクリスタルを落とす。<br>' +
-    '<b>PC</b>: WASD / 矢印で移動、マウスで狙う、クリックまたはスペースで攻撃、E か Shift でスーパー。<br>' +
-    '<b>スマホ</b>: 画面左半分で移動、右半分をドラッグして離すと攻撃（タップでオートエイム）、右下のボタンでスーパー。';
+    '<span>中央の鉱脈から出る<b>クリスタル</b>を拾い、チームで <b>' + GEM_GOAL + '個</b> 保持して <b>' + COUNTDOWN +
+    '秒</b> 耐えれば勝ち。倒されると持っているクリスタルを落とす。</span>' +
+    '<span class="pc"><b>操作</b>: WASD / 矢印で移動、マウスで狙う、クリックまたはスペースで攻撃、E か Shift でスーパー。</span>' +
+    '<span class="tp"><b>操作</b>: 左半分をドラッグで移動。右半分をドラッグして離すとその方向へ攻撃（タップでオートエイム）。' +
+    '右下のボタンでスーパー（ドラッグで方向指定）。ホームに戻ると自動で一時停止します。</span>';
 }
 
 function show(screen) {
@@ -1877,25 +2051,92 @@ window.addEventListener('pointermove', onPointerMove);
 window.addEventListener('pointerup', onPointerUp);
 window.addEventListener('pointercancel', onPointerUp);
 
+// ---------------------------------------------------------------- iOS 固有の抑止
+// iOS Safari は viewport の user-scalable=no を無視する。ピンチ・ダブルタップ拡大・
+// 引っ張って更新は、それぞれ個別に止める必要がある。
+for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(type, e => e.preventDefault(), { passive: false });
+}
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+// プレイ中だけスクロールを殺す。タイトル・リザルトは縦スクロールできる必要がある。
+document.addEventListener('touchmove', e => {
+  if (G.state === 'play' && e.cancelable) e.preventDefault();
+}, { passive: false });
+// ダブルタップ拡大の抑止。ボタン上では抑止しない（連続タップを潰さないため）。
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = e.timeStamp;
+  const onButton = e.target && e.target.closest && e.target.closest('button');
+  if (!onButton && now - lastTouchEnd < 320 && e.cancelable) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+// ---------------------------------------------------------------- 中断と復帰
+// iOSではホームに戻る・着信・画面ロックでフレームが止まる。復帰時にそのまま再開すると
+// 止まっていた間に撃たれた状態から始まってしまうため、明示的に一時停止する。
+function pauseGame() {
+  if (G.state === 'play' && !G.over && !G.paused) {
+    G.paused = true;
+    Input.keys.clear();
+    Input.moveStick.id = Input.aimStick.id = Input.superBtn.id = null;
+    Input.moveStick.active = Input.aimStick.active = Input.superBtn.active = false;
+    Input.mouse.down = false; Input.firePressed = false; Input.superPressed = false;
+  }
+  Sfx.suspend();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseGame();
+  else { last = 0; acc = 0; }
+});
+window.addEventListener('pagehide', pauseGame);
+
+// ---------------------------------------------------------------- 端末に応じた案内
+function updateHints() {
+  const el = document.getElementById('iosHint');
+  if (!el) return;
+  const touch = Perf.mobile || Input.hasTouch;
+  const portraitPhone = view.h > view.w * 1.25 && Math.min(view.w, view.h) < 520;
+  let standalone = false;
+  try {
+    standalone = window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  } catch (e) { /* 判定できない環境では通常表示のまま扱う */ }
+  const msgs = [];
+  if (touch && portraitPhone) msgs.push('横向きにすると視界が広くなります。');
+  if (touch && !standalone) msgs.push('共有メニューの「ホーム画面に追加」でフルスクリーンになり、画面端のスワイプ誤爆も減ります。');
+  if (msgs.length) { el.textContent = msgs.join(''); el.hidden = false; } else { el.hidden = true; }
+}
+
 // ---------------------------------------------------------------- メインループ
-let last = 0, acc = 0;
+let last = 0, acc = 0, perfAcc = 0, perfN = 0;
 const STEP = 1 / 60;
 function frame(now) {
   requestAnimationFrame(frame);
   if (!last) last = now;
   let dt = (now - last) / 1000; last = now;
   if (dt > 0.25) dt = 0.25;
-  acc += dt;
-  let steps = 0;
-  while (acc >= STEP && steps < 5) { update(STEP); acc -= STEP; steps++; }
-  if (steps === 5) acc = 0;
-  updateCamera(dt);
+  if (!G.paused) {
+    acc += dt;
+    let steps = 0;
+    while (acc >= STEP && steps < 5) { update(STEP); acc -= STEP; steps++; }
+    if (steps === 5) acc = 0;
+    updateCamera(dt);
+    // 実測フレーム時間が継続して悪いときだけ品質を落とす（端末名では判定しない）
+    if (G.state === 'play') {
+      perfAcc += dt; perfN++;
+      if (perfN >= 120) {
+        if (perfAcc / perfN > 0.0225) degradeQuality();
+        perfAcc = 0; perfN = 0;
+      }
+    }
+  }
   render();
 }
 
 try {
   G.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-} catch (e) { /* matchMedia 非対応環境ではモーションを維持する */ }
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) applyMobileQuality();
+} catch (e) { /* matchMedia 非対応環境では既定の品質・モーションを維持する */ }
 
 resize();
 generateArena(20260811);
@@ -1914,6 +2155,13 @@ window.__ARENA = {
   get alive() { return G.units.filter(u => !u.dead).length; },
   get fieldGems() { return G.gems.length; },
   get shots() { return G.shots.length; },
+  get paused() { return G.paused; },
+  get safeArea() { return { t: safe.t, r: safe.r, b: safe.b, l: safe.l }; },
+  get superButton() { return superBtnRect(); },
+  get quality() { return { glow: Perf.glow, glowParticles: Perf.glowParticles, maxParts: Perf.maxParts, mobile: Perf.mobile }; },
+  get viewport() { return { w: view.w, h: view.h, scale: view.scale }; },
+  get world() { return { w: WORLD_W, h: WORLD_H }; },
+  relayout() { resize(); },
   get totalDamage() { return G.units.reduce((s, u) => s + u.stats.dmg, 0); },
   get player() {
     const p = G.player;

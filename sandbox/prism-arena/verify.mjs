@@ -79,7 +79,7 @@ function loadPlaywright() {
 
 const pw = loadPlaywright();
 if (!pw) {
-  record('06-17 動的検査（起動・操作・状態遷移）', 'SKIP', 'playwright が見つからない');
+  record('06-20 動的検査（起動・操作・状態遷移・iOS適合）', 'SKIP', 'playwright が見つからない');
   summarize();
 } else {
   await dynamic(pw);
@@ -210,7 +210,89 @@ async function dynamic(playwright) {
     if (shotDir) await mobile.screenshot({ path: path.join(shotDir, '04-mobile.png') });
     await mobile.close();
 
-    check('17 実行中にJavaScript例外が発生しない', errors.length === 0,
+    // --- セーフエリア（ノッチ / ホームインジケータ）分だけHUDが内側へ寄るか ---
+    // env() の実値はブラウザ側が決めるためヘッドレスでは常に0になる。
+    // そこで env() をCSS変数で一段受けておき、変数を上書きして追従を実測する。
+    const sa = await page.evaluate(() => {
+      const before = window.__ARENA.superButton;
+      const st = document.documentElement.style;
+      st.setProperty('--sa-b', '34px'); st.setProperty('--sa-r', '48px');
+      window.__ARENA.relayout();
+      const after = window.__ARENA.superButton;
+      const read = window.__ARENA.safeArea;
+      st.removeProperty('--sa-b'); st.removeProperty('--sa-r');
+      window.__ARENA.relayout();
+      return { dx: before.x - after.x, dy: before.y - after.y, read, restored: window.__ARENA.safeArea };
+    });
+    check('17 セーフエリア分だけHUDが内側へ寄る',
+      sa.read.b === 34 && sa.read.r === 48 &&
+      Math.round(sa.dx) === 48 && Math.round(sa.dy) === 34 &&
+      sa.restored.b === 0 && sa.restored.r === 0,
+      `読取=${sa.read.r}/${sa.read.b} 移動=${Math.round(sa.dx)}/${Math.round(sa.dy)}`);
+
+    // --- バックグラウンドで停止し、復帰後はタップで再開するか ---
+    const pauseRes = await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      return { paused: window.__ARENA.paused, t: window.__ARENA.matchT };
+    });
+    await page.waitForTimeout(900);
+    const whilePaused = await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+      return { paused: window.__ARENA.paused, t: window.__ARENA.matchT };
+    });
+    await page.waitForTimeout(200);
+    await page.mouse.click(420, 420);
+    await page.waitForTimeout(250);
+    const afterTap = await page.evaluate(() => ({ paused: window.__ARENA.paused, t: window.__ARENA.matchT }));
+    check('18 バックグラウンドで一時停止し、復帰後はタップで再開する',
+      pauseRes.paused === true &&
+      Math.abs(whilePaused.t - pauseRes.t) < 0.05 &&     // 停止中は試合時間が進まない
+      whilePaused.paused === true &&                     // 復帰しただけでは再開しない
+      afterTap.paused === false && afterTap.t < whilePaused.t,
+      `停止中の経過=${(whilePaused.t - pauseRes.t).toFixed(3)}s 再開後=${afterTap.t.toFixed(1)}s`);
+
+    // --- iPhone / iPad 相当の各ビューポートで起動・操作でき、アリーナが画面を覆うか ---
+    const DEVICES = [
+      { name: 'iPhone SE 縦', w: 375, h: 667 },
+      { name: 'iPhone 14 Pro 縦', w: 393, h: 852 },
+      { name: 'iPhone 14 Pro 横', w: 852, h: 393 },
+      { name: 'iPad 縦', w: 820, h: 1180 },
+      { name: 'iPad 横', w: 1180, h: 820 }
+    ];
+    const devFails = [];
+    for (const d of DEVICES) {
+      const dp = await browser.newPage({
+        viewport: { width: d.w, height: d.h }, hasTouch: true, isMobile: true
+      });
+      const de = [];
+      dp.on('pageerror', e => de.push(e.message));
+      dp.on('console', m => { if (m.type() === 'error') de.push(m.text()); });
+      await dp.goto(pathToFileURL(TARGET).href, { waitUntil: 'load' });
+      await dp.waitForFunction(() => !!window.__ARENA, null, { timeout: 8000 });
+      await dp.tap('#startBtn');
+      await dp.waitForTimeout(350);
+      await dp.touchscreen.tap(Math.round(d.w * 0.22), Math.round(d.h * 0.72));
+      await dp.touchscreen.tap(Math.round(d.w * 0.72), Math.round(d.h * 0.45));
+      await dp.waitForTimeout(500);
+      const s = await dp.evaluate(() => ({
+        state: window.__ARENA.state, vp: window.__ARENA.viewport,
+        world: window.__ARENA.world, q: window.__ARENA.quality, btn: window.__ARENA.superButton
+      }));
+      // 黒帯が出ない = 拡大率がアリーナで画面を覆う下限を満たしている
+      const covers = s.vp.scale * s.world.w >= s.vp.w - 1 && s.vp.scale * s.world.h >= s.vp.h - 1;
+      const btnInside = s.btn.x + s.btn.r <= d.w && s.btn.y + s.btn.r <= d.h;
+      if (s.state !== 'play' || !covers || !btnInside || !s.q.mobile || de.length) {
+        devFails.push(`${d.name}(state=${s.state} covers=${covers} btn=${btnInside} mobileQ=${s.q.mobile} err=${de.length})`);
+      }
+      if (shotDir) await dp.screenshot({ path: path.join(shotDir, `dev-${d.name.replace(/[ /]/g, '_')}.png`) });
+      await dp.close();
+    }
+    check('19 iPhone / iPad 相当の5ビューポートで起動・操作でき、アリーナが画面を覆う',
+      devFails.length === 0, devFails.join(' | ') || `${DEVICES.length} 構成を実行`);
+
+    check('20 実行中にJavaScript例外が発生しない', errors.length === 0,
       errors.length ? errors.slice(0, 4).join(' | ') : '例外なし');
   } catch (e) {
     record('動的検査', 'FAIL', e.message);
