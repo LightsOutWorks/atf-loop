@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ハッカー・ライト">
+<meta name="theme-color" content="#04060f">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="なぞを とくと ハッキング せいこう。正義のハッカーになって、まちの ひかりを とりもどせ。">
+<title>ハッカー・ライト ― ひかりをとりもどせ</title>
+<style>
+/* ============================================================
+   ハッカー・ライト  ―  ひかりをとりもどせ
+   1ファイル完結 / 外部通信・外部リソースなし / iPhone・iPad 前提
+   ============================================================ */
+
+:root{
+  --bg:      #04060f;
+  --bg2:     #070c1c;
+  --panel:   #0b1226;
+  --panel2:  #101a35;
+  --line:    #1d2b52;
+  --cyan:    #35e8ff;
+  --cyan-d:  #0e94ad;
+  --magenta: #ff3d8b;
+  --yellow:  #ffd23f;
+  --green:   #4dff9f;
+  --text:    #e8f2ff;
+  --dim:     #8ea3c9;
+  --gap:     10px;
+  --keyh:    clamp(31px, 5.3vh, 44px);   /* がめんの たかさに あわせた キーの たかさ */
+  --radius:  12px;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Hiragino Maru Gothic ProN",
+             "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, "Courier New", monospace;
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html,body{
+  margin:0; padding:0; height:100%; width:100%;
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-ui);
+  overflow:hidden; overscroll-behavior:none;
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-text-size-adjust:100%;
+}
+
+/* ---------- 背景演出 ---------- */
+#bg{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #123 0%, transparent 60%),
+    radial-gradient(90% 60% at 10% 110%, #1a0b2a 0%, transparent 65%),
+    linear-gradient(180deg, #04060f 0%, #060a18 55%, #04060f 100%);
+}
+#grid{
+  position:fixed; inset:-20%; z-index:0; pointer-events:none; opacity:.16;
+  background-image:
+    linear-gradient(to right, rgba(53,232,255,.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(53,232,255,.35) 1px, transparent 1px);
+  background-size:44px 44px;
+  transform:perspective(360px) rotateX(58deg) translateY(8%);
+  animation:gridflow 9s linear infinite;
+}
+@keyframes gridflow{ from{background-position:0 0} to{background-position:0 44px} }
+#scan{
+  position:fixed; inset:0; z-index:900; pointer-events:none; opacity:.28;
+  background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.5) 2px 3px);
+  mix-blend-mode:multiply;
+}
+#vig{
+  position:fixed; inset:0; z-index:901; pointer-events:none;
+  box-shadow:inset 0 0 140px rgba(0,0,0,.85);
+}
+#flash{
+  position:fixed; inset:0; z-index:950; pointer-events:none; opacity:0;
+  background:var(--cyan);
+}
+#flash.on{ animation:flashfade .5s ease-out; }
+#flash.ng{ background:var(--magenta); animation:flashfade .35s ease-out; }
+@keyframes flashfade{ from{opacity:.55} to{opacity:0} }
+
+/* ---------- レイアウト ---------- */
+#app{
+  position:fixed; inset:0; z-index:10;
+  display:flex; flex-direction:column;
+  padding-top:env(safe-area-inset-top);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+.wrap{
+  width:100%; max-width:640px; margin:0 auto;
+  display:flex; flex-direction:column; flex:1; min-height:0;
+}
+.screen{ display:flex; flex-direction:column; flex:1; min-height:0; }
+.scroller{
+  flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:12px 14px 8px; overscroll-behavior:contain;
+  /* した に つづきが あることが わかるように、下端を すこし ぼかす */
+  -webkit-mask-image:linear-gradient(180deg, #000 calc(100% - 20px), transparent 100%);
+  mask-image:linear-gradient(180deg, #000 calc(100% - 20px), transparent 100%);
+}
+.scroller.vc{ display:flex; flex-direction:column; }
+.vcin{ margin:auto 0; width:100%; }
+.dock{
+  flex:none; padding:8px 12px calc(10px + env(safe-area-inset-bottom));
+  background:#04060f; border-top:1px solid var(--line);
+}
+
+/* ---------- HUD ---------- */
+#hud{
+  flex:none; display:flex; align-items:center; gap:8px;
+  padding:8px 14px 6px; font-family:var(--font-mono);
+  font-size:11px; letter-spacing:.06em; color:var(--dim);
+  border-bottom:1px solid var(--line);
+}
+#hud .tag{ color:var(--cyan); }
+#hud .spacer{ flex:1; }
+.frags{ display:flex; gap:4px; }
+.frag{
+  width:20px; height:20px; border-radius:5px; border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; color:#2c3c66; background:#070d1e; font-family:var(--font-ui);
+}
+.frag.got{
+  color:var(--yellow); border-color:var(--yellow); background:#241d05;
+  box-shadow:0 0 8px rgba(255,210,63,.5);
+}
+.iconbtn{
+  flex:none; border:1px solid var(--line); background:#070d1e; color:var(--dim);
+  border-radius:8px; padding:5px 9px; font-size:12px; font-family:var(--font-ui);
+  cursor:pointer; touch-action:manipulation; white-space:nowrap;
+}
+.iconbtn:active{ transform:scale(.94); }
+
+/* ---------- 汎用パーツ ---------- */
+.panel{
+  background:linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+  border:1px solid var(--line); border-radius:var(--radius);
+  padding:12px 13px; margin-bottom:9px;
+  box-shadow:0 0 0 1px rgba(53,232,255,.06), 0 8px 24px rgba(0,0,0,.5);
+}
+.kicker{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.18em;
+  color:var(--cyan); margin-bottom:6px; text-transform:uppercase;
+}
+h1,h2,h3{ margin:0; font-weight:800; letter-spacing:.02em; line-height:1.3; }
+h2{ font-size:clamp(17px,4.6vw,22px); }
+h3{ font-size:clamp(15px,4.1vw,18px); }
+p{ margin:0 0 8px; line-height:1.75; font-size:clamp(14px,3.9vw,16.5px); }
+p:last-child{ margin-bottom:0; }
+.note{ font-size:12.5px; color:var(--dim); line-height:1.6; }
+
+.btn{
+  display:block; width:100%; border:none; border-radius:12px;
+  padding:15px 18px; font-family:var(--font-ui); font-weight:800;
+  font-size:clamp(16px,4.4vw,18px); letter-spacing:.06em;
+  color:#04121a; background:linear-gradient(180deg, #6df4ff 0%, var(--cyan) 55%, #12b7d4 100%);
+  box-shadow:0 4px 0 #0a6d80, 0 0 22px rgba(53,232,255,.42);
+  cursor:pointer; touch-action:manipulation;
+}
+.btn:active{ transform:translateY(3px); box-shadow:0 1px 0 #0a6d80, 0 0 14px rgba(53,232,255,.35); }
+.btn.ghost{
+  background:#0a1228; color:var(--cyan); border:1px solid var(--cyan-d);
+  box-shadow:none; font-size:14px; padding:12px;
+}
+.btn.ghost:active{ transform:scale(.97); }
+.btn.warn{
+  background:#170c1a; color:var(--magenta); border:1px solid #63234a;
+  box-shadow:none; font-size:13px; padding:10px;
+}
+.btn[disabled]{ opacity:.35; pointer-events:none; }
+.btnrow{ display:flex; gap:8px; }
+.btnrow > *{ flex:1; }
+
+/* ---------- タイトル ---------- */
+#titleScreen .scroller{ display:flex; flex-direction:column; text-align:center; }
+.logo{
+  font-family:var(--font-mono); font-weight:700; letter-spacing:.22em;
+  font-size:clamp(11px,3.1vw,14px); color:var(--cyan); margin-bottom:10px;
+}
+.bigtitle{
+  font-size:clamp(28px,8.4vw,44px); font-weight:900; line-height:1.16;
+  letter-spacing:.01em; margin:0 0 4px;
+  background:linear-gradient(180deg,#ffffff 0%, #9ef6ff 45%, var(--cyan) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 16px rgba(53,232,255,.55));
+  position:relative;
+}
+.bigtitle.glitch::after{
+  content:attr(data-t); position:absolute; left:0; top:0; width:100%;
+  background:linear-gradient(180deg,#ff9ec8,var(--magenta));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:glitch 3.4s steps(1) infinite; opacity:.75;
+}
+@keyframes glitch{
+  0%,92%,100%{ transform:translate(0,0); opacity:0 }
+  93%{ transform:translate(-3px,1px); opacity:.8 }
+  95%{ transform:translate(3px,-2px); opacity:.7 }
+  97%{ transform:translate(-2px,-1px); opacity:.6 }
+}
+.subtitle{ font-size:clamp(13px,3.7vw,16px); color:var(--dim); margin:10px 0 22px; line-height:1.7; }
+
+/* ---------- ストーリー ---------- */
+.speaker{
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+  font-family:var(--font-mono); font-size:11.5px; letter-spacing:.1em;
+}
+.avatar{
+  width:30px; height:30px; border-radius:50%; flex:none;
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+  border:1px solid var(--line); background:#0a1128;
+}
+.who-luna .avatar{ border-color:var(--cyan); box-shadow:0 0 12px rgba(53,232,255,.5); }
+.who-luna .nm{ color:var(--cyan); }
+.who-doc .avatar{ border-color:var(--magenta); box-shadow:0 0 12px rgba(255,61,139,.5); }
+.who-doc .nm{ color:var(--magenta); }
+.who-hakase .avatar{ border-color:var(--green); box-shadow:0 0 12px rgba(77,255,159,.45); }
+.who-hakase .nm{ color:var(--green); }
+.storytext{
+  font-size:clamp(15px,4.2vw,18px); line-height:1.95; min-height:5.2em;
+  letter-spacing:.01em;
+}
+.storytext.narr{ color:#c8d8f2; font-style:normal; }
+.caret{
+  display:inline-block; width:.5em; height:1.05em; vertical-align:-.18em;
+  background:var(--cyan); margin-left:2px; animation:blink 1s steps(1) infinite;
+}
+@keyframes blink{ 50%{ opacity:0 } }
+.tapnext{
+  text-align:right; font-family:var(--font-mono); font-size:11px;
+  color:var(--cyan); animation:pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse{ 50%{ opacity:.25 } }
+
+/* ミッションカード */
+.missioncard{
+  border:1px solid var(--cyan); border-radius:var(--radius);
+  padding:18px 16px; text-align:center; margin-bottom:12px;
+  background:linear-gradient(180deg, rgba(53,232,255,.13), rgba(53,232,255,.02));
+  box-shadow:0 0 26px rgba(53,232,255,.22) inset, 0 0 20px rgba(53,232,255,.14);
+  animation:cardin .45s ease-out;
+}
+@keyframes cardin{ from{ opacity:0; transform:translateY(12px) scale(.97) } }
+.missioncard .no{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.28em; color:var(--cyan);
+}
+.missioncard .nmx{ font-size:clamp(19px,5.4vw,26px); font-weight:900; margin-top:6px; }
+
+/* ---------- パズル ---------- */
+.target{
+  font-family:var(--font-mono); font-size:11px; color:var(--magenta);
+  letter-spacing:.08em; margin-bottom:8px;
+}
+.qbody{ font-size:clamp(14.5px,4.1vw,17px); line-height:1.8; }
+.stage{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+  gap:12px; padding:12px 6px; margin:8px 0 4px;
+  background:#050a18; border:1px dashed var(--line); border-radius:10px;
+  min-height:70px;
+}
+.emo{ font-size:clamp(46px,13vw,72px); line-height:1; filter:drop-shadow(0 0 12px rgba(53,232,255,.35)); }
+.plus{ font-size:26px; color:var(--cyan); font-weight:900; }
+
+.eqlist{ font-family:var(--font-mono); font-size:clamp(16px,4.6vw,20px); line-height:2.1; text-align:center; letter-spacing:.06em; }
+.eqlist b{ color:var(--yellow); }
+.qmark{ color:var(--magenta); font-weight:900; }
+
+/* 半分だけ見える文字 */
+.halfbox{
+  width:100%; display:flex; justify-content:center; align-items:flex-start;
+  overflow:hidden; padding:6px 0 0;
+}
+.halfchars{
+  font-size:clamp(44px,13.5vw,78px); font-weight:900; line-height:1;
+  letter-spacing:.06em; color:#0ff; white-space:nowrap;
+  text-shadow:0 0 14px rgba(53,232,255,.75);
+  clip-path:inset(0 0 var(--cut,50%) 0);
+  -webkit-clip-path:inset(0 0 var(--cut,50%) 0);
+  transition:clip-path .5s ease;
+}
+.noise{
+  height:10px; margin-top:2px;
+  background:repeating-linear-gradient(90deg,#0b1a2e 0 6px,#132a44 6px 9px);
+  opacity:.7; border-radius:2px;
+}
+
+/* 五十音表 */
+/* キーボードと おなじ むき（よこ＝ぎょう / たて＝だん）で ならべる */
+.gojuon{
+  --cell:clamp(21px,7.1vw,34px);
+  display:grid; grid-template-columns:repeat(11, var(--cell));
+  gap:3px; justify-content:center; margin:8px auto 2px;
+  font-family:var(--font-ui);
+}
+.gojuon div{
+  height:var(--cell); display:flex; align-items:center; justify-content:center;
+  font-size:clamp(13px,3.6vw,17px); border-radius:5px;
+  background:#0a1228; border:1px solid #16224a; color:var(--text);
+}
+.gojuon div.hd{ background:#101c3c; color:var(--cyan); font-family:var(--font-mono); font-size:11px; }
+.gojuon div.empty{ background:transparent; border-color:transparent; }
+.codeline{
+  font-family:var(--font-mono); text-align:center; letter-spacing:.12em;
+  font-size:clamp(18px,5.6vw,28px); color:var(--yellow); margin:2px 0 2px;
+  text-shadow:0 0 12px rgba(255,210,63,.45);
+}
+
+/* たてよみメッセージ */
+.msgbox{
+  background:#0e0616; border:1px solid #4b1c3a; border-radius:10px;
+  padding:14px 12px; margin:8px 0 2px;
+}
+.msgbox .ln{
+  font-size:clamp(14px,4.1vw,17.5px); line-height:2.05; color:#ffd7ea;
+  letter-spacing:.04em;
+}
+
+/* 選択肢 */
+.choices{ display:flex; flex-direction:column; gap:8px; }
+.choice{
+  display:flex; align-items:center; gap:10px; width:100%;
+  background:#0a1228; border:1px solid var(--line); border-radius:11px;
+  padding:12px 13px; color:var(--text); font-family:var(--font-ui);
+  font-size:clamp(15px,4.2vw,18px); font-weight:700; cursor:pointer;
+  text-align:left; touch-action:manipulation;
+}
+.choice .lb{
+  flex:none; width:26px; height:26px; border-radius:7px; background:#16224a;
+  color:var(--cyan); font-family:var(--font-mono); font-size:12px;
+  display:flex; align-items:center; justify-content:center;
+}
+.choice.sel{
+  border-color:var(--cyan); background:#0d2338;
+  box-shadow:0 0 16px rgba(53,232,255,.32);
+}
+.choice.sel .lb{ background:var(--cyan); color:#04121a; }
+.choice:active{ transform:scale(.985); }
+.choice svg{ flex:none; }
+
+/* カード並べ */
+.chain{
+  display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+  padding:10px; background:#050a18; border:1px dashed var(--line);
+  border-radius:10px; margin-bottom:9px; min-height:56px;
+}
+.chip{
+  padding:8px 11px; border-radius:9px; font-weight:800;
+  font-size:clamp(13px,3.7vw,16px); background:#0d2338;
+  border:1px solid var(--cyan); color:var(--cyan);
+  box-shadow:0 0 10px rgba(53,232,255,.25);
+}
+.chip.fixed{ background:#141c33; border-color:#33456f; color:var(--dim); box-shadow:none; }
+.chip.slot{
+  background:transparent; border:1px dashed #2b3c68; color:#2b3c68;
+  min-width:52px; text-align:center;
+}
+.arrow{ color:#3a4c78; font-size:14px; }
+.pool{ display:flex; flex-wrap:wrap; gap:8px; }
+.card{
+  padding:11px 14px; border-radius:11px; font-weight:800;
+  font-size:clamp(14px,4vw,17px); background:#101a35;
+  border:1px solid var(--line); color:var(--text); cursor:pointer;
+  touch-action:manipulation;
+}
+.card:active{ transform:scale(.95); }
+.card.used{ opacity:.22; pointer-events:none; }
+.card.tile{ min-width:52px; text-align:center; font-size:clamp(19px,5.4vw,24px); }
+
+/* ---------- 入力 ---------- */
+.answerbar{
+  display:flex; align-items:center; gap:8px;
+  background:#050a18; border:1px solid var(--cyan-d); border-radius:11px;
+  padding:9px 11px; margin-bottom:8px;
+  box-shadow:0 0 16px rgba(53,232,255,.14) inset;
+}
+.answerbar .pfx{ font-family:var(--font-mono); color:var(--cyan-d); font-size:14px; }
+.answerbar .val{
+  flex:1; font-size:clamp(21px,6.2vw,27px); font-weight:800; letter-spacing:.16em;
+  color:var(--cyan); min-height:1.35em; text-shadow:0 0 10px rgba(53,232,255,.5);
+  overflow:hidden; white-space:nowrap;
+}
+.dock.folded #btnFold{
+  border-color:var(--cyan); color:var(--cyan); background:#0d2338;
+  animation:nudgec 1.8s ease-in-out infinite;
+}
+@keyframes nudgec{ 50%{ box-shadow:0 0 16px rgba(53,232,255,.6) } }
+.dock.folded .answerbar .val:empty::after{
+  content:"▲ をおしてね";
+  font-size:12.5px; font-weight:700; letter-spacing:.02em;
+  color:#4a6a95; text-shadow:none;
+}
+.answerbar.shake{ animation:shake .4s; border-color:var(--magenta); }
+@keyframes shake{
+  0%,100%{ transform:translateX(0) } 20%{ transform:translateX(-8px) }
+  40%{ transform:translateX(8px) } 60%{ transform:translateX(-5px) } 80%{ transform:translateX(5px) }
+}
+/* キーボードを たたむと、もんだいが ひろく 見える */
+.dock.folded .kbd{ display:none; }
+.kbd{ display:grid; gap:3px; }
+.kbd.kana{ grid-template-columns:repeat(10,1fr); }
+.kbd.num{ grid-template-columns:repeat(5,1fr); gap:6px; }
+.key{
+  height:var(--keyh); border-radius:7px; border:1px solid #1b2a52; background:#0e1731;
+  color:var(--text); font-family:var(--font-ui); font-weight:700;
+  font-size:clamp(14px,4.1vw,17px); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; touch-action:manipulation; padding:0;
+}
+.kbd.num .key{ height:calc(var(--keyh) * 1.12); font-family:var(--font-mono); font-size:20px; }
+.key:active{ background:var(--cyan); color:#04121a; transform:scale(.94); }
+.key.void{ background:transparent; border-color:transparent; pointer-events:none; }
+.key.fn{ background:#182444; color:var(--cyan); font-size:13px; flex-direction:column; gap:0; line-height:1.05; }
+.key.fn .mk{ font-size:19px; font-weight:900; }
+.key.fn small{ font-size:9.5px; opacity:.85; letter-spacing:.02em; }
+.kbd.util{ grid-template-columns:repeat(5,1fr); margin-top:3px; }
+
+.hackbtn{
+  margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.hackbtn .ic{ font-size:15px; }
+
+/* ヒント */
+.hintwrap{ margin-top:2px; }
+.hintitem{
+  background:#141005; border:1px solid #5c4a12; border-radius:10px;
+  padding:10px 12px; margin-bottom:6px; font-size:13.5px; line-height:1.7;
+  color:#ffe9a8; animation:cardin .3s ease-out;
+}
+.hintitem b{ color:var(--yellow); }
+.hintbtn{
+  width:100%; background:#141005; border:1px solid #5c4a12; color:var(--yellow);
+  border-radius:10px; padding:11px; font-family:var(--font-ui); font-weight:700;
+  font-size:13.5px; cursor:pointer; touch-action:manipulation;
+}
+.hintbtn:active{ transform:scale(.98); }
+.hintbtn.nudge{ animation:nudge 1.1s ease-in-out infinite; }
+@keyframes nudge{ 50%{ box-shadow:0 0 18px rgba(255,210,63,.55) } }
+.luna-say{
+  display:flex; gap:8px; align-items:flex-start; margin-top:8px;
+  background:#0a1a24; border:1px solid #14506a; border-radius:10px; padding:10px 12px;
+  font-size:13.5px; line-height:1.7; color:#bdf1ff; animation:cardin .3s ease-out;
+}
+.luna-say .av{ font-size:16px; }
+
+/* ---------- 成功演出 ---------- */
+.granted{
+  text-align:center; padding:22px 12px; animation:cardin .4s ease-out;
+}
+.granted .big{
+  font-family:var(--font-mono); font-size:clamp(20px,6.4vw,30px); font-weight:800;
+  letter-spacing:.12em; color:var(--green);
+  text-shadow:0 0 18px rgba(77,255,159,.7);
+}
+.granted .sub{ color:var(--dim); font-size:12px; font-family:var(--font-mono); margin-top:6px; letter-spacing:.1em; }
+.bar{
+  height:8px; border-radius:4px; background:#0d1730; overflow:hidden;
+  border:1px solid var(--line); margin:14px 0 4px;
+}
+.bar > i{
+  display:block; height:100%; width:0%;
+  background:linear-gradient(90deg,var(--cyan),var(--green));
+  box-shadow:0 0 12px rgba(77,255,159,.7);
+  animation:fill 1.1s cubic-bezier(.2,.9,.2,1) forwards;
+}
+@keyframes fill{ to{ width:100% } }
+.explain{
+  background:#06180f; border:1px solid #17603a; border-radius:11px;
+  padding:13px; margin-top:10px; font-size:14px; line-height:1.85; color:#c9ffe3;
+}
+.explain .h{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+  color:var(--green); margin-bottom:6px;
+}
+.fragget{
+  text-align:center; margin:14px 0 4px; animation:cardin .5s ease-out;
+}
+.fragget .fx{
+  display:inline-flex; width:74px; height:74px; align-items:center; justify-content:center;
+  font-size:38px; font-weight:900; color:#1b1400; border-radius:16px;
+  background:linear-gradient(180deg,#ffe98a,var(--yellow));
+  box-shadow:0 0 34px rgba(255,210,63,.75);
+  animation:pop .55s cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes pop{ from{ transform:scale(.3) rotate(-14deg); opacity:0 } }
+.fragget .cap{ font-family:var(--font-mono); font-size:11px; color:var(--yellow); letter-spacing:.14em; margin-top:8px; }
+
+/* ---------- エンディング ---------- */
+.stats{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0;
+}
+.stat{ background:#0a1228; border:1px solid var(--line); border-radius:10px; padding:10px 6px; text-align:center; }
+.stat .k{ font-family:var(--font-mono); font-size:9.5px; color:var(--dim); letter-spacing:.1em; }
+.stat .v{ font-size:19px; font-weight:900; color:var(--cyan); margin-top:3px; }
+.rank{ text-align:center; font-size:clamp(22px,6.6vw,30px); font-weight:900; color:var(--yellow);
+  text-shadow:0 0 20px rgba(255,210,63,.6); margin:6px 0 2px; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  #grid{ animation:none; }
+}
+
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="grid"></div>
+<div id="scan"></div>
+<div id="vig"></div>
+<div id="flash"></div>
+
+<div id="app"><div class="wrap">
+  <div id="hud" style="display:none">
+    <span class="tag" id="hudMission">MISSION 01</span>
+    <span class="spacer"></span>
+    <span class="frags" id="hudFrags"></span>
+    <button class="iconbtn" id="btnSound" type="button">♪</button>
+  </div>
+  <div id="view" class="screen"></div>
+</div></div>
+
+<script>
+"use strict";
+/* ============================================================
+   0. ちいさな道具
+   ============================================================ */
+const $  = (s, r=document) => r.querySelector(s);
+const view = $("#view");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v===null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+/* ---------- 音（コード生成のみ・外部ファイルなし） ---------- */
+const Snd = {
+  ctx:null, on: store.get("jh_sound", true),
+  init(){
+    if (this.ctx) return;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+    }catch(e){ this.ctx = null; }
+  },
+  resume(){ if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); },
+  tone(freq, dur, type, vol, delay){
+    if (!this.on || !this.ctx) return;
+    const t0 = this.ctx.currentTime + (delay||0);
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type||"square"; o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol||0.08, t0+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+(dur||0.1));
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t0); o.stop(t0+(dur||0.1)+0.03);
+  },
+  sweep(f1, f2, dur, vol){
+    if (!this.on || !this.ctx) return;
+    const t0 = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(f1, t0);
+    o.frequency.exponentialRampToValueAtTime(f2, t0+dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol||0.06, t0+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t0); o.stop(t0+dur+0.05);
+  },
+  blip(){ this.tone(1180, 0.05, "square", 0.045); },
+  tick(){ this.tone(720, 0.035, "square", 0.03); },
+  ok(){ [880,1174,1568].forEach((f,i)=>this.tone(f,0.16,"triangle",0.09,i*0.075)); },
+  ng(){ this.tone(180, 0.22, "sawtooth", 0.06); this.tone(120, 0.28, "square", 0.05, 0.05); },
+  hack(){ this.sweep(180, 2200, 0.55, 0.05); [523,659,784,1046].forEach((f,i)=>this.tone(f,0.22,"triangle",0.08,0.35+i*0.09)); },
+  frag(){ [1046,1318,1568,2093].forEach((f,i)=>this.tone(f,0.2,"sine",0.08,i*0.08)); },
+  win(){ [523,659,784,1046,784,1046,1318].forEach((f,i)=>this.tone(f,0.3,"triangle",0.09,i*0.16)); }
+};
+
+function flash(kind){
+  const f = $("#flash");
+  f.className = "";
+  void f.offsetWidth;
+  f.className = kind === "ng" ? "ng" : "on";
+}
+
+/* ============================================================
+   1. なぞなぞデータ
+   ============================================================ */
+
+/* --- 7セグ（ひかりの ぼう）を SVG で描く --- */
+const SEGMAP = {
+  "0":"abcdef", "1":"bc", "2":"abged", "3":"abgcd", "4":"fgbc",
+  "5":"afgcd", "6":"afgedc", "7":"abc", "8":"abcdefg", "9":"abcdfg"
+};
+const SEGRECT = {
+  a:[13,5,34,9], b:[47,12,9,34], c:[47,54,9,34], d:[13,91,34,9],
+  e:[4,54,9,34],  f:[4,12,9,34],  g:[13,48,34,9]
+};
+function svgDigit(ch, h){
+  const on = SEGMAP[ch] || "";
+  let r = "";
+  for (const k in SEGRECT){
+    const [x,y,w,hh] = SEGRECT[k];
+    const lit = on.indexOf(k) >= 0;
+    r += `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="4" fill="${lit?"#35e8ff":"#16233f"}" opacity="${lit?1:0.5}"/>`;
+  }
+  return `<svg viewBox="0 0 60 105" height="${h}" width="${h*60/105}" style="filter:drop-shadow(0 0 6px rgba(53,232,255,.5))" aria-hidden="true">${r}</svg>`;
+}
+function svgOp(op, h){
+  let r = "";
+  if (op === "+") r = `<rect x="10" y="48" width="40" height="9" rx="4" fill="#ffd23f"/><rect x="25.5" y="32.5" width="9" height="40" rx="4" fill="#ffd23f"/>`;
+  if (op === "-") r = `<rect x="10" y="48" width="40" height="9" rx="4" fill="#ffd23f"/>`;
+  if (op === "=") r = `<rect x="10" y="36" width="40" height="9" rx="4" fill="#8ea3c9"/><rect x="10" y="62" width="40" height="9" rx="4" fill="#8ea3c9"/>`;
+  return `<svg viewBox="0 0 60 105" height="${h}" width="${h*60/105}" style="filter:drop-shadow(0 0 6px rgba(255,210,63,.45))" aria-hidden="true">${r}</svg>`;
+}
+function svgEq(str, h){
+  let out = `<span style="display:inline-flex;align-items:center;gap:${Math.round(h*0.04)}px">`;
+  for (const ch of str){
+    out += (ch === "+" || ch === "-" || ch === "=") ? svgOp(ch, h) : svgDigit(ch, h);
+  }
+  return out + "</span>";
+}
+
+/* --- 五十音表（暗号用・キーボード用の共通データ） --- */
+const GYO = [
+  ["あ","い","う","え","お"],
+  ["か","き","く","け","こ"],
+  ["さ","し","す","せ","そ"],
+  ["た","ち","つ","て","と"],
+  ["な","に","ぬ","ね","の"],
+  ["は","ひ","ふ","へ","ほ"],
+  ["ま","み","む","め","も"],
+  ["や","",  "ゆ","",  "よ"],
+  ["ら","り","る","れ","ろ"],
+  ["わ","",  "",  "",  "を"]
+];
+function gojuonTable(){
+  let h = `<div class="gojuon"><div class="hd empty"></div>`;
+  for (let g=1; g<=10; g++) h += `<div class="hd">${g}</div>`;   // よこ＝ぎょう ばんごう
+  for (let d=0; d<5; d++){
+    h += `<div class="hd">${d+1}</div>`;                          // たて＝だん ばんごう
+    for (let g=0; g<10; g++){
+      const c = GYO[g][d];
+      h += c ? `<div>${c}</div>` : `<div class="empty"></div>`;
+    }
+  }
+  return h + `</div>`;
+}
+
+/* --- なぞなぞ本体 --- */
+const PUZZLES = {
+
+  p1: {
+    target:"TARGET : げんかんゲート / ロック A",
+    title:"カギを つくれ",
+    body:"ロックの がめんに、えが 2つ。<br>2つの えの なまえの <b>さいしょの 1もじ</b>を つなげろ！",
+    visual: `<div class="stage"><span class="emo">🌂</span><span class="plus">＋</span><span class="emo">🥛</span></div>
+             <p class="note">※ ひらがなの なまえで かんがえてね。</p>`,
+    input:{ type:"kana" },
+    answer:["かぎ"],
+    hints:[
+      "えの なまえを、こえに だして よんでみよう。",
+      "🥛 は「ミルク」じゃなくて <b>ぎゅうにゅう</b>。さいしょの もじは「ぎ」だね。",
+      "「かさ」の <b>か</b> ＋「ぎゅうにゅう」の <b>ぎ</b>。2もじの ことばだよ。"
+    ],
+    explain:"かさ の「<b>か</b>」＋ ぎゅうにゅう の「<b>ぎ</b>」＝ <b>かぎ</b>。<br>ゲートを あける カギは、えの なかに かくれていた！"
+  },
+
+  p2: {
+    target:"TARGET : げんかんゲート / ロック B",
+    title:"どうぶつの なかの すうじ",
+    body:"ロックに、ふしぎな しきが かいてある。<br>おなじ ルールで、こたえを だせ！",
+    visual: `<div class="stage"><div class="eqlist">
+        シカ　＝　<b>4</b><br>
+        クジラ　＝　<b>9</b><br>
+        ニワトリ　＝　<b>2</b><br>
+        <span style="opacity:.5">─────────</span><br>
+        ゴリラ　＋　ハチ　＝　<span class="qmark">？</span>
+      </div></div>`,
+    input:{ type:"number" },
+    answer:["13"],
+    hints:[
+      "どうぶつの なまえの <b>さいしょの おと</b>だけを 見てみよう。",
+      "シ＝4、ク＝9、ニ＝2 …… なまえの なかに <b>すうじの よみかた</b>が かくれている！",
+      "ゴリラ の「ゴ」は 5。ハチ は そのまま 8。あとは たしざん。"
+    ],
+    explain:"<b>シ</b>カ＝4、<b>ク</b>ジラ＝9、<b>ニ</b>ワトリ＝2。<br>なまえの あたまに すうじが かくれていた！<br><b>ゴ</b>リラ＝5、<b>ハチ</b>＝8 だから、5＋8＝<b>13</b>。"
+  },
+
+  p3: {
+    target:"TARGET : かんしカメラ / にんしょう",
+    title:"1つだけ なかまはずれ",
+    body:"カメラの ロックに、4つの ことばが ならんでいる。<br>この なかに、<b>1つだけ なかまはずれ</b>が いる。どれ？",
+    visual:"",
+    input:{ type:"choice", options:[
+      { key:"A", label:"しんぶんし" },
+      { key:"B", label:"みかん" },
+      { key:"C", label:"トマト" },
+      { key:"D", label:"たけやぶやけた" }
+    ]},
+    answer:["B"],
+    hints:[
+      "こえに 出して、ゆっくり よんでみよう。",
+      "こんどは <b>うしろから</b> よんでみて。",
+      "「しんぶんし」を うしろから よむと …… しんぶんし。あれ、おなじだ！"
+    ],
+    explain:"うしろから よんでも おなじ ことばを「かいぶん」という。<br>しんぶんし → しんぶんし ○<br>トマト → トマト ○<br>たけやぶやけた → たけやぶやけた ○<br><b>みかん → んかみ ×</b><br>なかまはずれは <b>みかん</b>！"
+  },
+
+  p4: {
+    target:"TARGET : かんしカメラ / えいぞう ふくげん",
+    title:"うえ はんぶんの メッセージ",
+    body:"かべの もじが、<b>うえ はんぶん</b>しか うつっていない。<br>なんて かいてある？",
+    visual: `<div class="stage" style="flex-direction:column;gap:0;padding:18px 8px 14px">
+        <div class="halfbox"><div class="halfchars" id="halfChars">たすけて</div></div>
+        <div class="noise" style="width:78%"></div>
+      </div>`,
+    input:{ type:"kana" },
+    answer:["たすけて"],
+    hints:[
+      "したはんぶんを、あたまの なかで そうぞうして みよう。",
+      "4もじ。だれかが こまっていて、きみを よんでいる ことば。",
+      "えいぞうを すこし ふくげんした！（もう ちょっと 下まで 見えるように なったよ）"
+    ],
+    onHint:function(i){ if (i === 2) { const e = $("#halfChars"); if (e) e.style.setProperty("--cut","30%"); } },
+    explain:"こたえは <b>たすけて</b>。<br>もじは うえ はんぶんだけでも、けっこう よめるんだ。<br>とじこめられているのは —— ミナミはかせ だ！"
+  },
+
+  p5: {
+    target:"TARGET : データきんこ / かいだん",
+    title:"1本だけ うごかせ",
+    body:"ひかりの ぼうで できた しき。でも まちがっている。<br><b>ぼうを 1本だけ うごかして</b>、ただしい しきに するには？",
+    visualFn:function(){
+      return `<div class="stage">${svgEq("5+7=2", 62)}</div>`;
+    },
+    input:{ type:"choice", optionsFn:function(){
+      return [
+        { key:"A", html: svgEq("6-7=2", 34) },
+        { key:"B", html: svgEq("9-7=2", 34) },
+        { key:"C", html: svgEq("5+7=12", 34) }
+      ];
+    }},
+    answer:["B"],
+    hints:[
+      "「＋」を よく 見て。たてぼう が 1本 あるよね。",
+      "たてぼうを ぬくと「＋」は「－」に なる。その 1本を <b>どこに たす</b>と いいかな？",
+      "「5」に <b>みぎうえ</b>の 1本を たすと …… なんの すうじに なる？"
+    ],
+    explain:"「＋」の <b>たてぼう 1本</b>を、「5」の みぎうえに うつす。<br>すると「＋」は「－」に、「5」は「<b>9</b>」に かわる。<br>→ <b>9 － 7 ＝ 2</b>。せいかい！<br>（A は うごかせるけど けいさんが まちがい。C は ぼうを <b>ふやして</b> いるので ルールいはん。）"
+  },
+
+  p6: {
+    target:"TARGET : データきんこ / メインロック",
+    title:"すうじの あんごう",
+    body:"ひょうを つかって、あんごうを よみとけ！",
+    visualFn:function(){
+      return `<div class="stage" style="flex-direction:column;gap:4px;padding:12px 4px">
+        <div class="codeline">6-2 ／ 9-1 ／ 2-4</div>
+        ${gojuonTable()}
+        <p class="note" style="margin-top:6px;text-align:center">
+          【れい】 2-1 ＝「か」　　4-5 ＝「と」
+        </p>
+      </div>`;
+    },
+    input:{ type:"kana", foldFirst:true },
+    answer:["ひらけ"],
+    hints:[
+      "まえの すうじは <b>うえの ばんごう</b>、うしろの すうじは <b>ひだりの ばんごう</b>だよ。",
+      "「6-2」は …… うえの「6」の れつ（は・ひ・ふ・へ・ほ）の、うえから 2ばんめ。つまり「ひ」！",
+      "「ひ」「ら」…… あと 1もじ。「2-4」は（か・き・く・け・こ）の 4ばんめ。"
+    ],
+    explain:"6-2＝<b>ひ</b>、9-1＝<b>ら</b>、2-4＝<b>け</b>。<br>あわせて <b>ひらけ</b>！<br>ロックの あいことばは、まさかの めいれいだった。"
+  },
+
+  p7: {
+    target:"TARGET : ファイアウォール / ゲート 1",
+    title:"しりとりで つなげ",
+    body:"ゲートは <b>しりとり</b>で ひらく。スタートは「かぎ」。<br>カードを タップして、しりとりの じゅんに 5まい ならべろ！<br><b>1まいだけ、ぜったいに つかえない カードが まざっている。</b>",
+    visual:"",
+    input:{ type:"order", variant:"chain", head:"かぎ", slots:5,
+      cards:["まくら","がっこう","うどん","ぎんが","らっこ","うま"] },
+    answer:[["ぎんが","がっこう","うま","まくら","らっこ"]],
+    hints:[
+      "スタートは「かぎ」。つぎは「<b>ぎ</b>」から はじまる カードだよ。",
+      "しりとりの ルールを おもいだして。<b>「ん」で おわる ことば</b>を つかったら、そこで おしまい！",
+      "ぎんが → がっこう → …… つぎは「う」から はじまる カードが 2まい ある。つかえるのは どっち？"
+    ],
+    explain:"かぎ → <b>ぎんが</b> → <b>がっこう</b> → <b>うま</b> → <b>まくら</b> → <b>らっこ</b>。<br>「うどん」は <b>「ん」で おわる</b>から、しりとりでは つかえない ワナの カード！"
+  },
+
+  p8: {
+    target:"TARGET : ファイアウォール / さいごの とびら",
+    title:"3つの いみを もつ ことば",
+    body:"とびらの あいことばは、<b>3つの いみ</b>を もつ ひとつの ことば。<br>ヒントを 見て、その ことばを こたえろ！",
+    visual: `<div class="stage" style="flex-direction:column;align-items:flex-start;gap:8px;padding:16px 18px">
+        <p style="margin:0">① ごはんを たべる ときに つかう もの</p>
+        <p style="margin:0">② かわの こっちがわと むこうがわを つなぐ もの</p>
+        <p style="margin:0">③ ものの いちばん おわりの ところ</p>
+      </div>`,
+    input:{ type:"kana" },
+    answer:["はし"],
+    hints:[
+      "3つ とも、<b>おなじ よみかた</b>の ことばだよ。",
+      "ひらがなで <b>2もじ</b>。",
+      "① は 2本で 1くみ。「お○○」とも いうね。"
+    ],
+    explain:"こたえは <b>はし</b>。<br>① おはし（箸）　② はし（橋）　③ はし（端）<br>おとが おなじでも、いみが ぜんぜん ちがう ことばが あるんだ。"
+  },
+
+  p9: {
+    target:"TARGET : ドクター・ナイトメア / ちょうはつ メッセージ",
+    title:"ボスの メッセージ",
+    body:"ドクターからの メッセージ。この なかに、ドクター じしんが <b>きづいていない ことば</b>が かくれている。それは なに？",
+    visual: `<div class="msgbox">
+        <div class="ln">ひとりで なにが できる？</div>
+        <div class="ln">かえりなさい、こどもは ねる じかんだ。</div>
+        <div class="ln">りっぱな ゆめも、やみの まえでは きえる。</div>
+      </div>`,
+    input:{ type:"kana" },
+    answer:["ひかり"],
+    hints:[
+      "よこに よむだけじゃ ないよ。<b>見る むきを かえて</b>みよう。",
+      "それぞれの ぎょうの、<b>さいしょの 1もじ</b>だけを あつめてみて。",
+      "「<b>ひ</b>とりで」「<b>か</b>えりなさい」「<b>り</b>っぱな」…… たてに よむと？"
+    ],
+    explain:"たてに よむと —— <b>ひ・か・り</b>。<br>ドクターは、じぶんの ちょうはつの なかに、<br>じぶんが いちばん おそれている ことばを かいていた。"
+  },
+
+  p10: {
+    target:"TARGET : さいしゅうロック / こころの パスワード",
+    title:"さいごの ならべかえ",
+    body:"さいしゅうロックは「こころの パスワード」。<br>あつめた <b>5つの かけら</b>を ならべかえて、<br>きみが ここまで たたかってきた <b>りゆう</b>を ことばに しろ！",
+    visual:"",
+    input:{ type:"order", variant:"word", slots:5,
+      cards:["り","い","ま","た","も"] },
+    answer:[["ま","も","り","た","い"]],
+    hints:[
+      "きみは なんのために、ここまで きたんだっけ？",
+      "5もじの ことば。さいしょの 2もじは「<b>まも</b>」。",
+      "ま・も・○・○・○ …… 「○○りたい」。"
+    ],
+    explain:"<b>まもりたい</b>。<br>それが、きみが ハッカーに なった りゆう。<br>そして —— それが きみの ちからの なまえだ。"
+  }
+};
+
+/* ============================================================
+   2. シーン（ストーリーの ながれ）
+   ============================================================ */
+const L  = (t) => ({ who:"ルナ", cls:"luna", av:"◕", t });
+const N  = (t) => ({ who:"",     cls:"narr", av:"",  t });
+const D  = (t) => ({ who:"ドクター・ナイトメア", cls:"doc", av:"☠", t });
+const H  = (t) => ({ who:"ミナミはかせ", cls:"hakase", av:"🔬", t });
+
+const SCENES = [
+  { type:"title" },
+
+  { type:"story", head:"PROLOGUE", lines:[
+    N("よる 9じ。まちの あかりが、いっせいに きえた。"),
+    N("しんごうも、びょういんも、がっこうも —— ぜんぶ とまった。"),
+    N("はんにんは「ナイトメア団」。まちじゅうの コンピューターを のっとった、わるい やつらだ。"),
+    N("でも、たった 1だいだけ。まだ いきている パソコンが あった。"),
+    N("…… きみの へやの、その パソコンだ。"),
+    L("つながった！ はじめまして、ライト。わたしは ルナ。きみの あいぼうAIだよ。"),
+    L("ナイトメア団の コンピューターには、ぜんぶ「なぞなぞロック」が かかってるの。"),
+    L("なぞを とけば、ハッキング せいこう。まちを とりもどせる！"),
+    L("コツは ひとつ。<b>あたまを やわらかく</b>。ふつうに かんがえたら、ぜったいに とけないよ。"),
+    L("いくよ、ライト。ミッション かいし！")
+  ]},
+
+  /* ---- MISSION 01 ---- */
+  { type:"story", mission:1, missionName:"アジトの げんかんゲート", lines:[
+    L("ここが ナイトメア団の アジト。まずは げんかんの ゲートを あけよう。"),
+    L("ロックの がめんに、へんな えが 2つ うつってる……。")
+  ]},
+  { type:"puzzle", p:"p1" },
+  { type:"story", lines:[
+    L("ゲートが はんぶん ひらいた！ ……でも、まだ ロックが もう1つ ある。"),
+    L("こんどは すうじの しき みたい。")
+  ]},
+  { type:"puzzle", p:"p2" },
+  { type:"clear", mission:1, frag:"り", lines:[
+    L("ゲート とっぱ！ ……ん？ なにか おちてる。"),
+    L("「コードのかけら」だ。5つ あつめると、なにかに なるらしいよ。だいじに もっておこう！")
+  ]},
+
+  /* ---- MISSION 02 ---- */
+  { type:"story", mission:2, missionName:"かんしカメラを ジャック", lines:[
+    L("アジトの なかは まっくら。かんしカメラを のっとって、なかを のぞこう。"),
+    L("カメラの ロックは …… ことばあそび みたい。")
+  ]},
+  { type:"puzzle", p:"p3" },
+  { type:"story", lines:[
+    L("カメラ ジャック せいこう！ えいぞうが うつる……。"),
+    L("だれかが とじこめられてる！ かべに もじを かいてる —— でも、うえ はんぶんしか うつらない！")
+  ]},
+  { type:"puzzle", p:"p4" },
+  { type:"clear", mission:2, frag:"た", lines:[
+    L("「たすけて」…… あの人は <b>ミナミはかせ</b>。まちの コンピューターを つくった 人だよ。"),
+    L("ナイトメア団に さらわれたんだ。ぜったい たすけよう！"),
+    L("……あ。ここにも かけらが おちてる。")
+  ]},
+
+  /* ---- MISSION 03 ---- */
+  { type:"story", mission:3, missionName:"データきんこ を こじあけろ", lines:[
+    L("つぎは データきんこ。まちの でんきの スイッチが、ぜんぶ ここに ある。"),
+    L("きんこの まえに、ひかる しきが うかんでる……。")
+  ]},
+  { type:"puzzle", p:"p5" },
+  { type:"story", lines:[
+    L("かいだん とっぱ！ さいごは きんこ 本体の ロックだ。"),
+    L("あんごうに なってる。ヒントの ひょうを つかって よんでみて！")
+  ]},
+  { type:"puzzle", p:"p6" },
+  { type:"clear", mission:3, frag:"も", lines:[
+    L("きんこが ひらいた！ まちの でんきが …… ちょっとだけ もどってきた！"),
+    L("まどの そとを 見て、ライト。あそこの しんごう、ついたよ。")
+  ]},
+
+  /* ---- MISSION 04 ---- */
+  { type:"story", mission:4, missionName:"めいろファイアウォール", lines:[
+    L("ボスの へやの まえに、めいろみたいな ファイアウォールが ある。"),
+    L("ゲートを しりとりで つなぐんだって。でも ワナが まざってる、きをつけて！")
+  ]},
+  { type:"puzzle", p:"p7" },
+  { type:"story", lines:[
+    L("すごい！ ライト、しりとり つよいね。"),
+    L("さいごの とびらは …… あいことばで あく みたい。")
+  ]},
+  { type:"puzzle", p:"p8" },
+  { type:"clear", mission:4, frag:"い", lines:[
+    L("とびら、かいほう。"),
+    L("……この おくに、<b>ドクター・ナイトメア</b>が いる。"),
+    L("ライト。こわい？ ……だいじょうぶ。わたしが ついてる。")
+  ]},
+
+  /* ---- MISSION 05 ---- */
+  { type:"story", mission:5, missionName:"ボスの へや ― ドクター・ナイトメア", lines:[
+    D("ようこそ、ちいさな ハッカーくん。よく ここまで きたね。"),
+    D("だが、ここまでだ。わたしの メッセージを よんで、いえに かえりなさい。"),
+    L("ライト、まって。この メッセージ …… なんか へんだよ。")
+  ]},
+  { type:"puzzle", p:"p9" },
+  { type:"clear", mission:5, title:"FINAL CODE", frag:"ま", lines:[
+    D("な …… なんだと！？ わたしの メッセージに、そんな ことばが かくれていた だと！？"),
+    D("ぐっ …… ならば さいしゅうロックを つかうまでだ！ これは だれにも あけられん！"),
+    L("ライト、いまの ショックで さいごの かけらが おちてきたよ！"),
+    L("これで 5つ ぜんぶ そろった。"),
+    L("さいしゅうロックは「こころの パスワード」。"),
+    L("きみが ここまで たたかってきた りゆうを、ことばに するんだ！")
+  ]},
+  { type:"puzzle", p:"p10" },
+
+  { type:"story", head:"FINAL", lines:[
+    N("ロック かいじょ。ナイトメア団の システムは、すべて ていしした。"),
+    N("まちに あかりが もどっていく。しんごうが つく。びょういんの きかいが うごきだす。"),
+    D("ば …… ばかな。こどもの ことばに、わたしの システムが ……！"),
+    N("ドクター・ナイトメアは けいさつに つかまり、ミナミはかせも ぶじに たすけだされた。"),
+    H("ありがとう。きみは、この まちの ヒーローだ。"),
+    L("ねえ ライト。ヒーローって、つよい人の ことじゃ ないんだよ。"),
+    L("「<b>まもりたい</b>」って おもえる 人の ことなんだ。"),
+    L("…… おつかれさま。またね、あいぼう。")
+  ]},
+
+  { type:"ending" }
+];
+
+/* ============================================================
+   3. じょうたい
+   ============================================================ */
+const SAVE_KEY = "jh_save_v1";
+const FRAG_SLOTS = 5;
+
+let S = {
+  i: 0,            // シーン番号
+  frags: [],       // あつめた かけら
+  hints: 0,        // つかった ヒントの かず
+  wrongs: 0,       // まちがえた かいすう
+  started: 0,      // あそびはじめた じこく
+  elapsed: 0       // クリアまでの びょうすう
+};
+
+function saveGame(){ store.set(SAVE_KEY, S); }
+function loadGame(){ const v = store.get(SAVE_KEY, null); return (v && typeof v.i === "number") ? v : null; }
+function clearSave(){ store.del(SAVE_KEY); }
+
+/* 進行中のシーン内 一時状態 */
+let T = {};
+
+/* ============================================================
+   4. HUD
+   ============================================================ */
+function currentMission(){
+  let m = 0;
+  for (let k=0; k<=S.i && k<SCENES.length; k++){
+    if (SCENES[k].mission) m = SCENES[k].mission;
+  }
+  return m;
+}
+function renderHud(){
+  const sc = SCENES[S.i] || {};
+  const show = sc.type !== "title";
+  $("#hud").style.display = show ? "flex" : "none";
+  if (!show) return;
+  const m = currentMission();
+  $("#hudMission").textContent = m ? ("MISSION 0" + m + " / 05") : "MISSION --";
+  let f = "";
+  for (let k=0; k<FRAG_SLOTS; k++){
+    const c = S.frags[k];
+    f += `<span class="frag ${c?"got":""}">${c || "?"}</span>`;
+  }
+  $("#hudFrags").innerHTML = f;
+  $("#btnSound").textContent = Snd.on ? "♪" : "🔇";
+}
+
+/* ============================================================
+   5. がめん びょうが
+   ============================================================ */
+function go(i){
+  clearInterval(typeTimer);   // まえの がめんの タイプライターを かならず とめる
+  S.i = i;
+  T = {};
+  saveGame();
+  render();
+}
+function next(){ go(S.i + 1); }
+
+function render(){
+  const sc = SCENES[S.i];
+  renderHud();
+  if (!sc){ go(0); return; }
+  if (sc.type === "title")  return renderTitle();
+  if (sc.type === "story")  return renderStory(sc);
+  if (sc.type === "puzzle") return renderPuzzle(sc);
+  if (sc.type === "clear")  return renderClear(sc);
+  if (sc.type === "ending") return renderEnding();
+}
+
+/* ---------- タイトル ---------- */
+function renderTitle(){
+  const saved = loadGame();
+  const canResume = saved && saved.i > 0 && saved.i < SCENES.length - 1;
+  view.innerHTML = `
+  <div class="screen" id="titleScreen">
+    <div class="scroller">
+     <div class="vcin">
+      <div class="logo">/// JUSTICE HACKER : PROTOCOL LIGHT ///</div>
+      <div class="bigtitle glitch" data-t="ハッカー・ライト">ハッカー・ライト</div>
+      <div style="font-size:clamp(14px,4.2vw,18px);font-weight:800;color:var(--yellow);letter-spacing:.06em">
+        ― ひかりを とりもどせ ―
+      </div>
+      <div class="subtitle">
+        きみは、まちで たった ひとりの せいぎの ハッカー。<br>
+        なぞを とけば、ハッキング せいこう。<br>
+        あたまを やわらかくして、わるものを やっつけろ！
+      </div>
+      <button class="btn" id="btnStart" type="button">▶　ミッション かいし</button>
+      ${canResume ? `<div style="height:8px"></div><button class="btn ghost" id="btnResume" type="button">つづきから（MISSION 0${missionOf(saved.i)} から）</button>` : ""}
+      <div style="height:14px"></div>
+      <div class="note">
+        なぞなぞは ぜんぶで <b>10もん</b>。<br>
+        こまったら いつでも「ヒント」を つかって いいよ。<br>
+        <span style="opacity:.7">※ おとが なります（がめんの ♪ ボタンで きりかえ）</span>
+      </div>
+      ${canResume ? `<div style="height:10px"></div><button class="btn warn" id="btnReset" type="button">さいしょから やりなおす</button>` : ""}
+     </div>
+    </div>
+  </div>`;
+
+  $("#btnStart").onclick = () => {
+    Snd.blip();
+    S = { i:0, frags:[], hints:0, wrongs:0, started:Date.now(), elapsed:0 };
+    go(1);
+  };
+  const r = $("#btnResume");
+  if (r) r.onclick = () => { Snd.blip(); S = saved; if(!S.started) S.started = Date.now(); render(); };
+  const rs = $("#btnReset");
+  if (rs) rs.onclick = () => { Snd.tick(); clearSave(); renderTitle(); };
+}
+function missionOf(idx){
+  let m = 1;
+  for (let k=0; k<=idx && k<SCENES.length; k++) if (SCENES[k].mission) m = SCENES[k].mission;
+  return m;
+}
+
+/* ---------- ストーリー ---------- */
+function renderStory(sc){
+  const isMission = !!sc.mission;
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc" id="storyScroll">
+     <div class="vcin">
+      ${isMission ? `<div class="missioncard">
+          <div class="no">MISSION 0${sc.mission}</div>
+          <div class="nmx">${sc.missionName}</div>
+        </div>` : ""}
+      ${sc.head ? `<div class="kicker">${sc.head}</div>` : ""}
+      <div class="panel">
+        <div class="speaker" id="spk"></div>
+        <div class="storytext" id="stext"></div>
+      </div>
+      <div class="tapnext" id="tapn">がめんを タップ ▸</div>
+     </div>
+    </div>
+    <div class="dock">
+      <button class="btn ghost" id="btnSkip" type="button">スキップ ▸▸</button>
+    </div>
+  </div>`;
+
+  T.li = 0; T.typing = false; T.full = "";
+  const spk = $("#spk"), st = $("#stext");
+
+  function showLine(){
+    const ln = sc.lines[T.li];
+    if (!ln){ next(); return; }
+    spk.className = "speaker who-" + (ln.cls === "luna" ? "luna" : ln.cls === "doc" ? "doc" : ln.cls === "hakase" ? "hakase" : "narr");
+    spk.innerHTML = ln.who ? `<span class="avatar">${ln.av}</span><span class="nm">${ln.who}</span>` : "";
+    spk.style.display = ln.who ? "flex" : "none";
+    st.className = "storytext" + (ln.who ? "" : " narr");
+    T.full = ln.t;
+    typeOut(st, ln.t, () => { T.typing = false; tapn("visible"); });
+    T.typing = true;
+    tapn("hidden");
+  }
+
+  function advance(){
+    if (T.typing){ finishType(st, T.full); T.typing = false; tapn("visible"); Snd.tick(); return; }
+    T.li++;
+    Snd.tick();
+    if (T.li >= sc.lines.length){ next(); return; }
+    showLine();
+  }
+
+  $("#storyScroll").addEventListener("pointerdown", advance);
+  $("#btnSkip").onclick = (e) => { e.stopPropagation(); Snd.tick(); next(); };
+  showLine();
+}
+
+/* タイプライター */
+let typeTimer = null;
+function typeOut(node, html, done){
+  clearInterval(typeTimer);
+  // <b> タグを こわさないように、タグを のこして 1もじずつ ひらく
+  const tokens = tokenize(html);
+  let n = 0;
+  node.innerHTML = "";
+  const step = () => {
+    n++;
+    node.innerHTML = joinTokens(tokens, n) + '<span class="caret"></span>';
+    if (n % 3 === 0) Snd.tone(1500 + (n%5)*90, 0.012, "square", 0.012);
+    if (n >= countChars(tokens)){
+      clearInterval(typeTimer);
+      node.innerHTML = joinTokens(tokens, n);
+      done && done();
+    }
+  };
+  typeTimer = setInterval(step, 32);
+}
+function finishType(node, html){
+  clearInterval(typeTimer);
+  node.innerHTML = html;
+}
+function tokenize(html){
+  const out = [];
+  let i = 0;
+  while (i < html.length){
+    if (html[i] === "<"){
+      const j = html.indexOf(">", i);
+      if (j < 0){ out.push({tag:false, c:html[i]}); i++; }
+      else { out.push({tag:true, c:html.slice(i, j+1)}); i = j+1; }
+    } else { out.push({tag:false, c:html[i]}); i++; }
+  }
+  return out;
+}
+function countChars(tokens){ return tokens.filter(t=>!t.tag).length; }
+function joinTokens(tokens, n){
+  let s = "", c = 0;
+  for (const t of tokens){
+    if (t.tag){ s += t.c; }
+    else { if (c < n){ s += t.c; c++; } }
+  }
+  return s;
+}
+
+/* ============================================================
+   6. なぞなぞ がめん
+   ============================================================ */
+function renderPuzzle(sc){
+  const P = PUZZLES[sc.p];
+  T = { val:"", sel:null, order:[], shown:0, P:P, solved:false, wrong:0 };
+
+  const vis = P.visualFn ? P.visualFn() : (P.visual || "");
+
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller" id="pScroll">
+      <div class="target">${P.target}</div>
+      <div class="panel">
+        <div class="kicker">なぞなぞロック</div>
+        <h2>${P.title}</h2>
+        <div style="height:8px"></div>
+        <div class="qbody">${P.body}</div>
+        ${vis}
+      </div>
+      <div id="inputArea"></div>
+      <div class="hintwrap" id="hintWrap"></div>
+      <div id="luna"></div>
+      <div style="height:10px"></div>
+    </div>
+    <div class="dock" id="dock"></div>
+  </div>`;
+
+  const it = P.input;
+  if (it.type === "kana" || it.type === "number"){
+    luna("こたえが わかったら、した の「<b>▲ キーボード</b>」を おして にゅうりょく してね。");
+  }
+  if (it.type === "kana")   buildKana();
+  if (it.type === "number") buildNumber();
+  if (it.type === "choice") buildChoice(it);
+  if (it.type === "order")  buildOrder(it);
+
+  renderHints();
+}
+
+/* ---------- ヒント ---------- */
+function renderHints(){
+  const P = T.P;
+  const w = $("#hintWrap");
+  let h = "";
+  for (let k=0; k<T.shown; k++){
+    h += `<div class="hintitem"><b>ヒント ${k+1}：</b> ${P.hints[k]}</div>`;
+  }
+  if (T.shown < P.hints.length){
+    h += `<button class="hintbtn ${T.wrong>=2?"nudge":""}" id="btnHint" type="button">💡 ヒントを みる（のこり ${P.hints.length - T.shown}）</button>`;
+  } else {
+    h += `<div class="note" style="text-align:center;padding:6px">ヒントは ぜんぶ でたよ。あとは きみの ばんだ！</div>`;
+  }
+  w.innerHTML = h;
+  const b = $("#btnHint");
+  if (b) b.onclick = () => {
+    Snd.tone(1320, .1, "sine", .06);
+    const idx = T.shown;
+    T.shown++; S.hints++;
+    if (P.onHint) P.onHint(idx);
+    saveGame();
+    renderHints();
+  };
+}
+/* キーボードの ひらく／たたむ（もんだいの えや ひょうを 大きく 見たい とき用） */
+function wireFold(){
+  const b = $("#btnFold"); if (!b) return;
+  const d = $("#dock");
+  const sync = () => { b.textContent = d.classList.contains("folded") ? "▲ キーボード" : "▼ とじる"; };
+  b.onclick = () => { d.classList.toggle("folded"); sync(); Snd.tick(); };
+  // 小さい がめんでも もんだいが 読めるように、さいしょは たたんでおく
+  if (!(T.P && T.P.input && T.P.input.foldFirst === false)) d.classList.add("folded");
+  sync();
+}
+
+/* 「タップ ▸」の ひょうじ きりかえ（がめんが きえた あとでも あんぜんに） */
+function tapn(v){ const e = $("#tapn"); if (e) e.style.visibility = v; }
+
+function luna(msg){
+  $("#luna").innerHTML = `<div class="luna-say"><span class="av">◕</span><span>${msg}</span></div>`;
+}
+
+/* ---------- 入力：ひらがな ---------- */
+const DAKU  = {"か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご","さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ","た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど","は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ","う":"ゔ"};
+const HANDA = {"は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ"};
+const UNDAKU = {}; for (const k in DAKU) UNDAKU[DAKU[k]] = k;
+const UNHAN  = {}; for (const k in HANDA) UNHAN[HANDA[k]] = k;
+
+function buildKana(){
+  $("#inputArea").innerHTML = "";
+
+  let rows = "";
+  for (let d=0; d<5; d++){
+    for (let g=0; g<10; g++){
+      const c = GYO[g][d];
+      rows += c ? `<button class="key" data-k="${c}" type="button">${c}</button>`
+                : `<button class="key void" type="button"></button>`;
+    }
+  }
+  /* にゅうりょくらんは キーボードの すぐ上に こていする（うった もじが かならず 見える） */
+  $("#dock").innerHTML = `
+    <div class="answerbar" id="abar">
+      <span class="pfx">&gt;</span>
+      <span class="val" id="aval"></span>
+      <button class="iconbtn" id="btnFold" type="button">▼ とじる</button>
+      <button class="iconbtn" id="btnClr" type="button">けす</button>
+    </div>
+    <div class="kbd kana" id="kbd">${rows}</div>
+    <div class="kbd util" id="kbdu">
+      <button class="key fn" data-f="daku" type="button"><span class="mk">゛</span><small>てんてん</small></button>
+      <button class="key fn" data-f="handaku" type="button"><span class="mk">゜</span><small>まる</small></button>
+      <button class="key" data-k="ん" type="button">ん</button>
+      <button class="key" data-k="ー" type="button">ー</button>
+      <button class="key fn" data-f="bs" type="button"><span class="mk">⌫</span><small>1もじ</small></button>
+    </div>
+    <button class="btn hackbtn" id="btnHack" type="button"><span class="ic">▶</span>ハッキング じっこう</button>`;
+
+  const put = (c) => { if (T.val.length >= 10) return; T.val += c; Snd.blip(); paint(); };
+  const paint = () => { $("#aval").textContent = T.val; };
+
+  $("#kbd").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-k]"); if (!b) return; put(b.dataset.k);
+  });
+  $("#kbdu").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.k) return put(b.dataset.k);
+    const f = b.dataset.f;
+    if (f === "bs"){ T.val = T.val.slice(0, -1); Snd.tick(); paint(); return; }
+    if (!T.val.length) return;
+    const last = T.val.slice(-1);
+    let nl = last;
+    if (f === "daku")    nl = DAKU[last]  || UNDAKU[last] || last;
+    if (f === "handaku") nl = HANDA[last] || UNHAN[last]  || last;
+    T.val = T.val.slice(0,-1) + nl; Snd.blip(); paint();
+  });
+  $("#btnClr").onclick = () => { T.val = ""; Snd.tick(); paint(); };
+  $("#btnHack").onclick = () => submit(T.val);
+  wireFold();
+  paint();
+}
+
+/* ---------- 入力：すうじ ---------- */
+function buildNumber(){
+  $("#inputArea").innerHTML = "";
+  let keys = "";
+  for (let n=1; n<=9; n++) keys += `<button class="key" data-k="${n}" type="button">${n}</button>`;
+  keys += `<button class="key" data-k="0" type="button">0</button>`;
+  keys += `<button class="key fn" data-f="bs" type="button"><span class="mk">⌫</span></button>`;
+  $("#dock").innerHTML = `
+    <div class="answerbar" id="abar">
+      <span class="pfx">&gt;</span>
+      <span class="val" id="aval"></span>
+      <button class="iconbtn" id="btnFold" type="button">▼ とじる</button>
+      <button class="iconbtn" id="btnClr" type="button">けす</button>
+    </div>
+    <div class="kbd num" id="kbd">${keys}</div>
+    <button class="btn hackbtn" id="btnHack" type="button"><span class="ic">▶</span>ハッキング じっこう</button>`;
+  const paint = () => { $("#aval").textContent = T.val; };
+  $("#kbd").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.f === "bs"){ T.val = T.val.slice(0,-1); Snd.tick(); }
+    else if (b.dataset.k !== undefined){ if (T.val.length >= 5) return; T.val += b.dataset.k; Snd.blip(); }
+    paint();
+  });
+  $("#btnClr").onclick = () => { T.val = ""; Snd.tick(); paint(); };
+  $("#btnHack").onclick = () => submit(T.val);
+  wireFold();
+  paint();
+}
+
+/* ---------- 入力：えらぶ ---------- */
+function buildChoice(it){
+  const opts = it.optionsFn ? it.optionsFn() : it.options;
+  T.opts = opts;
+  let h = `<div class="choices" id="choices">`;
+  for (const o of opts){
+    h += `<button class="choice" data-key="${o.key}" type="button">
+            <span class="lb">${o.key}</span>
+            <span>${o.html || esc(o.label)}</span>
+          </button>`;
+  }
+  h += `</div>`;
+  $("#inputArea").innerHTML = h;
+  $("#dock").innerHTML = `<button class="btn hackbtn" id="btnHack" type="button" disabled><span class="ic">▶</span>ハッキング じっこう</button>`;
+  $("#choices").addEventListener("click", (e) => {
+    const b = e.target.closest(".choice"); if (!b) return;
+    Snd.blip();
+    [...$("#choices").children].forEach(c => c.classList.remove("sel"));
+    b.classList.add("sel");
+    T.sel = b.dataset.key;
+    $("#btnHack").disabled = false;
+  });
+  $("#btnHack").onclick = () => submit(T.sel);
+}
+
+/* ---------- 入力：ならべる ---------- */
+function buildOrder(it){
+  T.order = [];
+  T.cards = it.cards.slice();
+  const isChain = it.variant === "chain";
+
+  const draw = () => {
+    let ch = `<div class="chain" id="chain">`;
+    if (isChain) ch += `<span class="chip fixed">${it.head}</span>`;
+    for (let k=0; k<it.slots; k++){
+      const v = T.order[k];
+      if (isChain && (k > 0 || it.head)) ch += `<span class="arrow">▸</span>`;
+      ch += v
+        ? `<span class="chip" data-slot="${k}">${v}</span>`
+        : `<span class="chip slot" data-slot="${k}">${isChain ? "？" : "＿"}</span>`;
+    }
+    ch += `</div>`;
+    let pool = `<div class="pool" id="pool">`;
+    T.cards.forEach((c, idx) => {
+      const used = T.order.indexOf(c) >= 0;
+      pool += `<button class="card ${isChain?"":"tile"} ${used?"used":""}" data-idx="${idx}" type="button">${c}</button>`;
+    });
+    pool += `</div>`;
+    $("#inputArea").innerHTML = ch + pool +
+      `<div class="note" style="margin-top:8px">ならべた カードを タップすると、もどせるよ。</div>`;
+    const btn = $("#btnHack");
+    if (btn) btn.disabled = T.order.filter(Boolean).length < it.slots;
+
+    $("#pool").addEventListener("click", (e) => {
+      const b = e.target.closest(".card"); if (!b) return;
+      const c = T.cards[+b.dataset.idx];
+      if (T.order.indexOf(c) >= 0) return;
+      const free = T.order.length < it.slots ? T.order.length : -1;
+      let put = -1;
+      for (let k=0; k<it.slots; k++){ if (!T.order[k]){ put = k; break; } }
+      if (put < 0) return;
+      T.order[put] = c;
+      Snd.blip(); draw();
+    });
+    $("#chain").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-slot]"); if (!b) return;
+      const k = +b.dataset.slot;
+      if (!T.order[k]) return;
+      T.order.splice(k, 1);
+      Snd.tick(); draw();
+    });
+  };
+
+  $("#dock").innerHTML = `<button class="btn hackbtn" id="btnHack" type="button" disabled><span class="ic">▶</span>ハッキング じっこう</button>`;
+  $("#btnHack").onclick = () => submit(T.order.slice(0, it.slots));
+  draw();
+}
+
+/* ---------- こたえあわせ ---------- */
+const katakanaToHira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+function normalize(v){
+  if (Array.isArray(v)) return v.join("|");
+  return katakanaToHira(String(v == null ? "" : v)).replace(/\s/g, "");
+}
+function isCorrect(given){
+  const g = normalize(given);
+  return T.P.answer.some(a => normalize(a) === g);
+}
+
+const WRONG_MSG = [
+  "ちがうみたい！ でも いい ちょうせん だよ。もういちど かんがえてみて。",
+  "おしい …… かな？ <b>ふつうの かんがえかた</b>を いちど すてて みよう。",
+  "むずかしいよね。ヒントを つかっても、ぜんぜん はずかしくないよ！",
+  "だいじょうぶ。なぞなぞは、まちがえた ぶんだけ たのしい！"
+];
+
+function submit(given){
+  if (T.solved) return;
+  const empty = Array.isArray(given) ? given.filter(Boolean).length === 0 : !given;
+  if (empty){
+    const folded = $("#dock") && $("#dock").classList.contains("folded");
+    luna(folded ? "した の「<b>▲ キーボード</b>」を おすと、もじが うてるよ！"
+               : "まだ こたえが にゅうりょく されてないよ！");
+    return;
+  }
+
+  if (isCorrect(given)){
+    T.solved = true;
+    flash("ok"); Snd.hack();
+    if (navigator.vibrate) { try{ navigator.vibrate([12, 40, 18]); }catch(e){} }
+    showGranted();
+  } else {
+    S.wrongs++; T.wrong++;
+    flash("ng"); Snd.ng();
+    if (navigator.vibrate) { try{ navigator.vibrate(60); }catch(e){} }
+    const bar = $("#abar");
+    if (bar){ bar.classList.remove("shake"); void bar.offsetWidth; bar.classList.add("shake"); }
+    luna(WRONG_MSG[Math.min(T.wrong-1, WRONG_MSG.length-1)]);
+    renderHints();
+    saveGame();
+  }
+}
+
+function showGranted(){
+  const P = T.P;
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc">
+     <div class="vcin">
+      <div class="granted">
+        <div class="big">ACCESS GRANTED</div>
+        <div class="sub">ハッキング せいこう</div>
+        <div class="bar"><i></i></div>
+      </div>
+      <div class="explain">
+        <div class="h">/// なぞとき かいせつ ///</div>
+        ${P.explain}
+      </div>
+      <div style="height:12px"></div>
+     </div>
+    </div>
+    <div class="dock">
+      <button class="btn" id="btnNext" type="button">つぎへ ▸</button>
+    </div>
+  </div>`;
+  $("#btnNext").onclick = () => { Snd.blip(); next(); };
+}
+
+/* ============================================================
+   7. ミッションクリア
+   ============================================================ */
+function renderClear(sc){
+  if (S.frags.indexOf(sc.frag) < 0) S.frags.push(sc.frag);
+  saveGame();
+  renderHud();
+  Snd.frag();
+
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc" id="clrScroll">
+     <div class="vcin">
+      <div class="granted" style="padding:14px 12px 4px">
+        <div class="big" style="color:var(--yellow);text-shadow:0 0 18px rgba(255,210,63,.7)">${sc.title || ("MISSION 0" + sc.mission + " CLEAR")}</div>
+        <div class="bar"><i></i></div>
+      </div>
+      <div class="fragget">
+        <div class="fx">${sc.frag}</div>
+        <div class="cap">CODE FRAGMENT ${S.frags.length} / 5</div>
+      </div>
+      <div class="panel">
+        <div class="speaker" id="spk"></div>
+        <div class="storytext" id="stext"></div>
+      </div>
+      <div class="tapnext" id="tapn">がめんを タップ ▸</div>
+      <div style="height:8px"></div>
+     </div>
+    </div>
+    <div class="dock">
+      <button class="btn ghost" id="btnSkip" type="button">スキップ ▸▸</button>
+    </div>
+  </div>`;
+
+  T.li = 0; T.typing = false;
+  const spk = $("#spk"), st = $("#stext");
+  const showLine = () => {
+    const ln = sc.lines[T.li];
+    if (!ln){ next(); return; }
+    spk.className = "speaker who-" + (ln.cls === "luna" ? "luna" : ln.cls === "doc" ? "doc" : ln.cls === "hakase" ? "hakase" : "narr");
+    spk.innerHTML = ln.who ? `<span class="avatar">${ln.av}</span><span class="nm">${ln.who}</span>` : "";
+    spk.style.display = ln.who ? "flex" : "none";
+    st.className = "storytext" + (ln.who ? "" : " narr");
+    T.full = ln.t;
+    T.typing = true;
+    tapn("hidden");
+    typeOut(st, ln.t, () => { T.typing = false; tapn("visible"); });
+  };
+  const advance = () => {
+    if (T.typing){ finishType(st, T.full); T.typing = false; tapn("visible"); Snd.tick(); return; }
+    T.li++; Snd.tick();
+    if (T.li >= sc.lines.length){ next(); return; }
+    showLine();
+  };
+  $("#clrScroll").addEventListener("pointerdown", advance);
+  $("#btnSkip").onclick = (e) => { e.stopPropagation(); Snd.tick(); next(); };
+  showLine();
+}
+
+/* ============================================================
+   8. エンディング
+   ============================================================ */
+function rankOf(hints, wrongs){
+  const score = hints * 2 + wrongs;
+  if (score === 0)  return { r:"S ランク", m:"かんぺき。まちの でんせつだ。" };
+  if (score <= 4)   return { r:"A ランク", m:"あたま、めちゃくちゃ やわらかい！" };
+  if (score <= 10)  return { r:"B ランク", m:"あきらめない ちからが すごい。" };
+  return { r:"C ランク", m:"さいごまで といた。それが いちばん えらい。" };
+}
+function renderEnding(){
+  if (!S.elapsed) S.elapsed = Math.max(1, Math.round((Date.now() - (S.started || Date.now())) / 1000));
+  saveGame();
+  Snd.win();
+  const mm = String(Math.floor(S.elapsed/60)).padStart(2,"0");
+  const ss = String(S.elapsed%60).padStart(2,"0");
+  const rk = rankOf(S.hints, S.wrongs);
+
+  view.innerHTML = `
+  <div class="screen">
+    <div class="scroller vc" style="text-align:center">
+     <div class="vcin">
+      <div class="logo" style="margin-top:6px">/// MISSION COMPLETE ///</div>
+      <div class="bigtitle" style="font-size:clamp(22px,6.4vw,36px);text-wrap:balance">まちに ひかりが もどった</div>
+      <div style="height:6px"></div>
+      <div class="fragget"><div class="fx" style="width:auto;padding:0 18px;font-size:30px;letter-spacing:.12em">まもりたい</div></div>
+      <div class="stats">
+        <div class="stat"><div class="k">TIME</div><div class="v">${mm}:${ss}</div></div>
+        <div class="stat"><div class="k">HINT</div><div class="v">${S.hints}</div></div>
+        <div class="stat"><div class="k">MISS</div><div class="v">${S.wrongs}</div></div>
+      </div>
+      <div class="rank">${rk.r}</div>
+      <p class="note" style="text-align:center">${rk.m}</p>
+      <div class="panel" style="text-align:left;margin-top:12px">
+        <div class="kicker">スタッフから</div>
+        <p style="font-size:14px">
+          なぞなぞを とく コツは、<b>「あたりまえ」を いちど うたがう</b>こと。<br>
+          ことばを うしろから よむ。たてに よむ。はんぶんだけ 見る。<br>
+          それが できる 人は、ほんとうの もんだいも とけるように なる。
+        </p>
+      </div>
+      <div style="height:12px"></div>
+     </div>
+    </div>
+    <div class="dock">
+      <button class="btn" id="btnAgain" type="button">▶　もういちど あそぶ</button>
+    </div>
+  </div>`;
+  $("#btnAgain").onclick = () => {
+    Snd.blip(); clearSave();
+    S = { i:0, frags:[], hints:0, wrongs:0, started:0, elapsed:0 };
+    render();
+  };
+}
+
+/* ============================================================
+   9. きどう
+   ============================================================ */
+$("#btnSound").onclick = (e) => {
+  e.stopPropagation();
+  Snd.on = !Snd.on;
+  store.set("jh_sound", Snd.on);
+  renderHud();
+  if (Snd.on) Snd.blip();
+};
+
+/* iOS：ピンチ/ダブルタップ拡大と ラバーバンドを おさえる */
+["gesturestart","gesturechange","gestureend"].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
+document.addEventListener("dblclick", e => e.preventDefault(), { passive:false });
+document.addEventListener("touchmove", e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive:false });
+
+/* さいしょの タップで おとを ゆうこうに する（iOS の きまり） */
+function unlock(){
+  Snd.init(); Snd.resume();
+  window.removeEventListener("pointerdown", unlock);
+  window.removeEventListener("touchstart", unlock);
+}
+window.addEventListener("pointerdown", unlock, { once:false });
+window.addEventListener("touchstart", unlock, { once:false });
+
+render();
+
+/* デバッグ用フック（自動テストから さわる） */
+window.__GAME__ = {
+  get state(){ return S; },
+  scenes: SCENES,
+  puzzles: PUZZLES,
+  goto(i){ go(i); },
+  answer(v){ submit(v); }
+};
+</script>
+</body>
+</html>
