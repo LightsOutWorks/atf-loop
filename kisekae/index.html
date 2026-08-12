@@ -224,20 +224,20 @@ function scal(x0,x1,y,n,r){
 function MIR(inner){return '<g transform="translate(440,0) scale(-1,1)">'+inner+'</g>';}
 /* ================= doll base ================= */
 const LEGT='transform="translate(0,342) scale(1,0.96) translate(0,-342)"';
+const HEADT='transform="translate(-17.6,-18.72) scale(1.08)"';
 function drawBody(s){
   const k=SKIN[s.skin];
-  const armL='<path d="M184,258 C168,272 158,298 153,330 C151,344 149,352 150,357" stroke="'+k.base+'" stroke-width="17" stroke-linecap="round" fill="none"/>'+
-    '<circle cx="150" cy="362" r="10.5" fill="'+k.base+'"/>';
-  const legL='<path d="M205,342 C203,392 202,470 202,538" stroke="'+k.base+'" stroke-width="22" stroke-linecap="round" fill="none"/>'+
-    '<ellipse cx="201" cy="553" rx="15" ry="9.5" fill="'+k.base+'"/>';
+  const armL='<path d="M184,258 C168,272 158,298 153,330 C151,344 149,352 150,357" stroke="'+k.base+'" stroke-width="18" stroke-linecap="round" fill="none"/>'+
+    '<circle cx="150" cy="362" r="11" fill="'+k.base+'"/>';
+  const legL='<path d="M205,342 C203,392 202,470 202,538" stroke="'+k.base+'" stroke-width="23" stroke-linecap="round" fill="none"/>'+
+    '<ellipse cx="201" cy="553" rx="15.5" ry="9.5" fill="'+k.base+'"/>';
   return '<g>'+
    /* legs */ '<g '+LEGT+'>'+legL+MIR(legL)+'</g>'+
    /* torso */ '<path d="M188,250 C188,246 252,246 252,250 C252,288 247,316 243,334 C239,348 201,348 197,334 C193,316 188,288 188,250 Z" fill="'+k.base+'"/>'+
    /* hips (closes the gap between the legs so背景や髪が透けない) */
    '<path d="M196,330 C196,326 244,326 244,330 L245,356 C245,376 233,388 220,388 C207,388 195,376 195,356 Z" fill="'+k.base+'"/>'+
    /* arms */ armL+MIR(armL)+
-   /* neck */ '<path d="M208,218 h24 v34 h-24 Z" fill="'+k.base+'"/><path d="M208,222 q12,10 24,0 v8 q-12,8 -24,0 Z" fill="'+k.shade+'" opacity=".3"/>'+
-   /* head */ '<path d="M149,140 C149,82 180,54 220,54 C260,54 291,82 291,140 C293,186 268,228 220,233 C172,228 147,186 149,140 Z" fill="'+k.base+'"/>'+
+   /* neck */ '<path d="M208,214 h24 v38 h-24 Z" fill="'+k.base+'"/><path d="M208,220 q12,10 24,0 v8 q-12,8 -24,0 Z" fill="'+k.shade+'" opacity=".3"/>'+
    /* base underwear (paper-doll cami + bloomer) */
    '<path d="M186,262 C186,258 254,258 254,262 C254,292 250,314 245,330 C241,342 199,342 195,330 C190,314 186,292 186,262 Z" fill="#ffffff" opacity=".96"/>'+
    '<path d="'+scal(191,249,334,5,5)+'" stroke="#f3d7ea" stroke-width="3" fill="none"/>'+
@@ -255,12 +255,12 @@ function drawFace(s){
   function openEye(cx,dir){
     let e='';
     if(mk.shadow>=0)e+=shadowArc(cx);
-    e+='<ellipse cx="'+cx+'" cy="169" rx="14.8" ry="17.8" fill="#fff"/>'+
-    '<circle cx="'+cx+'" cy="170" r="12.2" fill="'+ec+'"/>'+
-    '<circle cx="'+cx+'" cy="173" r="6.6" fill="#2c2033"/>'+
-    '<circle cx="'+(cx-4.5)+'" cy="162" r="4.4" fill="#fff"/>'+
-    '<circle cx="'+(cx+5)+'" cy="175" r="2.3" fill="#fff" opacity=".9"/>'+
-    '<path d="M'+(cx-14.5)+',164 Q'+cx+',150.5 '+(cx+14.5)+',164" stroke="#4a3040" stroke-width="5" stroke-linecap="round" fill="none"/>';
+    e+='<ellipse cx="'+cx+'" cy="169" rx="16" ry="19" fill="#fff"/>'+
+    '<circle cx="'+cx+'" cy="170" r="13.4" fill="'+ec+'"/>'+
+    '<circle cx="'+cx+'" cy="173.5" r="7.4" fill="#2c2033"/>'+
+    '<circle cx="'+(cx-4.8)+'" cy="161.5" r="4.8" fill="#fff"/>'+
+    '<circle cx="'+(cx+5.2)+'" cy="176" r="2.5" fill="#fff" opacity=".9"/>'+
+    '<path d="M'+(cx-15.5)+',163.5 Q'+cx+',149.5 '+(cx+15.5)+',163.5" stroke="#4a3040" stroke-width="5" stroke-linecap="round" fill="none"/>';
     if(mk.lash===1)e+=lashX(cx,dir);
     return e;
   }
@@ -303,11 +303,9 @@ const HAIR=[
   back:h=>'<path d="M220,46 C148,46 120,104 126,186 C130,252 112,318 124,378 C128,398 144,404 152,390 C158,378 162,366 170,362 C176,390 190,400 198,384 L242,384 C250,400 264,390 270,362 C278,366 282,378 288,390 C296,404 312,398 316,378 C328,318 310,252 314,186 C320,104 292,46 220,46 Z" fill="'+h.a+'"/>'+
    '<path d="M146,200 C140,270 142,330 152,376 M294,200 C300,270 298,330 288,376" stroke="'+h.b+'" stroke-width="7" stroke-linecap="round" fill="none" opacity=".6"/>'+
    '<path d="M176,300 C174,330 176,352 180,368 M264,300 C266,330 264,352 260,368" stroke="'+h.b+'" stroke-width="5" stroke-linecap="round" fill="none" opacity=".45"/>',
-  front:h=>'<path d="M150,140 C144,76 178,48 220,48 C264,48 296,78 290,140 C291,148 283,151 278,143 C266,119 252,105 238,99 C233,97 231,92 230,85 C228,92 224,98 218,101 C202,107 176,122 163,143 C158,151 149,148 150,140 Z" fill="'+h.a+'"/>'+
-   '<path d="M284,126 C294,164 298,214 293,262 C290,298 281,322 271,320 C263,318 264,302 267,282 C271,248 271,200 265,156 C263,142 264,132 272,126 Z" fill="'+h.a+'"/>'+
-   '<path d="M156,126 C146,166 142,218 148,268 C152,304 162,328 172,325 C180,322 178,306 175,286 C171,250 172,202 178,156 C180,142 178,132 170,125 Z" fill="'+h.a+'"/>'+
-   '<path d="M228,88 C220,101 206,110 192,115 M233,90 C240,103 250,111 262,117" stroke="'+h.a+'" stroke-width="3" fill="none" stroke-linecap="round" opacity=".9"/>'+
-   '<path d="M282,150 C288,200 288,250 283,292 M158,150 C152,200 152,250 157,290" stroke="'+h.b+'" stroke-width="4.5" fill="none" stroke-linecap="round" opacity=".55"/>'+
+  front:h=>'<path d="M230,86 C228,93 224,99 218,102 C204,108 182,124 172,143 C173,158 176,180 177,210 C178,248 178,270 177,286 C176,305 172,316 166,320 C156,328 148,318 150,298 C146,254 142,204 146,162 C147,152 148,144 150,138 C146,74 178,46 220,46 C264,46 296,76 290,138 C292,144 293,152 294,164 C298,208 296,258 292,300 C290,318 284,328 275,322 C268,317 265,305 264,286 C263,270 263,248 264,210 C265,180 268,158 270,143 C260,120 248,103 236,99 C232,97 231,92 230,86 Z" fill="'+h.a+'"/>'+
+   '<path d="M228,90 C220,102 206,111 193,115 M233,92 C241,104 251,112 262,117" stroke="'+h.a+'" stroke-width="3" fill="none" stroke-linecap="round" opacity=".9"/>'+
+   '<path d="M285,160 C289,210 288,256 284,294 M155,160 C151,210 152,256 156,292" stroke="'+h.b+'" stroke-width="4.5" fill="none" stroke-linecap="round" opacity=".5"/>'+
    '<path d="M206,52 C202,42 208,34 210,44 M232,50 C236,38 244,38 238,48" stroke="'+h.a+'" stroke-width="3" fill="none" stroke-linecap="round"/>'},
  {nm:'さらさらロング',
   back:h=>'<path d="M220,50 C154,50 132,104 138,176 C142,240 126,320 138,388 C142,410 166,416 172,396 C166,314 168,238 176,186 L264,186 C272,238 274,314 268,396 C274,416 298,410 302,388 C314,320 298,240 302,176 C308,104 286,50 220,50 Z" fill="'+h.a+'"/>'+
@@ -629,17 +627,17 @@ const HEADACC=[
   d:c=>'<path d="M158,92 L150,44 L196,68 Z" fill="'+c.a+'" '+O+'/><path d="M282,92 L290,44 L244,68 Z" fill="'+c.a+'" '+O+'/>'+
    '<path d="M163,82 L159,56 L184,70 Z" fill="'+c.b+'"/><path d="M277,82 L281,56 L256,70 Z" fill="'+c.b+'"/>'},
  {nm:'うさみみ',pals:[PAL.white,PAL.pink,PAL.lav,PAL.sky,PAL.lemon,PAL.mint],
-  d:c=>'<path d="M176,76 C160,40 164,4 180,4 C196,4 202,44 196,74 Z" fill="'+c.a+'" '+O+'/>'+
+  d:c=>'<g transform="translate(0,18)"><path d="M176,76 C160,40 164,4 180,4 C196,4 202,44 196,74 Z" fill="'+c.a+'" '+O+'/>'+
    '<path d="M264,76 C280,40 276,4 260,4 C244,4 238,44 244,74 Z" fill="'+c.a+'" '+O+'/>'+
    '<path d="M180,64 C172,42 174,18 181,16 C188,16 192,44 189,64 Z" fill="'+c.b+'" opacity=".85"/>'+
-   '<path d="M260,64 C268,42 266,18 259,16 C252,16 248,44 251,64 Z" fill="'+c.b+'" opacity=".85"/>'},
+   '<path d="M260,64 C268,42 266,18 259,16 C252,16 248,44 251,64 Z" fill="'+c.b+'" opacity=".85"/></g>'},
  {nm:'ベレーぼう',pals:[PAL.red,PAL.navy,PAL.pink,PAL.lemon,PAL.black,PAL.lav],
   d:c=>'<path d="M150,84 C142,44 208,26 252,38 C296,50 300,80 288,90 C240,66 186,70 150,84 Z" fill="'+c.a+'" '+O+'/>'+
    '<circle cx="224" cy="30" r="6" fill="'+c.b+'"/>'},
  {nm:'まほうハット',pals:[PAL.lav,PAL.navy,PAL.pink,PAL.black,PAL.sky,PAL.mint],
-  d:c=>'<g transform="rotate(10 250 60)"><ellipse cx="250" cy="62" rx="52" ry="14" fill="'+c.a+'" '+O+'/>'+
+  d:c=>'<g transform="translate(0,16)"><g transform="rotate(10 250 60)"><ellipse cx="250" cy="62" rx="52" ry="14" fill="'+c.a+'" '+O+'/>'+
    '<path d="M222,58 C226,30 240,6 262,2 C258,22 274,40 276,58 Q250,70 222,58 Z" fill="'+c.a+'" '+O+'/>'+
-   '<path d="M226,52 h48" stroke="'+c.b+'" stroke-width="8"/>'+star(262,26,7,c.c)+'</g>'},
+   '<path d="M226,52 h48" stroke="'+c.b+'" stroke-width="8"/>'+star(262,26,7,c.c)+'</g></g>'},
  {nm:'ハートピン',pals:[PAL.pink,PAL.red,PAL.lemon,PAL.sky,PAL.lav,PAL.mint],
   d:c=>heart(174,74,10,c.a)+heart(192,62,7,c.b)},
  {nm:'パールカチューシャ',pals:[PAL.white,PAL.rose,PAL.lemon,PAL.black,PAL.lav,PAL.mint],
@@ -798,7 +796,7 @@ const BG=[
 [DRESS[1],BOTTOM[2],HEADACC[0]].forEach(function(it){it.pals.push(PAL.bordeaux);});
 /* ================= registry ================= */
 const DB={
- hair:{lb:'かみがた',ic:'🎀',items:HAIR,crop:'90 10 260 300',opt:false},
+ hair:{lb:'かみがた',ic:'🎀',items:HAIR,crop:'84 8 272 310',opt:false},
  face:{lb:'おかお',ic:'😊',special:'face'},
  makeup:{lb:'おけしょう',ic:'💄',special:'makeup'},
  dress:{lb:'ドレス',ic:'👗',items:DRESS,crop:'100 220 240 320',opt:true},
@@ -806,8 +804,8 @@ const DB={
  bottom:{lb:'スカート',ic:'🌸',items:BOTTOM,crop:'110 300 220 180',opt:true},
  socks:{lb:'くつした',ic:'🧦',items:SOCKS,crop:'150 408 140 146',opt:true},
  shoes:{lb:'くつ',ic:'👟',items:SHOES,crop:'140 452 160 114',opt:true},
- head:{lb:'あたま',ic:'👑',items:HEADACC,crop:'110 0 220 140',opt:true},
- faceacc:{lb:'かおアクセ',ic:'👓',items:FACEACC,crop:'140 110 160 110',opt:true},
+ head:{lb:'あたま',ic:'👑',items:HEADACC,crop:'104 0 232 150',opt:true},
+ faceacc:{lb:'かおアクセ',ic:'👓',items:FACEACC,crop:'134 112 172 112',opt:true},
  neck:{lb:'くび',ic:'📿',items:NECK,crop:'160 230 120 70',opt:true},
  wings:{lb:'はね',ic:'🦋',items:WINGS,crop:'40 180 360 240',opt:true},
  hand:{lb:'てにもつ',ic:'🪄',items:HAND,crop:'80 250 200 200',opt:true},
@@ -835,12 +833,16 @@ function save(){try{localStorage.setItem('kisekae-v2',JSON.stringify(S));}catch(
 /* ================= render ================= */
 function itemOf(slot){const d=DB[slot];if(!d||!d.items)return null;const st=S[slot];if(st.i<0)return null;return d.items[st.i];}
 function colOf(slot){const it=itemOf(slot);if(!it||!it.pals)return null;return it.pals[Math.min(S[slot].c,it.pals.length-1)];}
+function headSkin(s){
+ const k=SKIN[s.skin];
+ return '<path d="M149,140 C149,82 180,54 220,54 C260,54 291,82 291,140 C293,186 268,228 220,233 C172,228 147,186 149,140 Z" fill="'+k.base+'"/>';
+}
 function drawDoll(){
  const h=HAIRC[S.hairC];
  const hair=HAIR[S.hair.i]||HAIR[0];
  let g='';
  const w=itemOf('wings');if(w)g+=w.d(colOf('wings'));
- g+='<g>'+hair.back(h)+'</g>';
+ g+='<g '+HEADT+'>'+hair.back(h)+'</g>';
  g+=drawBody(S);
  const so=itemOf('socks');if(so)g+='<g '+LEGT+'>'+so.d(colOf('socks'))+'</g>';
  const sh=itemOf('shoes');if(sh)g+='<g '+LEGT+'>'+sh.d(colOf('shoes'))+'</g>';
@@ -848,10 +850,10 @@ function drawDoll(){
  const to=itemOf('top');if(to)g+=to.d(colOf('top'));
  const dr=itemOf('dress');if(dr)g+=dr.d(colOf('dress'));
  const ne=itemOf('neck');if(ne)g+=ne.d(colOf('neck'));
- g+=drawFace(S);
- g+='<g>'+hair.front(h)+'</g>';
+ g+='<g '+HEADT+'>'+headSkin(S)+drawFace(S)+hair.front(h);
  const he=itemOf('head');if(he)g+=he.d(colOf('head'));
  const fa=itemOf('faceacc');if(fa)g+=fa.d(colOf('faceacc'));
+ g+='</g>';
  const ha=itemOf('hand');if(ha)g+=ha.d(colOf('hand'));
  return g;
 }
@@ -913,14 +915,15 @@ function buildGrid(){
  buildSwatches();
 }
 function faceThumb(vb){
- return '<svg viewBox="'+vb+'">'+'<g>'+HAIR[S.hair.i].back(HAIRC[S.hairC])+'</g>'+drawBody(S)+drawFace(S)+'<g>'+HAIR[S.hair.i].front(HAIRC[S.hairC])+'</g>'+'</svg>';
+ const h=HAIRC[S.hairC];
+ return '<svg viewBox="'+vb+'">'+'<g '+HEADT+'>'+HAIR[S.hair.i].back(h)+'</g>'+drawBody(S)+'<g '+HEADT+'>'+headSkin(S)+drawFace(S)+HAIR[S.hair.i].front(h)+'</g>'+'</svg>';
 }
 function buildFaceGrid(){
  let html='<div class="sechead">ひょうじょう</div>';
  const exNames=['にこにこ','わーい','ウインク','おすまし'];
  for(let i=0;i<4;i++){
   const saved=S.expr;S.expr=i;
-  html+='<button class="card'+(saved===i?' on':'')+'" data-expr="'+i+'">'+faceThumb('145 100 150 130')+'<span class="nm">'+exNames[i]+'</span></button>';
+  html+='<button class="card'+(saved===i?' on':'')+'" data-expr="'+i+'">'+faceThumb('138 96 164 138')+'<span class="nm">'+exNames[i]+'</span></button>';
   S.expr=saved;
  }
  html+='<div class="sechead">おはだ</div>';
@@ -955,17 +958,17 @@ function buildMakeupGrid(){
    S.mk[key]=saved;
   }
  }
- sec('💋 リップ','lip',LIPC.map(l=>l.nm),LIPC.length,'なし','160 168 120 70');
- sec('🍑 チーク','cheek',CHEEKNM,4,'ナチュラル','148 150 144 76');
- sec('✨ アイシャドウ','shadow',SHADOWC.map(x=>x.nm),SHADOWC.length,'なし','150 122 140 82');
+ sec('💋 リップ','lip',LIPC.map(l=>l.nm),LIPC.length,'なし','156 164 128 74');
+ sec('🍑 チーク','cheek',CHEEKNM,4,'ナチュラル','142 146 156 80');
+ sec('✨ アイシャドウ','shadow',SHADOWC.map(x=>x.nm),SHADOWC.length,'なし','144 118 152 86');
  html+='<div class="sechead">👁 まつげ</div>';
  const curLash=S.mk.lash;
  [['ふつう',0],['ロングまつげ',1]].forEach(p=>{
   S.mk.lash=p[1];
-  html+='<button class="card'+(curLash===p[1]?' on':'')+'" data-mk="lash" data-mi="'+p[1]+'">'+faceThumb('150 122 140 82')+'<span class="nm">'+p[0]+'</span></button>';
+  html+='<button class="card'+(curLash===p[1]?' on':'')+'" data-mk="lash" data-mi="'+p[1]+'">'+faceThumb('144 118 152 86')+'<span class="nm">'+p[0]+'</span></button>';
  });
  S.mk.lash=curLash;
- sec('💎 キラキラ','gem',GEMNM,3,'なし','148 148 144 66');
+ sec('💎 キラキラ','gem',GEMNM,3,'なし','142 144 156 72');
  gridEl.innerHTML=html;
  swEl.innerHTML='';
 }
