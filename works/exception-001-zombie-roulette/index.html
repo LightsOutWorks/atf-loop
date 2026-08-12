@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ゾンビ・ルーレット</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #08070f;
+    font-family: sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; display: block;
+    touch-action: none; background: #08070f;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; padding: 12px 16px; pointer-events: none;
+    font-family: monospace; color: #efe9ff; font-size: 15px;
+    letter-spacing: 1px; text-shadow: 0 0 6px rgba(0,0,0,.85);
+  }
+  #hudL, #hudR { display: flex; flex-direction: column; gap: 5px; }
+  #hudR { align-items: flex-end; }
+  #timeText { font-size: clamp(20px, 5vw, 30px); color: #f6f2ff; letter-spacing: 2px; }
+  #timeText.warn { color: #ff6b8a; }
+  .lbl { color: #8f86b8; font-size: 11px; letter-spacing: 2px; }
+  #hpWrap {
+    width: clamp(120px, 34vw, 260px); height: 11px;
+    border: 1px solid #4b4370; border-radius: 6px;
+    background: rgba(20,16,38,.75); overflow: hidden;
+  }
+  #hpBar {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, #ff4d6d, #ff9d5c);
+    transition: width .12s linear;
+  }
+  #ticketText { color: #ffd83d; font-size: clamp(14px, 3.6vw, 19px); }
+
+  /* ---------- くじを引くボタン ---------- */
+  #drawBtn {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    display: none; pointer-events: auto;
+    padding: 13px 26px; border: 2px solid #ffd83d; border-radius: 999px;
+    background: rgba(46,32,10,.92); color: #ffe98a;
+    font-family: sans-serif; font-size: clamp(15px, 4vw, 19px);
+    font-weight: bold; letter-spacing: 3px; cursor: pointer;
+    box-shadow: 0 0 22px rgba(255,216,61,.4);
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+  #drawBtn.on { display: block; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(255,216,61,.32); }
+    50%      { box-shadow: 0 0 30px rgba(255,216,61,.72); }
+  }
+
+  /* ---------- 画面 ---------- */
+  #titleScreen, #overScreen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; background: rgba(6,5,13,.93); text-align: center; padding: 26px;
+  }
+  #overScreen { display: none; }
+  h1 {
+    font-family: sans-serif; margin: 0;
+    font-size: clamp(28px, 8vw, 52px); color: #f6f2ff; letter-spacing: 5px;
+    text-shadow: 0 0 26px rgba(160,90,255,.6);
+  }
+  h2 {
+    font-family: sans-serif; margin: 0;
+    font-size: clamp(22px, 6vw, 36px); letter-spacing: 3px;
+  }
+  h2.clear { color: #6bffb0; text-shadow: 0 0 22px rgba(107,255,176,.5); }
+  h2.dead  { color: #ff6b8a; text-shadow: 0 0 22px rgba(255,107,138,.5); }
+  .sub { color: #a79ed0; font-size: clamp(12px, 3.4vw, 15px); line-height: 1.9; margin: 0; }
+  .sub b { color: #d8ccff; font-weight: normal; }
+  #overStats {
+    font-family: monospace; color: #cfc6f2; font-size: clamp(13px, 3.6vw, 16px);
+    line-height: 2; letter-spacing: 1px;
+  }
+  #overStats span { color: #ffd83d; }
+  button.big {
+    margin-top: 8px; padding: 15px 44px;
+    border: 2px solid #a05aff; border-radius: 999px;
+    background: rgba(40,20,70,.9); color: #f2e9ff;
+    font-family: sans-serif; font-size: clamp(16px, 4.4vw, 21px);
+    font-weight: bold; letter-spacing: 5px; cursor: pointer;
+  }
+  button.big:active { background: rgba(72,36,124,.95); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <div id="hudL">
+      <div class="lbl">のこり</div>
+      <div id="timeText">3:00</div>
+      <div id="hpWrap"><div id="hpBar"></div></div>
+    </div>
+    <div id="hudR">
+      <div class="lbl">スコア</div>
+      <div id="scoreText">0</div>
+      <div id="ticketText">くじ 0</div>
+    </div>
+  </div>
+
+  <button id="drawBtn">くじを引く</button>
+
+  <div id="titleScreen">
+    <h1>ゾンビ・ルーレット</h1>
+    <p class="sub">
+      ゾンビ化した人たちを倒して <b>3分</b> 耐えきれ。<br>
+      ダメージを与えると <b>紫 → 青 → 緑</b> に変わる。緑はもうすぐ倒れる。<br>
+      倒すと <b>宝箱</b> が落ちる。拾うと <b>くじ</b> が手に入る。<br>
+      くじを引くと <b>ルーレット</b> が回り、アイテムがもらえる。
+    </p>
+    <p class="sub">
+      移動: <b>WASD / 矢印キー</b>、または画面を <b>ドラッグ</b><br>
+      攻撃は自動。くじを引く: <b>スペース</b> または下のボタン
+    </p>
+    <button id="startBtn" class="big">START</button>
+  </div>
+
+  <div id="overScreen">
+    <h2 id="overTitle"></h2>
+    <div id="overStats"></div>
+    <button id="replayBtn" class="big">REPLAY</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  // 定数
+  // ============================================================
+  var DURATION = 180;          // 耐える秒数（＝3分）
+  var IFRAME = 0.7;            // 被弾後の無敵秒数
+  var MAX_ZOMBIES = 58;        // 同時出現上限（描画・当たり判定コストの上限）
+  var CHEST_DROP = 0.13;       // 通常ゾンビの宝箱ドロップ率
+  var CHEST_PITY = 22;         // このキル数ごとに宝箱を確定ドロップさせる
+  var CHEST_LIFE = 14;         // 宝箱が消えるまでの秒数
+
+  var BASE = {
+    hp: 100,
+    speed: 205,
+    fireInterval: 0.42,
+    damage: 11,
+    pierce: 0,
+    shots: 1,
+    range: 330,
+    bulletSpeed: 620
+  };
+
+  // ルーレットの出目。8分割
+  var ITEMS = [
+    { name: '連射',   desc: '攻撃間隔 -18%',      color: '#ff5da2' },
+    { name: '威力',   desc: 'ダメージ +6',        color: '#ff8a3d' },
+    { name: '貫通',   desc: '弾が1体多く貫通',    color: '#ffd83d' },
+    { name: '拡散',   desc: '弾数 +1',            color: '#6bffb0' },
+    { name: '射程',   desc: '射程 +70',           color: '#3dd6ff' },
+    { name: '加速',   desc: '移動速度 +12%',      color: '#7d8bff' },
+    { name: '手当',   desc: '体力 +35',           color: '#ff4d6d' },
+    { name: '衝撃波', desc: '全体に大ダメージ',   color: '#c46bff' }
+  ];
+
+  var ZTYPES = {
+    walker: { hp: 22, speed: 48, r: 15, dmg: 9,  score: 1, unlock: 0.00 },
+    runner: { hp: 14, speed: 94, r: 12, dmg: 7,  score: 2, unlock: 0.18 },
+    brute:  { hp: 92, speed: 32, r: 25, dmg: 20, score: 5, unlock: 0.42 }
+  };
+
+  // ============================================================
+  // DOM
+  // ============================================================
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var timeText = document.getElementById('timeText');
+  var scoreText = document.getElementById('scoreText');
+  var ticketText = document.getElementById('ticketText');
+  var hpBar = document.getElementById('hpBar');
+  var drawBtn = document.getElementById('drawBtn');
+  var titleScreen = document.getElementById('titleScreen');
+  var overScreen = document.getElementById('overScreen');
+  var overTitle = document.getElementById('overTitle');
+  var overStats = document.getElementById('overStats');
+  var startBtn = document.getElementById('startBtn');
+  var replayBtn = document.getElementById('replayBtn');
+
+  // ============================================================
+  // 画面サイズ
+  // ============================================================
+  var W = 960, H = 600, DPR = 1;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth || 960;
+    H = window.innerHeight || 600;
+    cv.width = Math.max(1, Math.floor(W * DPR));
+    cv.height = Math.max(1, Math.floor(H * DPR));
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ============================================================
+  // 状態
+  // ============================================================
+  var state = 'title';          // 'title' | 'play' | 'over'
+  var cleared = false;
+  var timeLeft = DURATION;
+  var score = 0;
+  var kills = 0;
+  var tickets = 0;
+  var killsSincePity = 0;
+
+  var player = null;
+  var stats = null;
+  var zombies = [];
+  var bullets = [];
+  var chests = [];
+  var particles = [];
+  var floaters = [];
+
+  var spawnTimer = 0;
+  var fireTimer = 0;
+  var shakeT = 0, shakeMag = 0;
+  var flashT = 0, flashColor = '#ffffff';
+
+  // ルーレット（play中のモーダル。stateは 'play' のまま）
+  var roul = {
+    active: false,
+    phase: 'spin',    // 'spin' | 'reveal'
+    t: 0,
+    rot: 0,
+    targetRot: 0,
+    index: 0,
+    tickAcc: 0
+  };
+
+  // 入力
+  var keys = Object.create(null);
+  var ptr = { down: false, x: 0, y: 0 };
+
+  // ============================================================
+  // 音（コード生成音のみ。AudioContextが無い環境では完全に無音で進む）
+  // ============================================================
+  var AC = null, audioDead = false;
+
+  function ac() {
+    if (AC || audioDead) return AC;
+    try {
+      var Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) { audioDead = true; return null; }
+      AC = new Ctor();
+    } catch (e) { audioDead = true; AC = null; }
+    return AC;
+  }
+
+  function beep(freq, dur, type, vol) {
+    var a = ac();
+    if (!a) return;
+    try {
+      var o = a.createOscillator();
+      var g = a.createGain();
+      o.type = type || 'square';
+      o.frequency.setValueAtTime(freq, a.currentTime);
+      g.gain.setValueAtTime(vol == null ? 0.06 : vol, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g);
+      g.connect(a.destination);
+      o.start();
+      o.stop(a.currentTime + dur);
+    } catch (e) { /* 音が鳴らないことはゲーム進行に影響させない */ }
+  }
+
+  function sweep(f0, f1, dur, type, vol) {
+    var a = ac();
+    if (!a) return;
+    try {
+      var o = a.createOscillator();
+      var g = a.createGain();
+      o.type = type || 'sawtooth';
+      o.frequency.setValueAtTime(f0, a.currentTime);
+      o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), a.currentTime + dur);
+      g.gain.setValueAtTime(vol == null ? 0.08 : vol, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g);
+      g.connect(a.destination);
+      o.start();
+      o.stop(a.currentTime + dur);
+    } catch (e) { /* 同上 */ }
+  }
+
+  // ============================================================
+  // 小道具
+  // ============================================================
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+
+  // ゾンビの色: HP満タン=紫 → 青 → 瀕死=緑
+  function zombieHue(ratio) { return 130 + clamp(ratio, 0, 1) * 150; }
+  function zombieColor(ratio, light) {
+    return 'hsl(' + zombieHue(ratio).toFixed(0) + ',72%,' + (light == null ? 58 : light) + '%)';
+  }
+
+  function rrect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function shake(mag) { shakeMag = Math.max(shakeMag, mag); shakeT = Math.max(shakeT, 0.24); }
+  function flash(color, t) { flashColor = color; flashT = Math.max(flashT, t); }
+
+  function burst(x, y, color, n, spd) {
+    for (var i = 0; i < n; i++) {
+      var a = rnd(0, Math.PI * 2), s = rnd(spd * 0.3, spd);
+      particles.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rnd(0.25, 0.6), max: 0.6, color: color, r: rnd(1.5, 3.6) });
+    }
+  }
+
+  function floatText(x, y, text, color) {
+    floaters.push({ x: x, y: y, text: text, color: color, life: 0.9, max: 0.9 });
+  }
+
+  // ============================================================
+  // 初期化 / 状態遷移
+  // ============================================================
+  function reset() {
+    timeLeft = DURATION;
+    score = 0;
+    kills = 0;
+    tickets = 0;
+    killsSincePity = 0;
+    drawnCount = 0;
+    cleared = false;
+
+    stats = {
+      speed: BASE.speed,
+      fireInterval: BASE.fireInterval,
+      damage: BASE.damage,
+      pierce: BASE.pierce,
+      shots: BASE.shots,
+      range: BASE.range
+    };
+    player = {
+      x: W / 2, y: H / 2,
+      hp: BASE.hp, maxHp: BASE.hp,
+      r: 14, inv: 0, aim: -Math.PI / 2
+    };
+
+    zombies.length = 0;
+    bullets.length = 0;
+    chests.length = 0;
+    particles.length = 0;
+    floaters.length = 0;
+
+    spawnTimer = 0.6;
+    fireTimer = 0;
+    shakeT = 0; shakeMag = 0; flashT = 0;
+
+    roul.active = false;
+    roul.phase = 'spin';
+    roul.t = 0;
+    roul.rot = 0;
+
+    keys = Object.create(null);
+    ptr.down = false;
+
+    syncHud();
+  }
+
+  function start() {
+    reset();
+    state = 'play';
+    titleScreen.style.display = 'none';
+    overScreen.style.display = 'none';
+    beep(520, 0.09, 'square', 0.07);
+  }
+
+  function gameOver(win) {
+    state = 'over';
+    cleared = !!win;
+    roul.active = false;
+    drawBtn.classList.remove('on');
+    overTitle.textContent = win ? 'SURVIVED' : 'OVERRUN';
+    overTitle.className = win ? 'clear' : 'dead';
+    overStats.textContent =
+      'スコア ' + score + '  /  撃破 ' + kills + '  /  ひいたくじ ' + drawnCount;
+    overScreen.style.display = 'flex';
+    if (win) { sweep(400, 900, 0.5, 'triangle', 0.09); flash('#6bffb0', 0.4); }
+    else { sweep(300, 60, 0.7, 'sawtooth', 0.1); flash('#ff4d6d', 0.4); shake(16); }
+  }
+
+  var drawnCount = 0;
+
+  // ============================================================
+  // 入力
+  // ============================================================
+  function onKeyDown(e) {
+    keys[e.key] = true;
+    var k = (e.key || '').toLowerCase();
+    if (k === ' ' || e.key === 'Spacebar') {
+      if (state === 'title') { start(); }
+      else if (state === 'over') { start(); }
+      else if (state === 'play') { tryDraw(); }
+      if (e.preventDefault) e.preventDefault();
+    } else if (k === 'enter') {
+      if (state === 'title' || state === 'over') start();
+    }
+  }
+  function onKeyUp(e) { keys[e.key] = false; }
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+
+  function pointerPos(e) {
+    var rect = cv.getBoundingClientRect();
+    ptr.x = (e.clientX || 0) - rect.left;
+    ptr.y = (e.clientY || 0) - rect.top;
+  }
+
+  cv.addEventListener('pointerdown', function (e) {
+    if (e.preventDefault) e.preventDefault();
+    ac(); // 最初の操作でAudioContextを起こす
+    if (roul.active && roul.phase === 'reveal') { closeRoulette(); return; }
+    ptr.down = true;
+    pointerPos(e);
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!ptr.down) return;
+    if (e.preventDefault) e.preventDefault();
+    pointerPos(e);
+  });
+  cv.addEventListener('pointerup', function () { ptr.down = false; });
+  cv.addEventListener('pointercancel', function () { ptr.down = false; });
+  cv.addEventListener('pointerleave', function () { ptr.down = false; });
+
+  startBtn.addEventListener('click', function () { ac(); start(); });
+  replayBtn.addEventListener('click', function () { ac(); start(); });
+  drawBtn.addEventListener('click', function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    ac();
+    tryDraw();
+  });
+
+  // ============================================================
+  // ルーレット
+  // ============================================================
+  function tryDraw() {
+    if (state !== 'play' || roul.active || tickets <= 0) return;
+    tickets--;
+    drawnCount++;
+    roul.active = true;
+    roul.phase = 'spin';
+    roul.t = 0;
+    roul.tickAcc = 0;
+    roul.index = Math.floor(Math.random() * ITEMS.length);
+
+    var seg = (Math.PI * 2) / ITEMS.length;
+    var spins = 4 + Math.floor(Math.random() * 3);
+    roul.targetRot = Math.PI * 2 * spins - (roul.index + 0.5) * seg;
+    roul.rot = 0;
+
+    ptr.down = false;
+    syncHud();
+    beep(700, 0.08, 'square', 0.07);
+  }
+
+  var SPIN_TIME = 2.2;
+
+  function updateRoulette(dt) {
+    roul.t += dt;
+    if (roul.phase === 'spin') {
+      var p = clamp(roul.t / SPIN_TIME, 0, 1);
+      var e = 1 - Math.pow(1 - p, 3);   // easeOutCubic
+      var prev = roul.rot;
+      roul.rot = roul.targetRot * e;
+
+      // 回転量に応じてカチカチ鳴らす
+      var seg = (Math.PI * 2) / ITEMS.length;
+      roul.tickAcc += (roul.rot - prev);
+      if (roul.tickAcc >= seg) {
+        roul.tickAcc -= seg;
+        beep(1200, 0.025, 'square', 0.035);
+      }
+
+      if (p >= 1) {
+        roul.phase = 'reveal';
+        roul.t = 0;
+        applyItem(roul.index);
+      }
+    } else {
+      if (roul.t > 1.7) closeRoulette();
+    }
+  }
+
+  function closeRoulette() {
+    if (!roul.active) return;
+    roul.active = false;
+    roul.phase = 'spin';
+    roul.t = 0;
+  }
+
+  function applyItem(i) {
+    var it = ITEMS[i];
+    switch (i) {
+      case 0: stats.fireInterval = Math.max(0.10, stats.fireInterval * 0.82); break;
+      case 1: stats.damage += 6; break;
+      case 2: stats.pierce += 1; break;
+      case 3: stats.shots = Math.min(7, stats.shots + 1); break;
+      case 4: stats.range = Math.min(760, stats.range + 70); break;
+      case 5: stats.speed = Math.min(BASE.speed * 1.7, stats.speed * 1.12); break;
+      case 6: player.hp = Math.min(player.maxHp, player.hp + 35); break;
+      case 7:
+        for (var z = 0; z < zombies.length; z++) hurtZombie(zombies[z], 70, true);
+        player.hp = Math.min(player.maxHp, player.hp + 15);
+        burst(player.x, player.y, '#c46bff', 46, 460);
+        flash('#c46bff', 0.28);
+        shake(13);
+        sweep(900, 120, 0.35, 'sawtooth', 0.09);
+        break;
+    }
+    floatText(player.x, player.y - 34, it.name, it.color);
+    beep(880, 0.16, 'triangle', 0.09);
+    syncHud();
+  }
+
+  // ============================================================
+  // スポーン
+  // ============================================================
+  function pickType(p) {
+    var pool = ['walker'];
+    if (p >= ZTYPES.runner.unlock) { pool.push('runner'); pool.push('runner'); }
+    if (p >= ZTYPES.brute.unlock) pool.push('brute');
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function spawnZombie(p) {
+    if (zombies.length >= MAX_ZOMBIES) return;
+    var key = pickType(p);
+    var t = ZTYPES[key];
+    var hpMul = 1 + 2.2 * p;
+    var spdMul = 1 + 0.45 * p;
+
+    // 画面外の縁から出す
+    var side = Math.floor(Math.random() * 4), x, y, m = 46;
+    if (side === 0) { x = rnd(-m, W + m); y = -m; }
+    else if (side === 1) { x = W + m; y = rnd(-m, H + m); }
+    else if (side === 2) { x = rnd(-m, W + m); y = H + m; }
+    else { x = -m; y = rnd(-m, H + m); }
+
+    var hp = t.hp * hpMul;
+    zombies.push({
+      kind: key, x: x, y: y, vx: 0, vy: 0,
+      hp: hp, maxHp: hp,
+      speed: t.speed * spdMul * rnd(0.9, 1.1),
+      r: t.r, dmg: t.dmg, score: t.score,
+      hitT: 0, wob: rnd(0, Math.PI * 2)
+    });
+  }
+
+  // ============================================================
+  // 戦闘
+  // ============================================================
+  function hurtZombie(z, dmg, silent) {
+    if (z.hp <= 0) return;
+    z.hp -= dmg;
+    z.hitT = 0.09;
+    if (z.hp <= 0) killZombie(z, silent);
+  }
+
+  function killZombie(z, silent) {
+    z.dead = true;
+    kills++;
+    killsSincePity++;
+    score += z.score;
+    burst(z.x, z.y, zombieColor(0, 62), z.kind === 'brute' ? 24 : 12, 240);
+    if (!silent) beep(z.kind === 'brute' ? 150 : 220, 0.07, 'square', 0.05);
+
+    var guaranteed = (z.kind === 'brute') || (killsSincePity >= CHEST_PITY);
+    if (guaranteed || Math.random() < CHEST_DROP) {
+      killsSincePity = 0;
+      chests.push({ x: z.x, y: z.y, life: CHEST_LIFE, t: rnd(0, Math.PI * 2) });
+    }
+    syncHud();
+  }
+
+  function fire() {
+    // 射程内の最も近いゾンビを狙う
+    var best = null, bestD = stats.range * stats.range;
+    for (var i = 0; i < zombies.length; i++) {
+      var z = zombies[i];
+      var dx = z.x - player.x, dy = z.y - player.y;
+      var d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = z; }
+    }
+    if (!best) return;
+
+    var base = Math.atan2(best.y - player.y, best.x - player.x);
+    player.aim = base;
+
+    var n = stats.shots;
+    var spread = n > 1 ? 0.14 : 0;
+    for (var s = 0; s < n; s++) {
+      var a = base + (s - (n - 1) / 2) * spread;
+      bullets.push({
+        x: player.x + Math.cos(a) * 16,
+        y: player.y + Math.sin(a) * 16,
+        vx: Math.cos(a) * BASE.bulletSpeed,
+        vy: Math.sin(a) * BASE.bulletSpeed,
+        life: stats.range / BASE.bulletSpeed + 0.1,
+        pierce: stats.pierce,
+        hit: []
+      });
+    }
+    beep(1500, 0.03, 'square', 0.025);
+  }
+
+  function hurtPlayer(dmg) {
+    if (player.inv > 0) return;
+    player.hp -= dmg;
+    player.inv = IFRAME;
+    flash('#ff4d6d', 0.18);
+    shake(8);
+    beep(120, 0.12, 'sawtooth', 0.08);
+    floatText(player.x, player.y - 26, '-' + Math.round(dmg), '#ff6b8a');
+    syncHud();
+    if (player.hp <= 0) { player.hp = 0; gameOver(false); }
+  }
+
+  // ============================================================
+  // 更新
+  // ============================================================
+  function update(dt) {
+    if (state !== 'play') return;
+
+    if (roul.active) { updateRoulette(dt); return; }   // ルーレット中はゲームを止める
+
+    timeLeft -= dt;
+    if (timeLeft <= 0) { timeLeft = 0; syncHud(); gameOver(true); return; }
+
+    var p = 1 - (timeLeft / DURATION);
+
+    // --- プレイヤー移動 ---
+    var mx = 0, my = 0;
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) mx -= 1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) mx += 1;
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) my -= 1;
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) my += 1;
+
+    if (mx === 0 && my === 0 && ptr.down) {
+      var pdx = ptr.x - player.x, pdy = ptr.y - player.y;
+      var pd = Math.hypot(pdx, pdy);
+      if (pd > 6) { mx = pdx / pd; my = pdy / pd; }
+    }
+    var ml = Math.hypot(mx, my);
+    if (ml > 0) {
+      player.x += (mx / ml) * stats.speed * dt;
+      player.y += (my / ml) * stats.speed * dt;
+    }
+    player.x = clamp(player.x, player.r, W - player.r);
+    player.y = clamp(player.y, player.r, H - player.r);
+    if (player.inv > 0) player.inv -= dt;
+
+    // --- スポーン ---
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnTimer = lerp(1.45, 0.36, p) * rnd(0.8, 1.2);
+      spawnZombie(p);
+      if (p > 0.5 && Math.random() < 0.40) spawnZombie(p);
+      if (p > 0.85 && Math.random() < 0.30) spawnZombie(p);
+    }
+
+    // --- 射撃 ---
+    fireTimer -= dt;
+    if (fireTimer <= 0) { fireTimer = stats.fireInterval; fire(); }
+
+    // --- ゾンビ ---
+    var i, j, z;
+    for (i = 0; i < zombies.length; i++) {
+      z = zombies[i];
+      if (z.hitT > 0) z.hitT -= dt;
+      z.wob += dt * 7;
+
+      var dx = player.x - z.x, dy = player.y - z.y;
+      var d = Math.hypot(dx, dy) || 1;
+      var sx = 0, sy = 0;
+
+      // 重なりすぎないように軽く押し合う
+      for (j = 0; j < zombies.length; j++) {
+        if (i === j) continue;
+        var o = zombies[j];
+        var ox = z.x - o.x, oy = z.y - o.y;
+        var od = Math.hypot(ox, oy);
+        var minD = z.r + o.r;
+        if (od > 0.001 && od < minD) {
+          sx += (ox / od) * (minD - od) * 2.2;
+          sy += (oy / od) * (minD - od) * 2.2;
+        }
+      }
+
+      z.x += ((dx / d) * z.speed + sx) * dt;
+      z.y += ((dy / d) * z.speed + sy) * dt;
+
+      if (d < z.r + player.r) {
+        hurtPlayer(z.dmg);
+        if (state !== 'play') return;   // 死亡した時点でこのフレームの更新を打ち切る
+      }
+    }
+
+    // --- 弾 ---
+    for (i = 0; i < bullets.length; i++) {
+      var b = bullets[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt;
+      if (b.x < -40 || b.x > W + 40 || b.y < -40 || b.y > H + 40) b.life = 0;
+
+      for (j = 0; j < zombies.length; j++) {
+        z = zombies[j];
+        if (z.dead || b.life <= 0) continue;
+        if (b.hit.indexOf(z) >= 0) continue;
+        if (Math.hypot(b.x - z.x, b.y - z.y) < z.r + 4) {
+          hurtZombie(z, stats.damage);
+          burst(b.x, b.y, '#fff2b8', 3, 120);
+          b.hit.push(z);
+          if (b.pierce > 0) b.pierce--;
+          else { b.life = 0; break; }
+        }
+      }
+    }
+
+    // --- 宝箱 ---
+    for (i = 0; i < chests.length; i++) {
+      var c = chests[i];
+      c.life -= dt;
+      c.t += dt * 3;
+      if (Math.hypot(c.x - player.x, c.y - player.y) < player.r + 20) {
+        c.got = true;
+        tickets++;
+        floatText(c.x, c.y - 16, 'くじ +1', '#ffd83d');
+        burst(c.x, c.y, '#ffd83d', 16, 200);
+        beep(1046, 0.1, 'triangle', 0.08);
+        syncHud();
+      }
+    }
+
+    // --- 演出 ---
+    for (i = 0; i < particles.length; i++) {
+      var pa = particles[i];
+      pa.x += pa.vx * dt; pa.y += pa.vy * dt;
+      pa.vx *= 0.92; pa.vy *= 0.92;
+      pa.life -= dt;
+    }
+    for (i = 0; i < floaters.length; i++) {
+      var f = floaters[i];
+      f.y -= 26 * dt;
+      f.life -= dt;
+    }
+    if (shakeT > 0) { shakeT -= dt; if (shakeT <= 0) shakeMag = 0; }
+    if (flashT > 0) flashT -= dt;
+
+    // --- 掃除 ---
+    zombies = zombies.filter(function (v) { return !v.dead; });
+    bullets = bullets.filter(function (v) { return v.life > 0; });
+    chests = chests.filter(function (v) { return !v.got && v.life > 0; });
+    particles = particles.filter(function (v) { return v.life > 0; });
+    floaters = floaters.filter(function (v) { return v.life > 0; });
+
+    syncHud();
+  }
+
+  // ============================================================
+  // HUD
+  // ============================================================
+  var lastHud = '';
+  function syncHud() {
+    var t = Math.max(0, Math.ceil(timeLeft));
+    var mm = Math.floor(t / 60), ss = t % 60;
+    var key = state + '|' + (roul.active ? 1 : 0) + '|' + t + '|' + score + '|' +
+              tickets + '|' + Math.round(player ? player.hp : 0);
+    if (key === lastHud) return;
+    lastHud = key;
+
+    timeText.textContent = mm + ':' + (ss < 10 ? '0' : '') + ss;
+    if (t <= 15 && state === 'play') timeText.classList.add('warn');
+    else timeText.classList.remove('warn');
+
+    scoreText.textContent = String(score);
+    ticketText.textContent = 'くじ ' + tickets;
+    hpBar.style.width = (player ? clamp(player.hp / player.maxHp, 0, 1) * 100 : 100) + '%';
+
+    if (state === 'play' && tickets > 0 && !roul.active) drawBtn.classList.add('on');
+    else drawBtn.classList.remove('on');
+  }
+
+  // ============================================================
+  // 描画
+  // ============================================================
+  function drawArena() {
+    ctx.fillStyle = '#08070f';
+    ctx.fillRect(0, 0, W, H);
+
+    // 床のグリッド
+    ctx.strokeStyle = 'rgba(120,96,190,0.10)';
+    ctx.lineWidth = 1;
+    var g = 64;
+    ctx.beginPath();
+    for (var x = 0; x <= W; x += g) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    for (var y = 0; y <= H; y += g) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    ctx.stroke();
+
+    // 外周のふち
+    ctx.strokeStyle = 'rgba(160,90,255,0.28)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+  }
+
+  function drawZombie(z) {
+    var ratio = clamp(z.hp / z.maxHp, 0, 1);
+    var col = zombieColor(ratio);
+    var dark = zombieColor(ratio, 30);
+    var wob = Math.sin(z.wob) * (z.r * 0.09);
+
+    ctx.save();
+    ctx.translate(z.x, z.y + wob);
+
+    // 影
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, z.r * 0.9, z.r * 0.85, z.r * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 胴
+    ctx.fillStyle = dark;
+    rrect(-z.r * 0.62, -z.r * 0.15, z.r * 1.24, z.r * 1.1, z.r * 0.3);
+    ctx.fill();
+
+    // 顔（ここがHPで紫→青→緑に変わる）
+    ctx.fillStyle = z.hitT > 0 ? '#ffffff' : col;
+    ctx.beginPath();
+    ctx.arc(0, -z.r * 0.42, z.r * 0.78, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 目と口
+    if (z.hitT <= 0) {
+      ctx.fillStyle = 'rgba(10,6,20,0.85)';
+      var ex = z.r * 0.3, ey = -z.r * 0.5, er = Math.max(1.3, z.r * 0.13);
+      ctx.beginPath(); ctx.arc(-ex, ey, er, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-z.r * 0.3, -z.r * 0.18, z.r * 0.6, Math.max(1.2, z.r * 0.1));
+    }
+
+    // ブルートには輪郭を足して見分けやすくする
+    if (z.kind === 'brute') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, z.r * 1.25, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawChest(c) {
+    var bob = Math.sin(c.t) * 3;
+    var blink = c.life < 3.5 && (Math.floor(c.life * 8) % 2 === 0);
+    ctx.save();
+    ctx.translate(c.x, c.y + bob);
+    ctx.globalAlpha = blink ? 0.35 : 1;
+
+    ctx.fillStyle = 'rgba(255,216,61,0.16)';
+    ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#7a4b12';
+    rrect(-13, -6, 26, 16, 3); ctx.fill();
+    ctx.fillStyle = '#c98a24';
+    rrect(-14, -14, 28, 10, 4); ctx.fill();
+    ctx.fillStyle = '#ffd83d';
+    ctx.fillRect(-2.5, -8, 5, 8);
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, player.r * 0.95, player.r * 0.9, player.r * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    var blink = player.inv > 0 && (Math.floor(player.inv * 16) % 2 === 0);
+    ctx.globalAlpha = blink ? 0.4 : 1;
+
+    ctx.fillStyle = '#f2e9ff';
+    ctx.beginPath(); ctx.arc(0, 0, player.r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#a05aff'; ctx.lineWidth = 3; ctx.stroke();
+
+    // 銃口
+    ctx.rotate(player.aim);
+    ctx.fillStyle = '#a05aff';
+    rrect(player.r - 3, -3.5, 15, 7, 3); ctx.fill();
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawRoulette() {
+    ctx.fillStyle = 'rgba(6,5,13,0.86)';
+    ctx.fillRect(0, 0, W, H);
+
+    var cx = W / 2, cy = H / 2 - (H < 520 ? 10 : 26);
+    var R = Math.min(W, H) * 0.30;
+    R = clamp(R, 90, 190);
+    var seg = (Math.PI * 2) / ITEMS.length;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(roul.rot);
+
+    for (var i = 0; i < ITEMS.length; i++) {
+      var a0 = -Math.PI / 2 + i * seg;
+      var a1 = a0 + seg;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, R, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = ITEMS[i].color;
+      ctx.globalAlpha = (roul.phase === 'reveal' && i !== roul.index) ? 0.28 : 0.95;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = 'rgba(6,5,13,0.85)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#1a1330';
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffd83d'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
+
+    // 出目の名前は盤と一緒に回さず、常に水平に置く（回転させると左半分が上下逆さまになる）
+    ctx.font = 'bold ' + Math.round(R * 0.135) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (var j = 0; j < ITEMS.length; j++) {
+      var mid = -Math.PI / 2 + (j + 0.5) * seg + roul.rot;
+      ctx.globalAlpha = (roul.phase === 'reveal' && j !== roul.index) ? 0.35 : 1;
+      ctx.fillStyle = 'rgba(12,8,22,0.92)';
+      ctx.fillText(ITEMS[j].name, cx + Math.cos(mid) * R * 0.63, cy + Math.sin(mid) * R * 0.63);
+    }
+    ctx.globalAlpha = 1;
+
+    // 上の針
+    ctx.fillStyle = '#ffd83d';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - R + 14);
+    ctx.lineTo(cx - 13, cy - R - 16);
+    ctx.lineTo(cx + 13, cy - R - 16);
+    ctx.closePath();
+    ctx.fill();
+
+    // 文字
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (roul.phase === 'spin') {
+      ctx.fillStyle = '#efe9ff';
+      ctx.font = 'bold ' + Math.round(clamp(W * 0.05, 18, 30)) + 'px sans-serif';
+      ctx.fillText('くじを引いた', cx, cy + R + 46);
+    } else {
+      var it = ITEMS[roul.index];
+      ctx.fillStyle = it.color;
+      ctx.font = 'bold ' + Math.round(clamp(W * 0.075, 26, 46)) + 'px sans-serif';
+      ctx.fillText(it.name, cx, cy + R + 44);
+      ctx.fillStyle = '#cfc6f2';
+      ctx.font = Math.round(clamp(W * 0.038, 13, 19)) + 'px sans-serif';
+      ctx.fillText(it.desc, cx, cy + R + 78);
+      ctx.fillStyle = 'rgba(207,198,242,0.55)';
+      ctx.font = Math.round(clamp(W * 0.03, 11, 14)) + 'px sans-serif';
+      ctx.fillText('タップ / クリックで再開', cx, cy + R + 108);
+    }
+  }
+
+  function render() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    var ox = 0, oy = 0;
+    if (shakeT > 0) {
+      ox = rnd(-shakeMag, shakeMag) * (shakeT / 0.24);
+      oy = rnd(-shakeMag, shakeMag) * (shakeT / 0.24);
+    }
+    ctx.save();
+    ctx.translate(ox, oy);
+
+    drawArena();
+
+    if (state !== 'title') {
+      var i;
+      for (i = 0; i < chests.length; i++) drawChest(chests[i]);
+
+      // 射程の目安
+      if (state === 'play' && !roul.active) {
+        ctx.strokeStyle = 'rgba(160,90,255,0.13)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, stats.range, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      for (i = 0; i < zombies.length; i++) drawZombie(zombies[i]);
+
+      ctx.fillStyle = '#fff2b8';
+      for (i = 0; i < bullets.length; i++) {
+        var b = bullets[i];
+        ctx.beginPath(); ctx.arc(b.x, b.y, 3.4, 0, Math.PI * 2); ctx.fill();
+      }
+
+      drawPlayer();
+
+      for (i = 0; i < particles.length; i++) {
+        var pa = particles[i];
+        ctx.globalAlpha = clamp(pa.life / pa.max, 0, 1);
+        ctx.fillStyle = pa.color;
+        ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 16px sans-serif';
+      for (i = 0; i < floaters.length; i++) {
+        var f = floaters[i];
+        ctx.globalAlpha = clamp(f.life / f.max, 0, 1);
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, f.x, f.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    if (roul.active) drawRoulette();
+
+    if (flashT > 0) {
+      ctx.globalAlpha = clamp(flashT, 0, 1) * 0.45;
+      ctx.fillStyle = flashColor;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ============================================================
+  // メインループ
+  // ============================================================
+  var last = -1;
+  function tick(now) {
+    if (last < 0) last = now;
+    var dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.05) dt = 0.05;
+    if (dt < 0) dt = 0;
+
+    update(dt);
+    render();
+    window.requestAnimationFrame(tick);
+  }
+
+  reset();
+  render();
+  window.requestAnimationFrame(tick);
+
+  // ============================================================
+  // 検証用フック（smoke.mjs と同じ形。テスト側を緩めないための読み取り専用API）
+  // ============================================================
+  window.__GAME__ = {
+    start: start,
+    get state() { return state; },
+    get timeLeft() { return timeLeft; },
+    get score() { return score; },
+    get kills() { return kills; },
+    get tickets() { return tickets; },
+    get hp() { return player ? player.hp : 0; },
+    get zombies() { return zombies.length; },
+    get chests() { return chests.length; },
+    get rouletteActive() { return roul.active; },
+    get rouletteItem() { return roul.active && roul.phase === 'reveal' ? ITEMS[roul.index].name : null; },
+    get cleared() { return cleared; },
+    get duration() { return DURATION; },
+    checkSuccess: function () { return kills >= 1; },
+
+    // 検証用の読み取り専用スナップショット。値を返すだけで、
+    // ゲーム側の進行・判定には一切使っていない。
+    snapshot: function () {
+      return {
+        w: W, h: H,
+        player: player ? { x: player.x, y: player.y, hp: player.hp, inv: player.inv } : null,
+        stats: stats ? {
+          speed: stats.speed, fireInterval: stats.fireInterval, damage: stats.damage,
+          pierce: stats.pierce, shots: stats.shots, range: stats.range
+        } : null,
+        base: { speed: BASE.speed, fireInterval: BASE.fireInterval, damage: BASE.damage,
+                pierce: BASE.pierce, shots: BASE.shots, range: BASE.range },
+        zombies: zombies.map(function (z) {
+          return { x: z.x, y: z.y, kind: z.kind, ratio: z.hp / z.maxHp, hue: zombieHue(z.hp / z.maxHp) };
+        }),
+        chests: chests.map(function (c) { return { x: c.x, y: c.y }; })
+      };
+    }
+  };
+})();
+</script>
+</body>
+</html>
