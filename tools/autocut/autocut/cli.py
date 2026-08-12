@@ -28,6 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
             "  autocut talk.mp4\n"
             "  autocut talk.mp4 --out ./出力 --shorts 5\n"
             "  autocut talk.mp4 --asr fixture --transcript talk.srt\n"
+            "\n"
+            "スマホから使う:\n"
+            "  autocut serve              母艦で待ち受け、iPhone のブラウザから渡す\n"
         ),
     )
     parser.add_argument("input", type=Path, help="元の動画ファイル")
@@ -81,6 +84,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+
+    # `autocut serve` はスマホから使うためのサーバー。位置引数と衝突するので先に分ける。
+    if argv and argv[0] == "serve":
+        from .server import main as serve_main
+        return serve_main(argv[1:])
+
     args = build_parser().parse_args(argv)
 
     if args.asr == "fixture" and args.transcript is None:

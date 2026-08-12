@@ -14,6 +14,7 @@ asr = ["faster-whisper>=1.0"]
 
 [project.scripts]
 autocut = "autocut.cli:main"
+autocut-serve = "autocut.server:main"
 
 [tool.setuptools]
 packages = ["autocut"]

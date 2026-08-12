@@ -8,6 +8,35 @@ autocut 撮ったやつ.mp4
 
 これだけ。途中で何も聞かれない。
 
+## スマホから使う
+
+iPhone のブラウザから動画を渡したいときは、母艦（Mac / PC）でこれを叩く。
+
+```bash
+autocut serve
+```
+
+```
+  autocut — スマホから使う
+  ──────────────────────────────────────────────
+  iPhone で開く:  http://192.168.11.5:8765/
+  PIN:            4821   （最初の1回だけ）
+  ──────────────────────────────────────────────
+```
+
+出てきた URL を iPhone の Safari で開くと、カメラロールから動画を選べる。処理は母艦がやり、終わると同じ画面で3種類を再生・保存できる。**動画は母艦から外へ出ない。** クラウドも課金も要らない。
+
+母艦が起きていて、同じ Wi-Fi にいることが条件。ブックマークしておけば次からは1タップで開く。
+
+| オプション | |
+|---|---|
+| `--port 8765` | 待ち受けるポート |
+| `--out ./autocut-web` | 受け取った動画と出力の置き場所 |
+| `--max-gb 8` | 1本の上限 |
+| `--no-pin` | PIN を求めない（信頼できる回線でのみ） |
+
+送信中はページを開いたままにする。送り終わったあとは閉じてよく、開き直せば途中経過に戻る。
+
 ```
 撮ったやつ_autocut/
 ├── youtube_long/     撮ったやつ_youtube_long.mp4        1920x1080
@@ -122,6 +151,8 @@ autocut talk.mp4 --highlights picks.json
 | テロップ | 焼き込みを目視確認。日本語が豆腐にならず、折返しと位置も意図どおり |
 | 縦型の組み直し | 背景ぼかし＋中央配置を目視確認。被写体が切れていない |
 | 単体テスト | 38件パス（`python -m unittest discover -s tests`） |
+| スマホ経路（`serve`） | 18項目パス。41.6MB の受け取りがバイト単位で一致 / 3種の生成 / Range 部分取得 206・範囲外 416 / 経路外読み出しを 403 で遮断 |
+| スマホ画面 | iPhone 相当（393×852）で PIN → 選択 → 送信 → 進捗 → 結果まで実際に操作。横スクロールの漏れなし |
 
 **まだ実測していないもの**
 
@@ -147,4 +178,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 # 通しの検証素材を作って回す（ffmpeg + espeak-ng が要る）
 python tests/make_fixture.py --out /tmp/fx
 python -m autocut /tmp/fx/fixture.mp4 --asr fixture --transcript /tmp/fx/fixture.json --out /tmp/fx/out
+
+# スマホ経路の通し検証（HTTP・ジョブ・Range 配信まで実際に動かす）
+python tests/serve_smoke.py --fixture /tmp/fx
 ```
