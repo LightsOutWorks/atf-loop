@@ -14,14 +14,20 @@
 //   2  no external requests or external URL references
 //   3  the inline script parses
 //   4  it loads, initialises, and 30 frames run without throwing
-//   5  START moves title -> play, in stage 1, with the starting weapon
+//   5  START moves title -> play, in stage 1, holding the katana
 //   6  weapons fire on their own and actually kill things
-//   7  item tiers are gated: stage 1 never offers anything above tier 1
+//   7  item tiers are gated, and the katana is never offered as a card
 //   8  stage 1 boss is the zombie horde, and its horde armour engages
-//   9  the stage chain is horde -> frost -> storm -> dragon
+//   9  the stage chain is horde -> frost -> storm -> dragon, on the 5:00 clock
 //  10  the ultimate items exist ONLY in the final stage, and are offered there
 //  11  the dragon changes phase as it loses health
 //  12  replay resets stage, level, kills and build
+//  13  16 scrolls sharpen the katana, and past level 5 it awakens
+//  14  the katana cuts yokai for double
+//  15  a blight beetle poisons on contact, and poison drains life
+//  16  every named outbreak spawns its own swarm
+//  17  the clock advances only while surviving, and freezes for every boss
+//  18  a boss killed by ordinary damage actually clears the stage
 //
 // Weakening a check, deleting one, or relaxing an expectation to force a
 // pass is forbidden (CONSTRAINTS.md Part I §6).
@@ -259,12 +265,15 @@ if (results[3].ok){
     assert(G.stageIndex === 0, 'did not begin at stage 1: ' + G.stageIndex);
     assert(G.stageName === 'ROTTING FIELDS', 'stage 1 name wrong: ' + G.stageName);
     assert(G.level === 1 && G.kills === 0, 'run did not start clean');
-    assert(G.build.weapons.blade === 1, 'starting weapon missing: ' + JSON.stringify(G.build));
+    assert(G.build.weapons.katana === 1, 'the katana is not the starting weapon: ' + JSON.stringify(G.build));
+    assert(G.katanaLv === 1 && G.scrollCount === 0, 'the blade did not start unsharpened');
     assert(G.phase === 'survive', 'stage 1 did not begin in survive phase: ' + G.phase);
+    assert(G.runClock < 1, 'the clock did not start at zero: ' + G.runClock);
+    assert(G.constants.runLimit === 300, 'the run is not five minutes: ' + G.constants.runLimit);
     ok = true;
   } catch (e){ detail = String(e && e.message || e); }
-  record(5, 'START enters stage 1 with the starting weapon', ok, detail);
-} else record(5, 'START enters stage 1 with the starting weapon', false, 'skipped');
+  record(5, 'START enters stage 1 holding the katana', ok, detail);
+} else record(5, 'START enters stage 1 holding the katana', false, 'skipped');
 
 // ---------- 6. auto-attack actually kills ----------
 if (results[4].ok){
@@ -310,10 +319,11 @@ if (results[5].ok){
     assert(seenTiers.size > 0, 'no level-up choices were ever offered');
     assert(above.length === 0, 'stage 1 offered tier(s) ' + above.join(',') + ' — ' + Array.from(seenIds).join(','));
     assert(!seenIds.has('fang') && !seenIds.has('ancient'), 'ultimate offered in stage 1');
+    assert(!seenIds.has('katana'), 'the katana was offered as a card; it must answer only to scrolls');
     ok = true;
   } catch (e){ detail = String(e && e.message || e); }
-  record(7, 'stage 1 offers tier 1 only', ok, detail);
-} else record(7, 'stage 1 offers tier 1 only', false, 'skipped');
+  record(7, 'stage 1 offers tier 1 only, and never the katana', ok, detail);
+} else record(7, 'stage 1 offers tier 1 only, and never the katana', false, 'skipped');
 
 // ---------- 8. the zombie horde boss ----------
 if (results[6].ok){
@@ -345,11 +355,12 @@ if (results[6].ok){
 
 // ---------- 9 + 10. the stage chain and the ultimate gate ----------
 const EXPECT = [
-  { idx: 0, boss: 'horde',  name: 'ROTTING FIELDS' },
-  { idx: 1, boss: 'frost',  name: 'FROZEN EXPANSE' },
-  { idx: 2, boss: 'storm',  name: 'THUNDER PEAK' },
-  { idx: 3, boss: 'dragon', name: "DRAGON'S ROOST" }
+  { idx: 0, boss: 'horde',  name: 'ROTTING FIELDS', clock: 80 },
+  { idx: 1, boss: 'frost',  name: 'FROZEN EXPANSE', clock: 175 },
+  { idx: 2, boss: 'storm',  name: 'THUNDER PEAK',   clock: 270 },
+  { idx: 3, boss: 'dragon', name: "DRAGON'S ROOST", clock: 300 }
 ];
+const clockAtBoss = [];
 let chainOk = false, chainDetail = '', ultOk = false, ultDetail = '';
 let ultOfferedAtStage = null, ultIds = [];
 if (results[7].ok){
@@ -373,6 +384,7 @@ if (results[7].ok){
       }
       assert(G.bossAlive, 'boss never spawned in stage ' + want.idx);
       assert(G.bossId === want.boss, 'stage ' + want.idx + ' boss is ' + G.bossId + ', expected ' + want.boss);
+      clockAtBoss.push({ idx: want.idx, want: want.clock, got: G.runClock });
 
       if (want.boss === 'dragon') break;
 
@@ -408,7 +420,20 @@ if (results[7].ok){
     ultOk = true;
   } catch (e){ ultDetail = String(e && e.message || e); }
 }
-record(9, 'stage chain is horde -> frost -> storm -> dragon', chainOk, chainDetail || (results[7].ok ? '' : 'skipped'));
+if (chainOk){
+  // the clock is the spine of the run: each boss must arrive at its own mark,
+  // and the dragon must arrive at exactly 5:00
+  try {
+    for (const c of clockAtBoss){
+      assert(Math.abs(c.got - c.want) < 1.2,
+        'stage ' + c.idx + ' boss arrived at ' + c.got.toFixed(2) + 's, expected ' + c.want + 's');
+    }
+    assert(clockAtBoss.length === EXPECT.length, 'not every boss was clocked');
+    const last = clockAtBoss[clockAtBoss.length - 1];
+    assert(Math.abs(last.got - 300) < 1.2, 'the dragon did not arrive at 5:00: ' + last.got.toFixed(2) + 's');
+  } catch (e){ chainOk = false; chainDetail = String(e && e.message || e); }
+}
+record(9, 'stage chain is horde -> frost -> storm -> dragon, on the 5:00 clock', chainOk, chainDetail || (results[7].ok ? '' : 'skipped'));
 record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail || (results[7].ok ? '' : 'skipped'));
 
 // ---------- 11. the dragon changes phase ----------
@@ -447,14 +472,169 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
     assert(G.kills === 0, 'replay kept the old kills: ' + G.kills);
     assert(G.bossAlive === false, 'replay kept a boss alive');
     const b = G.build;
-    assert(Object.keys(b.weapons).length === 1 && b.weapons.blade === 1,
+    assert(Object.keys(b.weapons).length === 1 && b.weapons.katana === 1,
       'replay kept the old build: ' + JSON.stringify(b.weapons));
     assert(Object.keys(b.passives).length === 0, 'replay kept old relics: ' + JSON.stringify(b.passives));
+    assert(G.katanaLv === 1, 'replay kept the sharpened blade: lv=' + G.katanaLv);
+    assert(G.scrollCount === 0, 'replay kept old scrolls: ' + G.scrollCount);
+    assert(G.runClock < 1, 'replay kept the old clock: ' + G.runClock);
+    assert(G.poisoned === false, 'replay kept the poison');
     pumpMoving(3);
     assert(G.state === 'play' || G.state === 'levelup', 'replayed run did not progress: ' + G.state);
     ok = true;
   } catch (e){ detail = String(e && e.message || e); }
   record(12, 'replay resets stage, level, kills and build', ok, detail);
+}
+
+// ---------- 13. scrolls sharpen the blade ----------
+{
+  let ok = false, detail = '';
+  try {
+    G.start(); env.pump(3);
+    const per = G.constants.scrollsPerLevel, awaken = G.constants.awakenLv;
+    assert(per === 16, 'a level is not 16 scrolls: ' + per);
+    assert(G.katanaLv === 1, 'the katana did not start at level 1: ' + G.katanaLv);
+
+    // 15 scrolls must not be enough; the 16th must be
+    G.grantScrolls(per - 1); env.pump(1);
+    assert(G.katanaLv === 1, 'the katana levelled early, at ' + (per - 1) + ' scrolls');
+    G.grantScrolls(1); env.pump(1);
+    assert(G.katanaLv === 2, 'the 16th scroll did not sharpen the blade: lv=' + G.katanaLv);
+
+    // and it keeps its rhythm all the way up
+    for (let want = 3; want <= awaken; want++){
+      G.grantScrolls(per); env.pump(1);
+      assert(G.katanaLv === want, 'expected katana lv ' + want + ' after ' + ((want - 1) * per) + ' scrolls, got ' + G.katanaLv);
+    }
+    assert(G.katanaLv === awaken && awaken > 5,
+      'the blade does not awaken past level 5: lv=' + G.katanaLv + ' awakenLv=' + awaken);
+
+    // an awakened blade must actually hit harder than a level-5 one
+    const awakenedHit = G.probeKatanaDamage('walker');
+    G.start(); env.pump(3);
+    G.grantScrolls(per * 4); env.pump(1);           // back to level 5
+    assert(G.katanaLv === 5, 'setup for the comparison failed: lv=' + G.katanaLv);
+    const lv5Hit = G.probeKatanaDamage('walker');
+    assert(awakenedHit > lv5Hit * 1.5,
+      'awakening is not a real upgrade: lv5 hit ' + Math.round(lv5Hit) + ', awakened hit ' + Math.round(awakenedHit));
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(13, '16 scrolls per level, and past level 5 the blade awakens', ok, detail);
+}
+
+// ---------- 14. the katana cuts yokai for double ----------
+{
+  let ok = false, detail = '';
+  try {
+    G.start(); env.pump(3);
+    const onWalker = G.probeKatanaDamage('walker');
+    const onYokai = G.probeKatanaDamage('onibi');
+    assert(onWalker > 0, 'the katana dealt no damage at all');
+    assert(Math.abs(onYokai - onWalker * 2) < onWalker * 0.05,
+      'yokai did not take double: walker ' + Math.round(onWalker) + ', onibi ' + Math.round(onYokai));
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(14, 'the katana cuts yokai for double', ok, detail);
+}
+
+// ---------- 15. the blight beetle poisons ----------
+{
+  let ok = false, detail = '';
+  try {
+    G.start(); env.pump(3);
+    pumpMoving(2);                                   // let the entry invulnerability lapse
+    let poisoned = false;
+    for (let i = 0; i < 40 && !poisoned; i++){
+      G.spawnOne('beetle', 0, 0);
+      env.pump(20);
+      if (G.poisoned) poisoned = true;
+    }
+    assert(poisoned, 'contact with a blight beetle never applied poison');
+    // Measure the drain itself, not net health: a level-up heal landing in the
+    // same window would hide a real drain and make this check lie either way.
+    const drainedBefore = G.poisonDrained;
+    const hpBefore = G.hp;
+    env.pump(90);                                    // ~1.5s of standing in it
+    const drained = G.poisonDrained - drainedBefore;
+    assert(drained > 0, 'poison ticked but took no life at all');
+    assert(drained >= 5, 'poison drained only ' + drained + ' over 1.5s; it is not a real threat');
+    assert(G.hp <= hpBefore + 40, 'health went up implausibly during poison: ' + hpBefore + ' -> ' + G.hp);
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(15, 'a blight beetle poisons on contact, and poison drains life', ok, detail);
+}
+
+// ---------- 16. named outbreaks ----------
+{
+  let ok = false, detail = '';
+  try {
+    const WANT = {
+      hounds: ['rothound'],
+      swarm:  ['beetle'],
+      yokai:  ['onibi', 'tengu', 'oni'],
+      shrike: ['shrike'],
+      rot:    ['walker', 'runner', 'bloater']
+    };
+    const missing = [];
+    for (const id of Object.keys(WANT)){
+      G.start(); env.pump(3);
+      G.fireEvent(id);
+      env.pump(2);
+      const seen = G.enemyTypes;
+      const total = WANT[id].reduce(function(n, t){ return n + (seen[t] || 0); }, 0);
+      if (total < 3) missing.push(id + '(' + total + ' of ' + WANT[id].join('/') + ')');
+    }
+    assert(missing.length === 0, 'outbreaks that did not spawn their swarm: ' + missing.join(', '));
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(16, 'every named outbreak spawns its own swarm', ok, detail);
+}
+
+// ---------- 17. the clock only runs while you are surviving ----------
+{
+  let ok = false, detail = '';
+  try {
+    G.start(); env.pump(3);
+    const t0 = G.runClock;
+    pumpMoving(3);
+    assert(G.runClock > t0 + 2, 'the clock did not advance while surviving: ' + t0 + ' -> ' + G.runClock);
+
+    G.skipToBoss(); env.pump(2);
+    const atWarn = G.runClock;
+    for (let i = 0; i < 40 && !G.bossAlive; i++){ pumpMoving(0.3); resolveChoices(); }
+    assert(G.bossAlive, 'the boss never arrived');
+    const atBoss = G.runClock;
+    assert(Math.abs(atBoss - atWarn) < 0.6, 'the clock ran during the warning: ' + atWarn + ' -> ' + atBoss);
+
+    for (let i = 0; i < 20; i++){ pumpMoving(0.5); resolveChoices(); if (!G.bossAlive) break; }
+    assert(Math.abs(G.runClock - atBoss) < 0.6,
+      'the clock ran during the boss fight: ' + atBoss.toFixed(2) + ' -> ' + G.runClock.toFixed(2));
+    assert(Math.abs(atBoss - G.stageEnd) < 1.2, 'the boss did not arrive on its mark: ' + atBoss.toFixed(2));
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(17, 'the clock advances only while surviving, and freezes for every boss', ok, detail);
+}
+
+// ---------- 18. a boss killed by ordinary damage actually clears the stage ----------
+{
+  let ok = false, detail = '';
+  try {
+    G.start(); env.pump(3);
+    G.skipToBoss(); env.pump(2);
+    for (let i = 0; i < 40 && !G.bossAlive; i++){ pumpMoving(0.3); resolveChoices(); }
+    assert(G.bossAlive, 'the boss never arrived');
+    // no test-only shortcut here: drive its health down through the real damage path
+    for (let i = 0; i < 400 && G.bossAlive; i++){ G.hurtBoss(400); env.pump(2); }
+    assert(!G.bossAlive, 'the boss survived 400 hits of ordinary damage');
+    for (let i = 0; i < 240 && G.state === 'play'; i++){ pumpMoving(0.1); resolveChoices(); }
+    assert(G.state === 'clear',
+      'killing the boss with damage did not clear the stage: state=' + G.state + ' phase=' + G.phase);
+    G.next(); env.pump(4);
+    resolveChoices();
+    assert(G.stageIndex === 1, 'the run did not advance past stage 1: ' + G.stageIndex);
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(18, 'a boss killed by ordinary damage clears the stage', ok, detail);
 }
 
 releaseAll();

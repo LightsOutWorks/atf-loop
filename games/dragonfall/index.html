@@ -233,18 +233,21 @@ var STAGES = [
     id: 'rot', label: 'STAGE 1', name: 'ROTTING FIELDS',
     accent: '#7fe3a0', fog: 'rgba(12,26,16,0.55)',
     ground: ['#0d1711', '#070c09'], grid: 'rgba(120,200,150,0.06)', deco: 'grave',
-    dur: 60, tier: 1, hpMul: 1.0, spawnBase: 1.45, burst: 2,
-    enemies: [['walker', 62], ['runner', 28], ['bloater', 10]],
+    end: 80, tier: 1, hpMul: 1.0, spawnBase: 1.45, burst: 2,
+    enemies: [['walker', 44], ['runner', 20], ['rothound', 22], ['bloater', 8], ['beetle', 6]],
+    events: ['rot', 'hounds', 'shrike'],
     boss: 'horde', bossName: 'THE HORDE KING',
     line: 'The dead do not tire. They only accumulate.',
+    clockLine: 'FIVE MINUTES UNTIL IT WAKES',
     clearLine: 'The mound stops moving. Cold air pours in from below.'
   },
   {
     id: 'ice', label: 'STAGE 2', name: 'FROZEN EXPANSE',
     accent: '#7fd3ff', fog: 'rgba(20,40,60,0.5)',
     ground: ['#0c1620', '#060b12'], grid: 'rgba(150,220,255,0.07)', deco: 'ice',
-    dur: 75, tier: 2, hpMul: 1.9, spawnBase: 1.02, burst: 2,
-    enemies: [['shade', 42], ['shardling', 33], ['brute', 25]],
+    end: 175, tier: 2, hpMul: 1.9, spawnBase: 1.02, burst: 2,
+    enemies: [['shade', 32], ['shardling', 24], ['brute', 18], ['beetle', 14], ['onibi', 12]],
+    events: ['rot', 'swarm', 'shrike', 'yokai'],
     boss: 'frost', bossName: 'THE FROST MONARCH',
     line: 'The floor is glass. You will not stop where you mean to.',
     clearLine: 'The ice splits. Far above, something is already thundering.'
@@ -253,8 +256,9 @@ var STAGES = [
     id: 'thunder', label: 'STAGE 3', name: 'THUNDER PEAK',
     accent: '#ffe27f', fog: 'rgba(40,36,60,0.5)',
     ground: ['#161426', '#08070f'], grid: 'rgba(255,225,150,0.06)', deco: 'pylon',
-    dur: 80, tier: 3, hpMul: 3.4, spawnBase: 0.90, burst: 3,
-    enemies: [['wisp', 40], ['hound', 34], ['sentinel', 26]],
+    end: 270, tier: 3, hpMul: 3.4, spawnBase: 0.90, burst: 3,
+    enemies: [['wisp', 28], ['hound', 24], ['sentinel', 18], ['tengu', 18], ['onibi', 12]],
+    events: ['yokai', 'swarm', 'shrike', 'hounds'],
     boss: 'storm', bossName: 'THE STORM LORD',
     line: 'Every strike is announced. Only the slow are surprised.',
     clearLine: 'The storm collapses inward. Something enormous inhales.'
@@ -263,8 +267,9 @@ var STAGES = [
     id: 'roost', label: 'FINAL', name: "DRAGON'S ROOST",
     accent: '#ff9b5a', fog: 'rgba(50,20,14,0.5)',
     ground: ['#1a0e0a', '#0a0505'], grid: 'rgba(255,150,90,0.07)', deco: 'ember',
-    dur: 16, tier: 4, hpMul: 5.2, spawnBase: 1.55, burst: 2,
-    enemies: [['walker', 20], ['shardling', 22], ['wisp', 24], ['hound', 34]],
+    end: 300, tier: 4, hpMul: 5.2, spawnBase: 1.55, burst: 2,
+    enemies: [['oni', 18], ['onibi', 22], ['tengu', 20], ['beetle', 14], ['hound', 16], ['walker', 10]],
+    events: ['yokai', 'shrike', 'rot'],
     boss: 'dragon', bossName: 'THE DRAGON',
     line: 'It has been awake the whole time.',
     clearLine: ''
@@ -277,6 +282,15 @@ var STAGES = [
 // literally the last thing the game can offer you.
 // ============================================================
 var ITEMS = {
+  // ---- the katana: never offered as a card. Scrolls sharpen it, nothing else. ----
+  katana: { kind: 'weapon', tier: 0, max: 6, name: 'KATANA', scroll: true,
+    desc: function(l){
+      if (l >= KATANA_AWAKEN_LV) return 'AWAKENED. A full circle of ruin for ' + bd(340) +
+        ', doubled against yokai, and a shockwave behind every cut.';
+      return 'Cuts ' + (1 + Math.floor((l - 1) / 2)) + ' arc' + (1 + Math.floor((l - 1) / 2) > 1 ? 's' : '') +
+        ' for ' + bd(26 + 26 * (l - 1)) + ', doubled against yokai. Sixteen scrolls sharpen it once.';
+    } },
+
   // ---- tier 1 weapons ----
   blade: { kind: 'weapon', tier: 1, max: 8, name: 'BLADE ARC',
     desc: function(l){ return 'Sweeps a ' + (l >= 7 ? 'triple' : l >= 4 ? 'double' : 'wide') +
@@ -345,7 +359,8 @@ var TIER_LABEL = ['', 'COMMON', 'FROSTBOUND', 'STORMFORGED', 'ULTIMATE'];
 var state = 'title';          // title | play | levelup | clear | over | win | paused
 var stageIndex = 0, stage = STAGES[0];
 var stageTime = 0, phase = 'survive';   // survive | warning | boss | done
-var runTime = 0, kills = 0, dmgDealt = 0;
+var runClock = 0, stageStart = 0;       // the five-minute clock; frozen during every boss
+var runTime = 0, kills = 0, dmgDealt = 0, poisonDrained = 0;
 var world = { w: 2600, h: 2000 };
 var cam = { x: 0, y: 0, shake: 0, flash: 0, flashCol: '255,255,255' };
 var view = { w: 800, h: 600, dpr: 1 };
@@ -353,6 +368,7 @@ var view = { w: 800, h: 600, dpr: 1 };
 var player = null;
 var enemies = [], pbullets = [], ebullets = [], orbs = [], gems = [], drops = [];
 var hazards = [], fx = [], parts = [], texts = [], decos = [];
+var scrolls = [];
 var boss = null, bossWarn = 0;
 var spawnTimer = 0, eventTimer = 18, pendingChoices = null, pendingKind = 'level';
 var toastTimer = 0;
@@ -367,6 +383,8 @@ function makePlayer(){
     hp: 140, maxHp: 140,
     level: 1, xp: 0, xpNext: 6,
     inv: 0, slowT: 0, freezeT: 0, regenAcc: 0,
+    poisonT: 0, poisonAcc: 0,
+    scrolls: 0, katanaLv: 1,
     face: { x: 1, y: 0 }, aim: 0,
     weapons: [], passives: {},
     hitFlash: 0
@@ -568,8 +586,22 @@ var ETYPES = {
   // --- stage 3: the storm ---
   wisp:      { hp: 30,  spd: 172, r: 9,  dmg: 9,  xp: 2, col: '#fff0a0', dark: '#5c5220', beh: 'weave' },
   hound:     { hp: 66,  spd: 130, r: 13, dmg: 13, xp: 3, col: '#ffc75a', dark: '#5c4318', beh: 'lunge' },
-  sentinel:  { hp: 135, spd: 76,  r: 16, dmg: 12, xp: 5, col: '#e0c0ff', dark: '#453058', beh: 'ranged', shot: 'bolt' }
+  sentinel:  { hp: 135, spd: 76,  r: 16, dmg: 12, xp: 5, col: '#e0c0ff', dark: '#453058', beh: 'ranged', shot: 'bolt' },
+  // --- the dog pack ---
+  rothound:  { hp: 20,  spd: 162, r: 10, dmg: 8,  xp: 1, col: '#9ab06a', dark: '#39441f', beh: 'lunge' },
+  // --- the blight: touching one poisons you ---
+  beetle:    { hp: 44,  spd: 98,  r: 12, dmg: 8,  xp: 2, col: '#8fd06a', dark: '#2b4a1c', beh: 'chase', poison: 1 },
+  // --- yokai: the katana cuts these twice as deep ---
+  onibi:     { hp: 26,  spd: 122, r: 10, dmg: 9,  xp: 2, col: '#8fe0ff', dark: '#1e4258', beh: 'weave',  yokai: 1, split: 1 },
+  tengu:     { hp: 84,  spd: 150, r: 13, dmg: 14, xp: 3, col: '#c08aff', dark: '#3a2455', beh: 'lunge',  yokai: 1 },
+  oni:       { hp: 260, spd: 80,  r: 22, dmg: 21, xp: 6, col: '#ff8a6a', dark: '#5a2018', beh: 'chase',  yokai: 1 },
+  // --- launched, not spawned: flies in, homes weakly, detonates ---
+  shrike:    { hp: 170, spd: 235, r: 18, dmg: 28, xp: 4, col: '#c8ccd4', dark: '#252a32', beh: 'shrike', blast: 1 }
 };
+
+var SCROLLS_PER_LEVEL = 16;   // sixteen scrolls sharpen the blade by one level
+var KATANA_AWAKEN_LV = 6;     // past level five it stops being a sword
+var RUN_LIMIT = 300;          // five minutes of survived time, then the dragon
 
 function spawnEnemy(type, x, y, elite, hpScale){
   if (enemies.length >= MAX_ENEMIES) return null;
@@ -582,6 +614,8 @@ function spawnEnemy(type, x, y, elite, hpScale){
     dmg: T.dmg * (elite ? 1.6 : 1) * (1 + stageIndex * 0.22),
     xp: T.xp * (elite ? 6 : 1), elite: !!elite,
     col: T.col, dark: T.dark, beh: T.beh, shot: T.shot, burst: T.burst,
+    poison: T.poison, yokai: T.yokai, split: T.split, blast: T.blast,
+    warn: T.beh === 'shrike' ? 1.15 : 0, fa: 0,
     t: rnd(0, 6), cd: rnd(0.6, 2.4), kx: 0, ky: 0,
     slow: 0, slowT: 0, freeze: 0, hitT: 0, lung: 0, wob: rnd(0, TAU)
   };
@@ -609,7 +643,7 @@ function weightedType(){
 
 function updateSpawning(dt){
   if (phase === 'done') return;
-  var prog = clamp(stageTime / stage.dur, 0, 1);
+  var prog = clamp((runClock - stageStart) / Math.max(1, stage.end - stageStart), 0, 1);
   var bossOn = (phase === 'boss');
   var interval = stage.spawnBase * (1 - 0.35 * prog) * (bossOn ? 2.1 : 1);
   spawnTimer -= dt;
@@ -622,18 +656,75 @@ function updateSpawning(dt){
       spawnEnemy(weightedType(), p.x, p.y, Math.random() < eliteChance);
     }
   }
-  // periodic encirclement so standing still is never safe
+  // named outbreaks, so standing still is never safe and every stage has a rhythm
   eventTimer -= dt;
   if (eventTimer <= 0 && !bossOn){
-    eventTimer = 26 - stageIndex * 3;
-    var n = 9 + stageIndex * 4, rad = Math.max(view.w, view.h) * 0.55;
-    for (var k = 0; k < n; k++){
-      var a = k / n * TAU + rnd(-0.1, 0.1);
-      spawnEnemy(weightedType(),
-        clamp(player.x + Math.cos(a) * rad, 30, world.w - 30),
-        clamp(player.y + Math.sin(a) * rad, 30, world.h - 30), false, 0.9);
-    }
-    floatText(player.x, player.y - 60, 'THEY CIRCLE', '#ffd0d0', true);
+    eventTimer = 23 - stageIndex * 2;
+    runEvent(pick(stage.events));
+  }
+}
+
+var EVENTS = {
+  rot:    { name: 'ROT SURGE',     sub: 'THE GROUND GIVES UP ITS DEAD',  types: ['walker', 'runner', 'bloater'], n: 18, col: '#a8d07a' },
+  hounds: { name: 'HOUND PACK',    sub: 'THEY HUNT IN NUMBERS',          types: ['rothound'],                    n: 16, col: '#c8e08a' },
+  swarm:  { name: 'BLIGHT SWARM',  sub: 'EVERY TOUCH IS POISON',         types: ['beetle'],                      n: 14, col: '#a8f06a' },
+  yokai:  { name: 'HYAKKI YAGYO',  sub: 'THE NIGHT PARADE — USE THE BLADE', types: ['onibi', 'tengu', 'oni'],    n: 14, col: '#c08aff' },
+  shrike: { name: 'SHRIKE VOLLEY', sub: 'INCOMING — DO NOT STAND STILL', types: ['shrike'],                      n: 4,  col: '#ffd0a0' }
+};
+
+function runEvent(id){
+  var ev = EVENTS[id];
+  if (!ev) return;
+  showToast(ev.name, ev.sub, 2.4);
+  sfx('boss', 0.45);
+  flash(id === 'shrike' ? '255,180,120' : '255,255,255', 0.22);
+  var rad = Math.max(view.w, view.h) * (id === 'shrike' ? 0.66 : 0.55);
+  var count = ev.n + stageIndex * (id === 'shrike' ? 1 : 3);
+  for (var k = 0; k < count; k++){
+    var a = k / count * TAU + rnd(-0.12, 0.12);
+    var e = spawnEnemy(pick(ev.types),
+      clamp(player.x + Math.cos(a) * rad, 30, world.w - 30),
+      clamp(player.y + Math.sin(a) * rad, 30, world.h - 30), false, id === 'shrike' ? 1 : 0.9);
+    if (e && id === 'shrike') e.fa = angTo(e.x, e.y, player.x, player.y);
+  }
+  // every outbreak pays out scrolls, so surviving one sharpens the blade
+  for (var d = 0; d < 2; d++) dropScroll(player.x + rnd(-90, 90), player.y + rnd(-90, 90));
+}
+
+// ---------- scrolls and the blade ----------
+function dropScroll(x, y){
+  scrolls.push({ x: x + rnd(-8, 8), y: y + rnd(-8, 8), vx: rnd(-50, 50), vy: rnd(-50, 50), t: 0 });
+}
+function katanaEntry(){
+  for (var i = 0; i < player.weapons.length; i++) if (player.weapons[i].id === 'katana') return player.weapons[i];
+  return null;
+}
+function collectScroll(){
+  player.scrolls++;
+  var w = katanaEntry();
+  if (!w) return;
+  if (w.lv >= ITEMS.katana.max){
+    floatText(player.x, player.y - 34, 'SCROLL', '#ffd9a0');
+    return;
+  }
+  var into = player.scrolls % SCROLLS_PER_LEVEL;
+  if (into === 0) levelKatana();
+  else floatText(player.x, player.y - 34, into + '/' + SCROLLS_PER_LEVEL, '#ffd9a0');
+}
+function levelKatana(){
+  var w = katanaEntry();
+  if (!w || w.lv >= ITEMS.katana.max) return;
+  w.lv++;
+  player.katanaLv = w.lv;
+  sfx('level');
+  if (w.lv >= KATANA_AWAKEN_LV){
+    showToast('THE BLADE AWAKENS', 'PAST LEVEL FIVE IT IS NO LONGER A SWORD', 3.0);
+    floatText(player.x, player.y - 46, 'AWAKENED', '#ff8aa8', true);
+    flash('255,180,200', 0.6); shake(18);
+    fx.push({ kind: 'ring', x: player.x, y: player.y, r0: 10, r1: 340, t: 0, life: 0.7, col: '#ff6a8a', w: 6 });
+  } else {
+    showToast('KATANA LV ' + w.lv, SCROLLS_PER_LEVEL + ' SCROLLS SHARPENED IT', 1.8);
+    floatText(player.x, player.y - 46, 'KATANA LV ' + w.lv, '#ffd9a0', true);
   }
 }
 
@@ -653,6 +744,10 @@ function hurtEnemy(e, amount, kx, ky, col){
 
 function killEnemy(e){
   if (e.dead) return;
+  // A boss reaching 0 through ordinary damage must go through defeatBoss(),
+  // not the generic death path — otherwise it is flagged dead, the stage
+  // never clears, and the run soft-locks in the boss phase.
+  if (e.isBoss){ defeatBoss(); return; }
   e.dead = true;
   kills++;
   burst(e.x, e.y, e.elite ? 16 : 8, e.col, 150, 0.5, e.elite ? 4 : 3);
@@ -670,6 +765,19 @@ function killEnemy(e){
     gems.push({ x: e.x + rnd(-10, 10), y: e.y + rnd(-10, 10), vx: rnd(-40, 40), vy: rnd(-40, 40),
       v: Math.max(1, Math.round(e.xp / n)), t: 0 });
   }
+  if (e.split){
+    // an onibi does not go out; it divides
+    for (var sp = 0; sp < 2; sp++){
+      var sa = Math.random() * TAU;
+      var kid = spawnEnemy('onibi', e.x + Math.cos(sa) * 22, e.y + Math.sin(sa) * 22, false, 0.4);
+      if (kid) kid.split = 0;
+    }
+  }
+  // scrolls: the only thing that sharpens the katana
+  // Tuned so that 80 scrolls — the five sharpenings that awaken the blade —
+  // land in the last third of the run, not in the second stage.
+  var scrollChance = e.elite ? 0.40 : (e.yokai ? 0.10 : 0.05);
+  if (Math.random() < scrollChance) dropScroll(e.x, e.y);
   if (Math.random() < (e.elite ? 0.45 : 0.035)) drops.push({ x: e.x, y: e.y, kind: 'heal', t: 0 });
   else if (Math.random() < (e.elite ? 0.30 : 0.012)) drops.push({ x: e.x, y: e.y, kind: 'nuke', t: 0 });
 }
@@ -740,6 +848,28 @@ function updateEnemies(dt){
     var a = angTo(e.x, e.y, player.x, player.y);
     var sp = e.spd * mul;
 
+    if (e.beh === 'shrike'){
+      // launched: hangs in place while its marker flashes, then flies and detonates
+      if (e.warn > 0){
+        e.warn -= dt;
+        if (e.warn <= 0){ e.fa = angTo(e.x, e.y, player.x, player.y); sfx('blast', 0.45); }
+        continue;
+      }
+      var want = angTo(e.x, e.y, player.x, player.y);
+      e.fa += clamp(angDiff(e.fa, want), -1.05 * dt, 1.05 * dt);   // weak homing: outrunnable
+      e.x += Math.cos(e.fa) * e.spd * dt;
+      e.y += Math.sin(e.fa) * e.spd * dt;
+      e.life = (e.life == null ? 7 : e.life) - dt;
+      if (parts.length < MAX_PARTS){
+        parts.push({ x: e.x - Math.cos(e.fa) * e.r, y: e.y - Math.sin(e.fa) * e.r,
+          vx: rnd(-20, 20), vy: rnd(-20, 20), t: 0, life: 0.35, col: '#ffb060', size: 3 });
+      }
+      if (e.life <= 0 || len(e.x - player.x, e.y - player.y) < e.r + player.r){
+        explodeAt(e.x, e.y, 108, e.dmg * 1.6, '#ffd0a0', 'enemy');
+        killEnemy(e);
+      }
+      continue;
+    }
     if (e.beh === 'weave'){
       a += Math.sin(e.t * 5 + e.wob) * 0.85;
     } else if (e.beh === 'chill'){
@@ -763,11 +893,21 @@ function updateEnemies(dt){
     e.y += (Math.sin(a) * sp + e.ky) * dt;
     e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
     e.x = clamp(e.x, 12, world.w - 12); e.y = clamp(e.y, 12, world.h - 12);
-    separate(e);
+    if (e.beh !== 'shrike') separate(e);
 
     var dd = len(e.x - player.x, e.y - player.y);
-    if (dd < e.r + player.r) hurtPlayer(e.dmg);
+    if (dd < e.r + player.r){
+      var before = player.inv;
+      hurtPlayer(e.dmg);
+      if (e.poison && before <= 0) poisonPlayer();
+    }
   }
+}
+
+function poisonPlayer(){
+  var fresh = player.poisonT <= 0;
+  player.poisonT = 5.0;
+  if (fresh) floatText(player.x, player.y - 40, 'POISONED', '#a8f06a', true);
 }
 
 function fireEnemyShot(e){
@@ -837,6 +977,7 @@ function ensureId(e){ if (!e.id) e.id = ++idc; return e.id; }
 // ============================================================
 function weaponCooldown(id, l){
   var base = {
+    katana: l >= KATANA_AWAKEN_LV ? 0.62 : 0.95 - 0.07 * (l - 1),
     blade: 1.15 - 0.055 * l, shard: 0.95 - 0.055 * l, orb: 999,
     nova: 3.6 - 0.20 * l, icicle: 1.65 - 0.09 * l,
     chain: 2.05 - 0.11 * l, storm: 0.35, fang: 2.4 - 0.14 * l
@@ -850,6 +991,26 @@ function fireWeapon(w){
   var l = w.lv, D = statDmg(), extra = statProj();
   var t;
   switch (w.id){
+    case 'katana': {
+      if (l >= KATANA_AWAKEN_LV){
+        // awakened: no arc, a circle. Everything within reach is cut at once.
+        var adm = 340 * D, arad = 300;
+        fx.push({ kind: 'slash', x: player.x, y: player.y, a: player.aim, arc: Math.PI, r: arad, t: 0, life: 0.24, col: '#fff2f2' });
+        fx.push({ kind: 'ring', x: player.x, y: player.y, r0: 20, r1: arad, t: 0, life: 0.38, col: '#ff6a8a', w: 5 });
+        coneDamage(player.x, player.y, player.aim, Math.PI, arad, adm, 300, '#ffd6dd', 2);
+        shake(9); sfx('crit', 0.7);
+      } else {
+        var kdm = (26 + 26 * (l - 1)) * D, krange = 118 + 17 * (l - 1);
+        var karcs = 1 + Math.floor((l - 1) / 2);
+        for (var ks = 0; ks < karcs; ks++){
+          var ka = player.aim + ks * (TAU / karcs);
+          fx.push({ kind: 'slash', x: player.x, y: player.y, a: ka, arc: 0.95, r: krange, t: 0, life: 0.17, col: '#ffe8ec' });
+          coneDamage(player.x, player.y, ka, 0.95, krange, kdm, 240, '#ffd6dd', 2);
+        }
+        sfx('shoot', 0.35);
+      }
+      break;
+    }
     case 'blade': {
       var dmg = (16 + 8 * l) * D, range = 96 + 11 * l, arc = 1.35 + 0.06 * l;
       var sweeps = l >= 7 ? 3 : l >= 4 ? 2 : 1;
@@ -943,13 +1104,14 @@ function mkBullet(x, y, ang, spd, r, dmg, pierce, life, col, kind){
     r: r, dmg: dmg, pierce: pierce, life: life, t: 0, col: col, kind: kind, hit: {} };
 }
 
-function coneDamage(x, y, a, arc, range, dmg, kb, col){
+function coneDamage(x, y, a, arc, range, dmg, kb, col, yokaiMul){
   eachTarget(function(e){
     var dx = e.x - x, dy = e.y - y, d = len(dx, dy);
     if (d > range + e.r) return;
     if (d > 0.01 && Math.abs(angDiff(a, Math.atan2(dy, dx))) > arc) return;
     var ka = d > 0.01 ? Math.atan2(dy, dx) : a;
-    hurtEnemy(e, dmg, Math.cos(ka) * kb, Math.sin(ka) * kb, col);
+    var amt = (yokaiMul && e.yokai) ? dmg * yokaiMul : dmg;
+    hurtEnemy(e, amt, Math.cos(ka) * kb, Math.sin(ka) * kb, (yokaiMul && e.yokai) ? '#ffb0c8' : col);
   });
 }
 
@@ -1045,6 +1207,19 @@ function updatePickups(dt){
       gems.splice(i, 1);
       gainXp(g.v);
     }
+  }
+  for (var sI = scrolls.length - 1; sI >= 0; sI--){
+    var sc = scrolls[sI];
+    sc.t += dt;
+    var sd = len(sc.x - player.x, sc.y - player.y);
+    if (sd < pr * 1.15){
+      var sa = angTo(sc.x, sc.y, player.x, player.y), ss = 250 + (pr - sd) * 3.2;
+      sc.x += Math.cos(sa) * ss * dt; sc.y += Math.sin(sa) * ss * dt;
+    } else {
+      sc.x += sc.vx * dt; sc.y += sc.vy * dt;
+      sc.vx *= Math.pow(0.02, dt); sc.vy *= Math.pow(0.02, dt);
+    }
+    if (sd < player.r + 12){ scrolls.splice(sI, 1); collectScroll(); sfx('pick', 0.5); }
   }
   for (var k = drops.length - 1; k >= 0; k--){
     var dr = drops[k];
@@ -1470,9 +1645,18 @@ var BOSSES = {
         showToast(b.ph === 2 ? 'IT REMEMBERS THE COLD' : 'IT TAKES THE SKY',
           b.ph === 2 ? 'FROST AND LIGHTNING' : 'FINAL PHASE', 2.4);
         if (b.ph === 2){
-          for (var i = 0; i < 4; i++){
-            var a2 = i / 4 * TAU;
-            spawnEnemy(i % 2 ? 'shardling' : 'hound', b.x + Math.cos(a2) * 150, b.y + Math.sin(a2) * 150, true, 0.7);
+          // it stops fighting alone and starts calling yokai up out of the roost
+          for (var i = 0; i < 5; i++){
+            var a2 = i / 5 * TAU;
+            spawnEnemy(i % 2 ? 'onibi' : 'oni', b.x + Math.cos(a2) * 160, b.y + Math.sin(a2) * 160, i === 0, 0.7);
+          }
+          floatText(b.x, b.y - b.r - 52, 'IT CALLS THE YOKAI', '#c08aff', true);
+        }
+        if (b.ph === 3){
+          b.mask = true;   // it puts on an oni's face for the last third
+          for (var y3 = 0; y3 < 8; y3++){
+            var ay = y3 / 8 * TAU;
+            spawnEnemy(y3 % 3 === 0 ? 'tengu' : 'onibi', b.x + Math.cos(ay) * 230, b.y + Math.sin(ay) * 230, false, 0.6);
           }
         }
       }
@@ -1530,6 +1714,15 @@ var BOSSES = {
             b.da = a; b.dive = 0.75;
             floatText(b.x, b.y - b.r - 30, 'DIVE', '#ffd0a0', true);
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 520, w: 52, tw: 0.55, life: 0.6, dmg: 0, col: '#ffcf90' });
+          } else if (b.sub % 7 === 0){
+            // hyakki yagyo: a marching line of spirits crosses the arena
+            floatText(b.x, b.y - b.r - 30, 'HYAKKI YAGYO', '#c08aff', true);
+            var ma = Math.random() * TAU, mx = player.x - Math.cos(ma) * 520, my = player.y - Math.sin(ma) * 520;
+            for (var mi = 0; mi < 10; mi++){
+              spawnEnemy(mi % 4 === 0 ? 'tengu' : 'onibi',
+                clamp(mx + Math.cos(ma + 1.57) * (mi - 4.5) * 46, 30, world.w - 30),
+                clamp(my + Math.sin(ma + 1.57) * (mi - 4.5) * 46, 30, world.h - 30), false, 0.55);
+            }
           } else {
             // meteor rain around the player, with survivable gaps
             for (var m = 0; m < 9; m++){
@@ -1598,6 +1791,23 @@ var BOSSES = {
       // eyes
       g.fillStyle = b.invuln > 0 ? '#ffffff' : '#ffe27f';
       g.beginPath(); g.arc(-9, -b.r * 1.06, 4.2, 0, TAU); g.arc(9, -b.r * 1.06, 4.2, 0, TAU); g.fill();
+      if (b.mask){
+        // the oni face it wears for the final third
+        g.fillStyle = '#f0e2cc';
+        g.beginPath(); g.ellipse(0, -b.r * 1.02, b.r * 0.42, b.r * 0.5, 0, 0, TAU); g.fill();
+        g.strokeStyle = '#8a2018'; g.lineWidth = 2; g.stroke();
+        g.fillStyle = '#8a2018';
+        g.beginPath();
+        g.moveTo(-b.r * 0.3, -b.r * 1.2); g.lineTo(-b.r * 0.06, -b.r * 1.06); g.lineTo(-b.r * 0.3, -b.r * 0.96); g.closePath();
+        g.moveTo(b.r * 0.3, -b.r * 1.2); g.lineTo(b.r * 0.06, -b.r * 1.06); g.lineTo(b.r * 0.3, -b.r * 0.96); g.closePath();
+        g.fill();
+        g.fillRect(-b.r * 0.22, -b.r * 0.86, b.r * 0.44, b.r * 0.09);
+        g.strokeStyle = '#f0e2cc'; g.lineWidth = 4; g.lineCap = 'round';
+        g.beginPath();
+        g.moveTo(-b.r * 0.34, -b.r * 1.34); g.lineTo(-b.r * 0.5, -b.r * 1.72);
+        g.moveTo(b.r * 0.34, -b.r * 1.34); g.lineTo(b.r * 0.5, -b.r * 1.72);
+        g.stroke();
+      }
       g.restore();
     }
   }
@@ -1673,6 +1883,19 @@ function updatePlayer(dt){
   if (player.inv > 0) player.inv -= dt;
   if (player.hitFlash > 0) player.hitFlash -= dt;
 
+  if (player.poisonT > 0){
+    player.poisonT -= dt;
+    player.poisonAcc += 5.5 * dt;             // poison ignores invulnerability frames
+    if (player.poisonAcc >= 1){
+      var tick = Math.floor(player.poisonAcc);
+      player.poisonAcc -= tick;
+      player.hp -= tick;
+      poisonDrained += tick;
+      if (Math.random() < 0.35) burst(player.x, player.y, 1, '#a8f06a', 60, 0.4, 3);
+      if (player.hp <= 0){ player.hp = 0; gameOver(); return; }
+    }
+  }
+
   if (hasUlt()){
     player.regenAcc += 2.5 * dt;
     if (player.regenAcc >= 1){
@@ -1713,6 +1936,7 @@ function candidatePool(){
   var out = [];
   for (var id in ITEMS){
     var it = ITEMS[id];
+    if (it.scroll) continue;                            // the katana answers only to scrolls
     if (it.tier > stage.tier) continue;                 // later realms only
     var cur = itemLevel(id);
     if (cur >= it.max) continue;
@@ -1815,7 +2039,9 @@ function beginStage(){
   hazards = []; fx = []; parts = []; texts = [];
   boss = null; bossWarn = 0; clearDelay = 0;
   stageTime = 0; phase = 'survive';
-  spawnTimer = 0.6; eventTimer = 20;
+  stageStart = stageIndex === 0 ? 0 : STAGES[stageIndex - 1].end;
+  scrolls = [];
+  spawnTimer = 0.6; eventTimer = stageIndex === 0 ? 14 : 10;
   player.x = world.w / 2; player.y = world.h / 2;
   player.vx = player.vy = 0; player.inv = 1.2; player.slowT = 0;
   buildDecos();
@@ -1833,7 +2059,10 @@ function stageCleared(){
   state = 'clear';
   $('clearTitle').textContent = stage.bossName + ' FALLS';
   $('clearBody').textContent = stage.clearLine;
+  var ckw = katanaEntry();
   $('clearStats').textContent =
+    'CLOCK ' + fmtTime(runClock) + ' / 5:00   KATANA LV ' + (ckw ? ckw.lv : 0) +
+      '   SCROLLS ' + player.scrolls + '\n' +
     'LEVEL ' + player.level + '   KILLS ' + kills + '   TIME ' + fmtTime(runTime) + '\n' +
     'NEXT: ' + STAGES[stageIndex + 1].label + ' — ' + STAGES[stageIndex + 1].name;
   $('nextBtn').textContent = (stageIndex === STAGES.length - 2) ? 'ENTER THE ROOST' : 'DESCEND';
@@ -1876,7 +2105,11 @@ function statsBlock(){
   var loadout = [];
   for (var i = 0; i < player.weapons.length; i++) loadout.push(ITEMS[player.weapons[i].id].name + ' ' + player.weapons[i].lv);
   for (var k in player.passives) if (player.passives[k] > 0) loadout.push(ITEMS[k].name + ' ' + player.passives[k]);
+  var kw = katanaEntry();
   return 'STAGE   ' + stage.label + '  ' + stage.name + '\n' +
+         'CLOCK   ' + fmtTime(runClock) + ' / 5:00' + (phase === 'boss' ? '  (held)' : '') + '\n' +
+         'KATANA  LV ' + (kw ? kw.lv : 0) + (kw && kw.lv >= KATANA_AWAKEN_LV ? '  AWAKENED' : '') +
+           '   SCROLLS ' + player.scrolls + '\n' +
          'LEVEL   ' + player.level + '\n' +
          'KILLS   ' + kills + '\n' +
          'TIME    ' + fmtTime(runTime) + '\n' +
@@ -1891,10 +2124,15 @@ function fmtTime(s){
 
 function updateStageFlow(dt){
   stageTime += dt;
+  // The five-minute clock advances only while you are surviving. Every boss
+  // fight holds it exactly where it was, so the dragon always arrives at 5:00.
+  if (phase === 'survive') runClock = Math.min(RUN_LIMIT, runClock + dt);
   if (phase === 'survive'){
-    if (stageTime >= stage.dur){
+    if (runClock >= stage.end){
       phase = 'warning'; bossWarn = 3.0;
-      showToast('WARNING', stage.bossName + ' APPROACHES', 3.0);
+      var last = (stageIndex === STAGES.length - 1);
+      showToast(last ? 'FIVE MINUTES' : 'WARNING',
+        last ? 'THE CLOCK STOPS — ' + stage.bossName + ' WAKES' : stage.bossName + ' APPROACHES', 3.0);
       sfx('boss');
       flash('255,60,60', 0.4);
     }
@@ -1915,8 +2153,8 @@ function updateStageFlow(dt){
 function startRun(){
   initAudio();
   player = makePlayer();
-  applyItem('blade');
-  runTime = 0; kills = 0; dmgDealt = 0;
+  applyItem('katana');   // you begin with the blade; scrolls are what make it matter
+  runTime = 0; runClock = 0; kills = 0; dmgDealt = 0; poisonDrained = 0;
   pendingLevels = 0; pendingChoices = null; pendingUlt = false;
   stageIndex = 0;
   cam.shake = 0; cam.flash = 0;
@@ -1939,22 +2177,21 @@ function syncHud(){
   var parts2 = [];
   for (var i = 0; i < player.weapons.length; i++){
     var w = player.weapons[i];
-    parts2.push(ITEMS[w.id].name + '·' + w.lv);
+    if (w.id === 'katana'){
+      parts2.push(w.lv >= KATANA_AWAKEN_LV
+        ? 'KATANA AWAKENED'
+        : 'KATANA·' + w.lv + ' [' + (player.scrolls % SCROLLS_PER_LEVEL) + '/' + SCROLLS_PER_LEVEL + ']');
+    } else parts2.push(ITEMS[w.id].name + '·' + w.lv);
   }
   var pas = [];
   for (var k in player.passives) if (player.passives[k] > 0) pas.push(ITEMS[k].name + '·' + player.passives[k]);
   elLoad.textContent = parts2.join('  ') + (pas.length ? '\n' + pas.join('  ') : '');
 
-  if (phase === 'survive'){
-    elPhase.textContent = 'SURVIVE';
-    elTimer.textContent = fmtTime(Math.max(0, stage.dur - stageTime));
-  } else if (phase === 'warning'){
-    elPhase.textContent = 'INCOMING';
-    elTimer.textContent = String(Math.max(0, Math.ceil(bossWarn)));
-  } else {
-    elPhase.textContent = phase === 'boss' ? 'BOSS' : 'CLEAR';
-    elTimer.textContent = fmtTime(runTime);
-  }
+  elTimer.textContent = fmtTime(runClock) + ' / 5:00';
+  if (phase === 'survive') elPhase.textContent = 'SURVIVE';
+  else if (phase === 'warning') elPhase.textContent = 'INCOMING ' + Math.max(0, Math.ceil(bossWarn));
+  else if (phase === 'boss') elPhase.textContent = 'BOSS · CLOCK HELD';
+  else elPhase.textContent = 'CLEAR';
 }
 
 // ============================================================
@@ -2024,6 +2261,7 @@ function render(){
   drawDecos(g);
   drawHazards(g);
   drawGems(g);
+  drawScrolls(g);
   for (var i = 0; i < enemies.length; i++) drawEnemy(g, enemies[i]);
   if (boss && !boss.dead) BOSSES[boss.id].draw(boss, g);
   drawEnemyBullets(g);
@@ -2048,6 +2286,11 @@ function render(){
   vg.addColorStop(1, stage.fog);
   g.fillStyle = vg;
   g.fillRect(0, 0, view.w, view.h);
+  if (player && player.poisonT > 0){
+    var pv2 = 0.10 + 0.05 * Math.sin(runTime * 6);
+    g.fillStyle = 'rgba(120,220,80,' + pv2.toFixed(3) + ')';
+    g.fillRect(0, 0, view.w, view.h);
+  }
   if (player && player.hp / player.maxHp < 0.3){
     var pulse = 0.16 + 0.1 * Math.sin(runTime * 7);
     g.fillStyle = 'rgba(255,40,40,' + pulse.toFixed(3) + ')';
@@ -2199,6 +2442,23 @@ function drawGems(g){
   }
 }
 
+function drawScrolls(g){
+  for (var i = 0; i < scrolls.length; i++){
+    var sc = scrolls[i];
+    var bob = Math.sin(runTime * 5 + i) * 2;
+    g.save(); g.translate(sc.x, sc.y + bob); g.rotate(-0.36);
+    g.fillStyle = 'rgba(255,214,150,0.22)';
+    g.beginPath(); g.arc(0, 0, 13, 0, TAU); g.fill();
+    g.fillStyle = '#f4e2bc';
+    g.fillRect(-9, -4.5, 18, 9);
+    g.fillStyle = '#b8452f';
+    g.beginPath(); g.arc(-9, 0, 4.6, 0, TAU); g.arc(9, 0, 4.6, 0, TAU); g.fill();
+    g.strokeStyle = '#8a6a44'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(-4, -1.6); g.lineTo(4, -1.6); g.moveTo(-4, 1.6); g.lineTo(4, 1.6); g.stroke();
+    g.restore();
+  }
+}
+
 function drawEnemy(g, e){
   var wob = Math.sin(e.t * 6 + e.wob) * 2;
   g.save(); g.translate(e.x, e.y);
@@ -2206,10 +2466,146 @@ function drawEnemy(g, e){
   g.beginPath(); g.ellipse(0, e.r * 0.75, e.r * 0.85, e.r * 0.3, 0, 0, TAU); g.fill();
 
   var body = e.hitT > 0 ? '#ffffff' : e.col;
-  var fam = (e.type === 'walker' || e.type === 'runner' || e.type === 'bloater') ? 'z'
-          : (e.type === 'shade' || e.type === 'shardling' || e.type === 'brute') ? 'i' : 's';
+  var FAM = { walker: 'z', runner: 'z', bloater: 'z', shade: 'i', shardling: 'i', brute: 'i',
+    rothound: 'd', beetle: 'b', onibi: 'f', tengu: 'y', oni: 'o', shrike: 'k' };
+  var fam = FAM[e.type] || 's';
 
-  if (fam === 'z'){
+  if (fam === 'd'){
+    // zombie dog: low, fast, four legs
+    g.rotate(Math.atan2(player.y - e.y, player.x - e.x));
+    g.strokeStyle = e.dark; g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath();
+    for (var lg = -1; lg <= 1; lg += 2){
+      g.moveTo(-e.r * 0.5, lg * e.r * 0.4); g.lineTo(-e.r * 0.7, lg * e.r * 0.95 + wob);
+      g.moveTo(e.r * 0.5, lg * e.r * 0.4); g.lineTo(e.r * 0.7, lg * e.r * 0.95 - wob);
+    }
+    g.moveTo(-e.r * 0.95, 0); g.lineTo(-e.r * 1.7, -wob * 1.6);
+    g.stroke();
+    g.fillStyle = body;
+    g.beginPath(); g.ellipse(0, 0, e.r * 1.05, e.r * 0.62, 0, 0, TAU); g.fill();
+    g.beginPath(); g.arc(e.r * 0.95, 0, e.r * 0.52, 0, TAU); g.fill();
+    g.fillStyle = e.dark;
+    g.beginPath(); g.moveTo(e.r * 0.8, -e.r * 0.5); g.lineTo(e.r * 1.05, -e.r * 0.95); g.lineTo(e.r * 1.15, -e.r * 0.4); g.closePath();
+    g.moveTo(e.r * 0.8, e.r * 0.5); g.lineTo(e.r * 1.05, e.r * 0.95); g.lineTo(e.r * 1.15, e.r * 0.4); g.closePath();
+    g.fill();
+    g.fillStyle = '#ff5a5a';
+    g.beginPath(); g.arc(e.r * 1.15, -e.r * 0.16, 2.2, 0, TAU); g.arc(e.r * 1.15, e.r * 0.16, 2.2, 0, TAU); g.fill();
+  } else if (fam === 'b'){
+    // blight beetle: carapace, six legs, and a face you can read
+    g.rotate(Math.atan2(player.y - e.y, player.x - e.x) + Math.PI / 2);
+    g.strokeStyle = e.dark; g.lineWidth = 2.4; g.lineCap = 'round';
+    g.beginPath();
+    for (var li = -1; li <= 1; li++){
+      var ly = li * e.r * 0.5;
+      g.moveTo(-e.r * 0.6, ly); g.lineTo(-e.r * 1.35, ly + Math.sin(e.t * 12 + li) * 4);
+      g.moveTo(e.r * 0.6, ly); g.lineTo(e.r * 1.35, ly - Math.sin(e.t * 12 + li) * 4);
+    }
+    g.stroke();
+    g.fillStyle = e.dark;
+    g.beginPath(); g.ellipse(0, e.r * 0.16, e.r * 0.86, e.r * 1.08, 0, 0, TAU); g.fill();
+    g.fillStyle = body;
+    g.beginPath(); g.ellipse(0, e.r * 0.2, e.r * 0.7, e.r * 0.92, 0, 0, TAU); g.fill();
+    g.strokeStyle = e.dark; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(0, -e.r * 0.55); g.lineTo(0, e.r * 1.05); g.stroke();
+    // the face
+    g.fillStyle = e.dark;
+    g.beginPath(); g.arc(0, -e.r * 0.72, e.r * 0.52, 0, TAU); g.fill();
+    g.fillStyle = '#f2ffd0';
+    g.beginPath(); g.arc(-e.r * 0.24, -e.r * 0.8, e.r * 0.2, 0, TAU);
+    g.arc(e.r * 0.24, -e.r * 0.8, e.r * 0.2, 0, TAU); g.fill();
+    g.fillStyle = '#1a2a10';
+    g.beginPath(); g.arc(-e.r * 0.24, -e.r * 0.82, e.r * 0.09, 0, TAU);
+    g.arc(e.r * 0.24, -e.r * 0.82, e.r * 0.09, 0, TAU); g.fill();
+    g.strokeStyle = '#c8f09a'; g.lineWidth = 2.4;
+    g.beginPath();
+    g.moveTo(-e.r * 0.3, -e.r * 1.05); g.lineTo(-e.r * 0.08, -e.r * 1.35);
+    g.moveTo(e.r * 0.3, -e.r * 1.05); g.lineTo(e.r * 0.08, -e.r * 1.35);
+    g.stroke();
+  } else if (fam === 'f'){
+    // onibi: a spirit flame with a small face inside it
+    var fl = 1 + Math.sin(e.t * 9) * 0.14;
+    g.fillStyle = 'rgba(120,220,255,0.20)';
+    g.beginPath(); g.arc(0, 0, e.r * 2.1 * fl, 0, TAU); g.fill();
+    g.fillStyle = body;
+    g.beginPath();
+    g.moveTo(0, -e.r * 1.7 * fl);
+    g.quadraticCurveTo(e.r * 1.05, -e.r * 0.2, 0, e.r * 1.05);
+    g.quadraticCurveTo(-e.r * 1.05, -e.r * 0.2, 0, -e.r * 1.7 * fl);
+    g.fill();
+    g.fillStyle = '#0d2b3c';
+    g.beginPath(); g.arc(-e.r * 0.26, -e.r * 0.1, e.r * 0.15, 0, TAU);
+    g.arc(e.r * 0.26, -e.r * 0.1, e.r * 0.15, 0, TAU); g.fill();
+    g.beginPath(); g.arc(0, e.r * 0.34, e.r * 0.22, 0, Math.PI); g.fill();
+  } else if (fam === 'y'){
+    // tengu: winged yokai in a long-nosed mask
+    g.rotate(Math.atan2(player.y - e.y, player.x - e.x) + Math.PI / 2);
+    var fp = Math.sin(e.t * 10) * 0.4;
+    g.fillStyle = e.dark;
+    for (var wg = -1; wg <= 1; wg += 2){
+      g.save(); g.scale(wg, 1);
+      g.beginPath();
+      g.moveTo(e.r * 0.3, -e.r * 0.2);
+      g.quadraticCurveTo(e.r * 1.8, -e.r * (0.9 + fp), e.r * 1.9, e.r * 0.3);
+      g.quadraticCurveTo(e.r * 1.0, e.r * 0.1, e.r * 0.3, e.r * 0.4);
+      g.closePath(); g.fill();
+      g.restore();
+    }
+    g.fillStyle = body;
+    g.beginPath(); g.ellipse(0, e.r * 0.2, e.r * 0.52, e.r * 0.9, 0, 0, TAU); g.fill();
+    g.fillStyle = '#ffe8e8';
+    g.beginPath(); g.arc(0, -e.r * 0.72, e.r * 0.48, 0, TAU); g.fill();
+    g.fillStyle = '#c8384a';
+    g.beginPath(); g.moveTo(0, -e.r * 0.86); g.lineTo(-e.r * 0.16, -e.r * 0.62); g.lineTo(0, -e.r * 1.7); g.closePath(); g.fill();
+    g.fillStyle = '#2a1020';
+    g.beginPath(); g.arc(-e.r * 0.22, -e.r * 0.82, e.r * 0.09, 0, TAU);
+    g.arc(e.r * 0.22, -e.r * 0.82, e.r * 0.09, 0, TAU); g.fill();
+  } else if (fam === 'o'){
+    // oni: horns, and enough mass to matter
+    g.fillStyle = e.dark;
+    g.beginPath(); g.ellipse(0, e.r * 0.45, e.r * 0.95, e.r * 0.78, 0, 0, TAU); g.fill();
+    g.strokeStyle = e.dark; g.lineWidth = e.r * 0.3; g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(-e.r * 0.7, e.r * 0.1); g.lineTo(-e.r * 1.35, e.r * 0.35 + wob);
+    g.moveTo(e.r * 0.7, e.r * 0.1); g.lineTo(e.r * 1.35, e.r * 0.35 - wob);
+    g.stroke();
+    g.fillStyle = body;
+    g.beginPath(); g.arc(0, -e.r * 0.3, e.r * 0.8, 0, TAU); g.fill();
+    g.fillStyle = '#f2e6d0';
+    g.beginPath(); g.moveTo(-e.r * 0.5, -e.r * 0.85); g.lineTo(-e.r * 0.72, -e.r * 1.6); g.lineTo(-e.r * 0.22, -e.r * 1.02); g.closePath();
+    g.moveTo(e.r * 0.5, -e.r * 0.85); g.lineTo(e.r * 0.72, -e.r * 1.6); g.lineTo(e.r * 0.22, -e.r * 1.02); g.closePath();
+    g.fill();
+    g.fillStyle = '#3a0f0c';
+    g.beginPath(); g.moveTo(-e.r * 0.52, -e.r * 0.5); g.lineTo(-e.r * 0.14, -e.r * 0.3); g.lineTo(-e.r * 0.52, -e.r * 0.16); g.closePath();
+    g.moveTo(e.r * 0.52, -e.r * 0.5); g.lineTo(e.r * 0.14, -e.r * 0.3); g.lineTo(e.r * 0.52, -e.r * 0.16); g.closePath();
+    g.fill();
+    g.fillStyle = '#fff2c8';
+    g.fillRect(-e.r * 0.4, e.r * 0.05, e.r * 0.8, e.r * 0.16);
+  } else if (fam === 'k'){
+    // iron shrike: a launched spike, marker first, then flight
+    if (e.warn > 0){
+      var blink = Math.sin(e.warn * 26) > 0 ? 0.9 : 0.3;
+      g.strokeStyle = 'rgba(255,190,120,' + blink + ')'; g.lineWidth = 3;
+      g.beginPath(); g.arc(0, 0, e.r * 1.9, 0, TAU); g.stroke();
+      g.rotate(angTo(e.x, e.y, player.x, player.y));
+      g.fillStyle = 'rgba(255,190,120,' + blink + ')';
+      g.beginPath(); g.moveTo(e.r * 2.4, 0); g.lineTo(e.r * 1.1, -e.r * 0.7); g.lineTo(e.r * 1.1, e.r * 0.7); g.closePath(); g.fill();
+    } else {
+      g.rotate(e.fa);
+      g.fillStyle = 'rgba(255,150,70,0.30)';
+      g.beginPath(); g.arc(-e.r * 0.9, 0, e.r * 1.15, 0, TAU); g.fill();
+      g.fillStyle = e.dark;
+      g.beginPath();
+      g.moveTo(-e.r * 1.0, -e.r * 1.1); g.lineTo(-e.r * 0.3, -e.r * 0.5);
+      g.lineTo(-e.r * 0.3, e.r * 0.5); g.lineTo(-e.r * 1.0, e.r * 1.1); g.closePath(); g.fill();
+      g.fillStyle = body;
+      g.beginPath();
+      g.moveTo(e.r * 1.5, 0); g.lineTo(-e.r * 0.6, -e.r * 0.62);
+      g.lineTo(-e.r * 0.95, 0); g.lineTo(-e.r * 0.6, e.r * 0.62); g.closePath(); g.fill();
+      g.strokeStyle = '#6a727e'; g.lineWidth = 1.6; g.stroke();
+      g.fillStyle = '#ff6a4a';
+      g.fillRect(e.r * 0.1, -e.r * 0.13, e.r * 0.75, e.r * 0.26);
+    }
+  } else if (fam === 'z'){
     g.fillStyle = e.dark;
     g.beginPath(); g.ellipse(0, e.r * 0.3, e.r * 0.9, e.r * 0.75, 0, 0, TAU); g.fill();
     g.fillStyle = body;
@@ -2498,6 +2894,37 @@ window.__GAME__ = {
   get bossMinions(){ return boss && boss.near != null ? boss.near : 0; },
   hurtBoss: function(a){ if (boss && !boss.dead) hurtEnemy(boss, a); },
   get choices(){ return pendingChoices ? pendingChoices.slice() : null; },
+  get runClock(){ return runClock; },
+  get stageEnd(){ return stage.end; },
+  get katanaLv(){ var w = katanaEntry(); return w ? w.lv : 0; },
+  get scrollCount(){ return player ? player.scrolls : 0; },
+  get scrollsOnGround(){ return scrolls.length; },
+  get poisoned(){ return player ? player.poisonT > 0 : false; },
+  get poisonDrained(){ return poisonDrained; },
+  get enemyTypes(){
+    var o = {};
+    for (var i = 0; i < enemies.length; i++) if (!enemies[i].dead) o[enemies[i].type] = (o[enemies[i].type] || 0) + 1;
+    return o;
+  },
+  grantScrolls: function(n){ for (var i = 0; i < n; i++) collectScroll(); },
+  fireEvent: function(id){ runEvent(id); },
+  spawnOne: function(type, dx, dy){
+    return spawnEnemy(type, clamp(player.x + (dx || 0), 20, world.w - 20),
+      clamp(player.y + (dy || 0), 20, world.h - 20)) ? true : false;
+  },
+  probeKatanaDamage: function(type){
+    // fire the katana once at a lone target and report what actually landed
+    var e = spawnEnemy(type, player.x + 40, player.y);
+    if (!e) return 0;
+    var before = e.hp;
+    var w = katanaEntry();
+    player.aim = 0; e.x = player.x + 40; e.y = player.y;
+    fireWeapon(w);
+    var dealt = before - e.hp;
+    killEnemy(e);
+    return dealt;
+  },
+  constants: { scrollsPerLevel: SCROLLS_PER_LEVEL, awakenLv: KATANA_AWAKEN_LV, runLimit: RUN_LIMIT },
   get build(){
     var o = { weapons: {}, passives: {} };
     for (var i = 0; i < player.weapons.length; i++) o.weapons[player.weapons[i].id] = player.weapons[i].lv;
@@ -2512,7 +2939,7 @@ window.__GAME__ = {
   },
   choose: function(i){ chooseCard(i); },
   next: function(){ if (state === 'clear') nextStage(); },
-  skipToBoss: function(){ if (state === 'play' && phase === 'survive') stageTime = stage.dur; },
+  skipToBoss: function(){ if (state === 'play' && phase === 'survive') runClock = stage.end; },
   killBoss: function(){ if (boss && !boss.dead){ boss.hp = 0; defeatBoss(); } },
   grantLevels: function(n){ for (var i = 0; i < n; i++){ player.level++; queueLevelUp(); } },
   itemTier: function(id){ return ITEMS[id] ? ITEMS[id].tier : 0; },
