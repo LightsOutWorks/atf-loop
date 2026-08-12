@@ -69,28 +69,34 @@
     background: var(--chrome-2); cursor: pointer; padding: 6px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     color: var(--text-dim);
+    --thumb-bg: var(--chrome-2);
   }
   .motif-btn svg { width: 66%; height: auto; display: block; flex: none; }
-  .motif-btn .mname { font-size: 8.5px; letter-spacing: .06em; }
+  .motif-btn .mname { font-size: 10px; letter-spacing: .02em; }
   .motif-btn:hover { border-color: var(--text-dim); }
-  .motif-btn.active { border-color: var(--shu); background: var(--chrome-3); color: var(--text); }
+  .motif-btn.active { border-color: var(--shu); background: var(--chrome-3); color: var(--text); --thumb-bg: var(--chrome-3); }
   .motif-btn:focus-visible { outline: 2px solid var(--shu); outline-offset: 1px; }
   .motif-btn .big { font-size: 22px; font-family: Georgia, serif; line-height: 1; }
 
   .swatches { display: flex; gap: 8px; }
   .swatch {
     width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-    border: 2px solid transparent; padding: 0;
+    border: none; padding: 0;
+    box-shadow: inset 0 0 0 1px rgba(232,229,218,.3);
   }
-  .swatch.active { border-color: var(--text); }
-  .swatch:focus-visible { outline: 2px solid var(--shu); outline-offset: 2px; }
+  .swatch.active {
+    box-shadow: inset 0 0 0 1px rgba(232,229,218,.3),
+                0 0 0 2px var(--chrome), 0 0 0 4px var(--shu);
+  }
+  .swatch:focus-visible { outline: 2px solid var(--shu); outline-offset: 5px; }
 
   input[type="range"] { width: 100%; accent-color: var(--shu); }
+  input[type="range"]:focus-visible { outline: 2px solid var(--shu); outline-offset: 2px; }
 
   .btn-row { display: flex; gap: 9px; }
   button.gen {
     flex: 1; padding: 12px 0; border: none; border-radius: var(--radius);
-    background: var(--shu); color: #f6efe9; font-size: 14px; letter-spacing: .18em;
+    background: var(--shu); color: #f6efe9; font-size: 14px; letter-spacing: .35em; text-indent: .35em;
     cursor: pointer; font-family: inherit;
   }
   button.gen:hover { background: var(--shu-hover); }
@@ -134,10 +140,17 @@
     .card .fade { transition: opacity .8s ease; }
   }
 
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+
   @media (max-width: 900px) {
     .layout { flex-direction: column; }
     aside.controls { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
     main.out { padding: 22px 14px 50px; }
+    .swatch { width: 42px; height: 42px; }
+    .card-tools button { padding: 10px 16px; }
   }
 </style>
 </head>
@@ -150,53 +163,53 @@
 <div class="layout">
   <aside class="controls">
     <div class="ctl-group">
-      <div class="lbl">BRAND NAME</div>
-      <input type="text" id="brandName" value="Ensō" maxlength="24" aria-label="ブランド名">
+      <label class="lbl" for="brandName">BRAND NAME — ブランド名</label>
+      <input type="text" id="brandName" value="Ensō" maxlength="24">
     </div>
 
     <div class="ctl-group">
-      <div class="lbl">MOTIF</div>
-      <div class="motif-grid" id="motifGrid" role="listbox" aria-label="モチーフ選択"></div>
+      <div class="lbl" id="lblMotif">MOTIF — モチーフ</div>
+      <div class="motif-grid" id="motifGrid" role="group" aria-labelledby="lblMotif"></div>
     </div>
 
     <div class="ctl-group">
-      <div class="lbl">INK</div>
-      <div class="swatches" id="inkSwatches"></div>
+      <div class="lbl" id="lblInk">INK — インク</div>
+      <div class="swatches" id="inkSwatches" role="group" aria-labelledby="lblInk"></div>
     </div>
 
     <div class="ctl-group">
-      <div class="lbl">PAPER</div>
-      <div class="swatches" id="paperSwatches"></div>
+      <div class="lbl" id="lblPaper">PAPER — 紙</div>
+      <div class="swatches" id="paperSwatches" role="group" aria-labelledby="lblPaper"></div>
     </div>
 
     <div class="ctl-group">
-      <div class="lbl">GUIDE DENSITY — 補助線の密度</div>
-      <input type="range" id="density" min="20" max="100" value="65" aria-label="補助線の密度">
+      <div class="lbl" id="lblDensity">GUIDE DENSITY — 補助線の密度</div>
+      <input type="range" id="density" min="20" max="100" value="65" aria-labelledby="lblDensity">
     </div>
 
     <div class="btn-row">
-      <button class="gen" id="genBtn">設 計 す る</button>
-      <button class="ghost" id="shuffleBtn" title="補助線の引き方（と抽象・モノグラムの形）を変える">引き直す</button>
+      <button class="gen" id="genBtn">設計する</button>
     </div>
 
-    <p class="hint">モチーフを円・楕円・多角形の集積として構成し、その構成円をそのまま作図補助線として設計シートに展開します。すべてブラウザ内で完結（外部通信なし）。</p>
+    <p class="hint">モチーフを円・楕円・多角形の集積として構成し、その構成図形をそのまま作図補助線として設計シートに展開します。「設計する」を押すたびに補助線の引き方（抽象・モノグラムは形も）が変わります。すべてブラウザ内で完結（外部通信なし）。</p>
+    <p class="visually-hidden" aria-live="polite" id="renderStatus"></p>
   </aside>
 
   <main class="out">
     <div class="card-wrap">
-      <div class="card" id="sheetCard" aria-label="設計シート"></div>
+      <div class="card" id="sheetCard"></div>
       <div class="card-tools">
         <span class="cap">CONSTRUCTION SHEET</span>
-        <button data-dl="svg" data-target="sheet">SVG</button>
-        <button data-dl="png" data-target="sheet">PNG</button>
+        <button data-dl="svg" data-target="sheet" aria-label="設計シートをSVG形式でダウンロード">↓ SVG</button>
+        <button data-dl="png" data-target="sheet" aria-label="設計シートをPNG形式でダウンロード">↓ PNG</button>
       </div>
     </div>
     <div class="card-wrap">
-      <div class="card" id="logoCard" aria-label="完成ロゴ"></div>
+      <div class="card" id="logoCard"></div>
       <div class="card-tools">
         <span class="cap">FINAL MARK</span>
-        <button data-dl="svg" data-target="logo">SVG</button>
-        <button data-dl="png" data-target="logo">PNG</button>
+        <button data-dl="svg" data-target="logo" aria-label="完成ロゴをSVG形式でダウンロード">↓ SVG</button>
+        <button data-dl="png" data-target="logo" aria-label="完成ロゴをPNG形式でダウンロード">↓ PNG</button>
       </div>
     </div>
   </main>
@@ -290,10 +303,10 @@ function placedMark(motif, ink, paper, x, y, size) {
 const fmt2 = n => Math.round(n * 10000) / 10000;
 
 /* ── 作図補助線エンジン ──
-   構成円をそのまま stroke し、接線・中心線・辺の延長・黄金比円・
+   構成図形をそのまま stroke し、接線・中心線・辺の延長・黄金比円・
    半径注記を seeded に選んで重ねる。座標系はマーク座標（512）。
-   bounds: 延長線を伸ばす範囲（シート全域をマーク座標に逆変換したもの） */
-function buildGuides(motif, seed, density, bounds) {
+   延長線は十分長く引き、シート側の clipPath で切る。 */
+function buildGuides(motif, seed, density) {
   const rng = mulberry32(seed);
   const g = { strokes: [], lines: [], dashed: [], ticks: [], labels: [] };
   const circles = motif.shapes.filter(s => s.type === 'circle');
@@ -313,9 +326,15 @@ function buildGuides(motif, seed, density, bounds) {
     g.ticks.push(`M ${fmt(s.cx - t)} ${fmt(s.cy)} H ${fmt(s.cx + t)} M ${fmt(s.cx)} ${fmt(s.cy - t)} V ${fmt(s.cy + t)}`);
   });
 
-  const majors = circles.slice().sort((a, b) => b.r - a.r).slice(0, 7);
+  // 接線・中心線の対象: 円に加え、ほぼ無回転の楕円も含める（キツネ・ネコ等の楕円主体モチーフ対策）
+  const rounds = circles.map(s => ({ cx: s.cx, cy: s.cy, r: s.r, rx: s.r, ry: s.r, circle: true }))
+    .concat(ellipses.filter(e => {
+      const a = Math.abs((e.rot || 0) % 180);
+      return a <= 20 || a >= 160;
+    }).map(e => ({ cx: e.cx, cy: e.cy, r: Math.max(e.rx, e.ry), rx: e.rx, ry: e.ry, circle: false })));
+  const majors = rounds.sort((a, b) => b.r - a.r).slice(0, 8);
   const clipLine = (x1, y1, x2, y2) => {
-    // 点(x1,y1)-(x2,y2) を bounds まで延長
+    // 点(x1,y1)-(x2,y2) を通る直線を大きく延長する
     const dx = x2 - x1, dy = y2 - y1;
     const L = Math.hypot(dx, dy) || 1;
     const ux = dx / L, uy = dy / L;
@@ -327,15 +346,15 @@ function buildGuides(motif, seed, density, bounds) {
     g.lines.push(`<line x1="${fmt(l.x1)}" y1="${fmt(l.y1)}" x2="${fmt(l.x2)}" y2="${fmt(l.y2)}"/>`);
   };
 
-  // 3. 主要円の水平・垂直接線
+  // 3. 主要図形の水平・垂直接線
   majors.forEach(s => {
-    if (rng() < 0.62 * density) pushLine(s.cx - 10, s.cy - s.r, s.cx + 10, s.cy - s.r);
-    if (rng() < 0.62 * density) pushLine(s.cx - 10, s.cy + s.r, s.cx + 10, s.cy + s.r);
-    if (rng() < 0.45 * density) pushLine(s.cx - s.r, s.cy - 10, s.cx - s.r, s.cy + 10);
-    if (rng() < 0.45 * density) pushLine(s.cx + s.r, s.cy - 10, s.cx + s.r, s.cy + 10);
+    if (rng() < 0.62 * density) pushLine(s.cx - 10, s.cy - s.ry, s.cx + 10, s.cy - s.ry);
+    if (rng() < 0.62 * density) pushLine(s.cx - 10, s.cy + s.ry, s.cx + 10, s.cy + s.ry);
+    if (rng() < 0.45 * density) pushLine(s.cx - s.rx, s.cy - 10, s.cx - s.rx, s.cy + 10);
+    if (rng() < 0.45 * density) pushLine(s.cx + s.rx, s.cy - 10, s.cx + s.rx, s.cy + 10);
   });
 
-  // 4. 主要円ペアの中心を貫く線
+  // 4. 主要図形ペアの中心を貫く線
   for (let i = 0; i < majors.length; i++) {
     for (let j = i + 1; j < majors.length; j++) {
       if (rng() < 0.38 * density) {
@@ -356,7 +375,7 @@ function buildGuides(motif, seed, density, bounds) {
   });
 
   // 6. 黄金比の同心円（破線）
-  majors.slice(0, 3).forEach((s, i) => {
+  majors.filter(s => s.circle).slice(0, 3).forEach((s, i) => {
     if (rng() < 0.8 * density) {
       const r2 = i === 0 ? s.r * PHI : s.r / PHI;
       g.dashed.push(`<circle cx="${fmt(s.cx)}" cy="${fmt(s.cy)}" r="${fmt(r2)}" fill="none"/>`);
@@ -364,7 +383,7 @@ function buildGuides(motif, seed, density, bounds) {
   });
 
   // 7. 半径注記（r = 96）
-  majors.slice(0, 3).forEach(s => {
+  majors.filter(s => s.circle).slice(0, 3).forEach(s => {
     if (rng() < 0.9 * density) {
       const th = rng() * Math.PI * 2;
       const ex = s.cx + Math.cos(th) * s.r, ey = s.cy + Math.sin(th) * s.r;
@@ -394,11 +413,35 @@ function wrapEn(str, max) {
   return lines;
 }
 function wrapJa(str, max) {
+  // 行頭禁則（。、」など）は前行へぶら下げ、末尾の孤立短行は直前行から字を移して整える
+  const cs = Array.from(String(str));
+  const noHead = '。、」』）］！？!?ー・';
   const lines = [];
-  let s = String(str);
-  while (s.length > max) { lines.push(s.slice(0, max)); s = s.slice(max); }
-  if (s) lines.push(s);
+  let cur = '';
+  for (let i = 0; i < cs.length; i++) {
+    cur += cs[i];
+    if (cur.length >= max && !(i + 1 < cs.length && noHead.includes(cs[i + 1]))) {
+      lines.push(cur); cur = '';
+    }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length >= 2 && Array.from(lines[lines.length - 1]).length <= 3) {
+    const prev = Array.from(lines[lines.length - 2]);
+    lines[lines.length - 1] = prev.slice(-3).join('') + lines[lines.length - 1];
+    lines[lines.length - 2] = prev.slice(0, -3).join('');
+  }
   return lines;
+}
+
+/* 2色を混ぜる（シートの注記色をインク・紙から導出する） */
+function mixHex(a, b, t) {
+  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
+  return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+function inkRgba(ink, alpha) {
+  const p = [1, 3, 5].map(i => parseInt(ink.slice(i, i + 2), 16));
+  return `rgba(${p[0]},${p[1]},${p[2]},${alpha})`;
 }
 
 function sheetSVG(motif, opts) {
@@ -406,18 +449,26 @@ function sheetSVG(motif, opts) {
   // マーク配置: 512 → 620px 幅、中央
   const s = 620 / 512, tx = (SHEET_W - 620) / 2, ty = 132;
   const guides = buildGuides(motif, seed, density);
-  const guideColor = '#8b887a';
-  const gridColor = 'rgba(75,74,61,.13)';
-  const gridColor2 = 'rgba(75,74,61,.22)';
-  const inkDim = '#6b6a5e';
-  const sheetNo = String(1000 + (seed % 9000)).padStart(4, '0');
+  const guideColor = mixHex(ink, paper, 0.5);
+  const gridColor = inkRgba(ink, 0.13);
+  const gridColor2 = inkRgba(ink, 0.22);
+  const inkDim = mixHex(ink, paper, 0.36);
+  const idHash = String(motif.id || '').split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const sheetNo = String(1000 + ((seed + idHash) % 9000)).padStart(4, '0');
 
-  const conceptEn = wrapEn(motif.concept || '', 58);
-  const conceptJa = wrapJa(motif.conceptJa || '', 30);
-  let ty2 = 862;
-  const enT = conceptEn.slice(0, 6).map(l => `<text x="64" y="${ty2 += 18.5}" font-size="12.5" fill="${inkDim}" font-family="Georgia,'Times New Roman',serif">${esc(l)}</text>`).join('');
-  ty2 += 12;
-  const jaT = conceptJa.slice(0, 3).map(l => `<text x="64" y="${ty2 += 17}" font-size="11" fill="${inkDim}" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">${esc(l)}</text>`).join('');
+  const conceptEnAll = wrapEn(motif.concept || '', 72);
+  const conceptEn = conceptEnAll.slice(0, 6);
+  if (conceptEnAll.length > 6) conceptEn[5] += ' …';
+  const conceptJaAll = wrapJa(motif.conceptJa || '', 31);
+  const conceptJa = conceptJaAll.slice(0, 3);
+  if (conceptJaAll.length > 3) conceptJa[2] += '…';
+  let ty2 = 856;
+  const enT = conceptEn.map(l => `<text x="64" y="${ty2 += 18}" font-size="12" fill="${inkDim}" font-family="Georgia,'Times New Roman',serif">${esc(l)}</text>`).join('');
+  ty2 += 11;
+  const jaT = conceptJa.map(l => `<text x="64" y="${ty2 += 16.5}" font-size="10.5" fill="${inkDim}" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif">${esc(l)}</text>`).join('');
+
+  // ブランド名の概算幅（fs17・字間2。和文は全角幅で見積もる）
+  const brandWidth = Array.from(String(brand)).reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 19 : 10.4), 0);
 
   const labels = guides.labels.map(l =>
     `<g stroke="${guideColor}" stroke-width="0.7" opacity="0.85">${l.line}</g>` +
@@ -447,14 +498,7 @@ function sheetSVG(motif, opts) {
     ${Array.from({ length: SHEET_W / 80 - 1 }, (_, i) => `<text x="${(i + 1) * 80}" y="15">${(i + 1) * 80}</text>`).join('')}
   </g>
 
-  <!-- ヘッダ -->
-  <g>
-    ${placedMark(motif, ink, paper, SHEET_W / 2 - 74, 40, 26)}
-    <text x="${SHEET_W / 2 + 8}" y="59" font-size="17" letter-spacing="2" fill="${ink}" text-anchor="middle" font-family="Georgia,'Times New Roman','Hiragino Mincho ProN',serif">${esc(brand)}</text>
-    <text x="${SHEET_W / 2}" y="82" font-size="7.5" letter-spacing="3.2" fill="${inkDim}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">GEOMETRIC LOGO CONSTRUCTION — SHEET No. ${sheetNo}</text>
-  </g>
-
-  <!-- 作図領域 -->
+  <!-- 作図領域（テキスト類より先に描き、文字が線の上に載るようにする） -->
   <g clip-path="url(#sheetClip)">
     <g transform="translate(${tx},${ty}) scale(${s})">
       <g class="fade" opacity="0.16">${markBody(motif, ink, paper)}</g>
@@ -468,7 +512,15 @@ function sheetSVG(motif, opts) {
     </g>
   </g>
 
-  <!-- CONCEPT -->
+  <!-- ヘッダ（ブランド名の実幅ぶんマークを左へ逃がす） -->
+  <g>
+    ${placedMark(motif, ink, paper, SHEET_W / 2 + 8 - brandWidth / 2 - 40, 40, 26)}
+    <text x="${SHEET_W / 2 + 8}" y="59" font-size="17" letter-spacing="2" fill="${ink}" text-anchor="middle" font-family="Georgia,'Times New Roman','Hiragino Mincho ProN',serif">${esc(brand)}</text>
+    <text x="${SHEET_W / 2}" y="82" font-size="7.5" letter-spacing="3.2" fill="${inkDim}" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">GEOMETRIC LOGO CONSTRUCTION — SHEET No. ${sheetNo}</text>
+  </g>
+
+  <!-- CONCEPT（うっすら紙色を敷き、補助線の上でも読めるようにする） -->
+  <rect x="50" y="832" width="546" height="196" fill="${paper}" opacity="0.6"/>
   <text x="64" y="850" font-size="10" letter-spacing="4.5" fill="${ink}" font-family="ui-monospace,Menlo,monospace">CONCEPT</text>
   ${enT}
   ${jaT}
@@ -508,7 +560,8 @@ function annularArc(cx, cy, rOut, rIn, a0, a1) {
   return `M ${fmt(x0)} ${fmt(y0)} A ${fmt(rOut)} ${fmt(rOut)} 0 ${large} 1 ${fmt(x1)} ${fmt(y1)} L ${fmt(x2)} ${fmt(y2)} A ${fmt(rIn)} ${fmt(rIn)} 0 ${large} 0 ${fmt(x3)} ${fmt(y3)} Z`;
 }
 function monogramMotif(brand, seed) {
-  const ch = (String(brand).trim()[0] || 'E').toUpperCase();
+  // Array.from でコードポイント単位に切る（絵文字・非BMP漢字でサロゲートを割らない）
+  const ch = (Array.from(String(brand).trim())[0] || 'E').toUpperCase();
   const rng = mulberry32(seed);
   const gapAt = -Math.PI / 2 + (rng() - 0.3) * 1.2;       // 円環の切れ目位置
   const gap = 0.55 + rng() * 0.4;
@@ -531,7 +584,7 @@ function monogramMotif(brand, seed) {
 function abstractMotif(seed) {
   const rng = mulberry32(seed);
   const shapes = [];
-  const n = 7 + Math.floor(rng() * 4);
+  const n = 8 + Math.floor(rng() * 4);
   let cx = 256, cy = 262, r = 96 + rng() * 26;
   const golden = Math.PI * (3 - Math.sqrt(5));
   let a = rng() * Math.PI * 2;
@@ -546,6 +599,16 @@ function abstractMotif(seed) {
     shapes.push({ type: 'circle', cx: fmt(nx), cy: fmt(ny), r: fmt(nr), op });
     if (op === 'add') { px = nx; py = ny; pr = nr; }
   }
+  // cut が一度も出なかったら1つ彫り、必ず表情を作る
+  if (!shapes.some(s => s.op === 'cut')) {
+    shapes.push({ type: 'circle', cx: fmt(cx + r * 0.55), cy: fmt(cy - r * 0.45), r: fmt(r * 0.34), op: 'cut' });
+  }
+  // 光学センタリング: add円のバウンディングボックス中心を (256,262) へ寄せる
+  const adds = shapes.filter(s => s.op === 'add');
+  const minX = Math.min(...adds.map(s => s.cx - s.r)), maxX = Math.max(...adds.map(s => s.cx + s.r));
+  const minY = Math.min(...adds.map(s => s.cy - s.r)), maxY = Math.max(...adds.map(s => s.cy + s.r));
+  const dx = 256 - (minX + maxX) / 2, dy = 262 - (minY + maxY) / 2;
+  shapes.forEach(s => { s.cx = fmt(s.cx + dx); s.cy = fmt(s.cy + dy); });
   return {
     id: 'abstract', nameEn: 'Abstract', nameJa: '抽象',
     concept: 'Circles descend along the golden angle, each borrowing its radius from the last, until a single asymmetric constellation remains. The mark is pure construction: nothing depicted, everything derived.',
@@ -581,7 +644,15 @@ function render(animate) {
   sheetCard.innerHTML = lastSheetSVG;
   logoCard.innerHTML = lastLogoSVG;
 
+  const status = document.getElementById('renderStatus');
+  if (status) status.textContent = `設計シートを更新: ${motif.nameJa || motif.id}`;
+
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // モバイル縦積みでは結果が画面外に出るので、生成時にシートへ追従する
+  if (animate && matchMedia('(max-width: 900px)').matches) {
+    sheetCard.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }
   if (animate && !reduced) {
     // 補助線を描画順にストロークで引き、終わり際にシルエットを現す
     sheetCard.classList.add('drawing');
@@ -599,7 +670,7 @@ function render(animate) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       guides.forEach(el => { el.style.strokeDashoffset = '0'; });
       setTimeout(() => {
-        // style.opacity を外し、SVG属性の opacity（sheet側0.09 / logo側1）へ遷移で戻す
+        // style.opacity を外し、SVG属性の opacity（sheet側0.16 / logo側1）へ遷移で戻す
         fades.forEach(el => { el.style.opacity = ''; });
       }, Math.min(1300, guides.length * 16 + 450));
     }));
@@ -616,7 +687,7 @@ function download(name, blob) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function fileBase(target) {
-  const b = state.brand.replace(/[^\w\-ぁ-んァ-ン一-龠]/g, '') || 'enso';
+  const b = state.brand.replace(/[^\p{L}\p{N}_\-]/gu, '') || 'enso';
   return `${b}-${state.motif}-${target}`;
 }
 function downloadSVG(target) {
@@ -624,7 +695,8 @@ function downloadSVG(target) {
   download(fileBase(target) + '.svg', new Blob([src], { type: 'image/svg+xml' }));
 }
 function downloadPNG(target) {
-  const src = target === 'sheet' ? lastSheetSVG : lastLogoSVG;
+  let src = target === 'sheet' ? lastSheetSVG : lastLogoSVG;
+  if (src.toWellFormed) src = src.toWellFormed();   // 迷子サロゲートで encodeURIComponent が落ちないよう保険
   const img = new Image();
   const scale = 2;
   img.onload = () => {
@@ -643,22 +715,21 @@ function downloadPNG(target) {
 /* ── UI構築 ── */
 function buildUI() {
   const grid = document.getElementById('motifGrid');
-  const thumbPaper = 'transparent';
   MOTIFS.forEach(m => {
     const b = document.createElement('button');
     b.className = 'motif-btn'; b.type = 'button'; b.dataset.motif = m.id;
-    b.setAttribute('role', 'option');
-    b.innerHTML = markSVG(m, 'currentColor', 'var(--chrome-2)', 40) + `<span class="mname">${esc(m.nameJa)}</span>`;
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = markSVG(m, 'currentColor', 'var(--thumb-bg)', 40) + `<span class="mname">${esc(m.nameJa)}</span>`;
     grid.appendChild(b);
   });
   const mono = document.createElement('button');
   mono.className = 'motif-btn'; mono.type = 'button'; mono.dataset.motif = 'monogram';
-  mono.setAttribute('role', 'option');
-  mono.innerHTML = `<span class="big">A</span><span class="mname">頭文字</span>`;
+  mono.setAttribute('aria-pressed', 'false');
+  mono.innerHTML = `<span class="big">E</span><span class="mname">頭文字</span>`;
   grid.appendChild(mono);
   const abs = document.createElement('button');
   abs.className = 'motif-btn'; abs.type = 'button'; abs.dataset.motif = 'abstract';
-  abs.setAttribute('role', 'option');
+  abs.setAttribute('aria-pressed', 'false');
   abs.innerHTML = `<span class="big">◐</span><span class="mname">抽象</span>`;
   grid.appendChild(abs);
 
@@ -666,45 +737,48 @@ function buildUI() {
     const btn = e.target.closest('.motif-btn');
     if (!btn) return;
     state.motif = btn.dataset.motif;
-    grid.querySelectorAll('.motif-btn').forEach(x => x.classList.toggle('active', x === btn));
+    grid.querySelectorAll('.motif-btn').forEach(x => {
+      x.classList.toggle('active', x === btn);
+      x.setAttribute('aria-pressed', x === btn ? 'true' : 'false');
+    });
     render(true);
   });
 
-  const inkRow = document.getElementById('inkSwatches');
-  INKS.forEach((k, i) => {
-    const b = document.createElement('button');
-    b.className = 'swatch' + (i === 0 ? ' active' : ''); b.type = 'button';
-    b.style.background = k.c; b.title = k.name; b.setAttribute('aria-label', 'インク: ' + k.name);
-    b.onclick = () => {
-      state.ink = k.c;
-      inkRow.querySelectorAll('.swatch').forEach(x => x.classList.toggle('active', x === b));
-      render(false);
-    };
-    inkRow.appendChild(b);
-  });
-  const paperRow = document.getElementById('paperSwatches');
-  PAPERS.forEach((k, i) => {
-    const b = document.createElement('button');
-    b.className = 'swatch' + (i === 0 ? ' active' : ''); b.type = 'button';
-    b.style.background = k.c; b.title = k.name; b.setAttribute('aria-label', '紙: ' + k.name);
-    b.onclick = () => {
-      state.paper = k.c;
-      paperRow.querySelectorAll('.swatch').forEach(x => x.classList.toggle('active', x === b));
-      render(false);
-    };
-    paperRow.appendChild(b);
-  });
+  const makeSwatchRow = (rowId, list, apply) => {
+    const row = document.getElementById(rowId);
+    list.forEach((k, i) => {
+      const b = document.createElement('button');
+      b.className = 'swatch' + (i === 0 ? ' active' : ''); b.type = 'button';
+      b.style.background = k.c; b.title = k.name; b.setAttribute('aria-label', k.name);
+      b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+      b.onclick = () => {
+        apply(k.c);
+        row.querySelectorAll('.swatch').forEach(x => {
+          x.classList.toggle('active', x === b);
+          x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+        });
+        render(false);
+      };
+      row.appendChild(b);
+    });
+  };
+  makeSwatchRow('inkSwatches', INKS, c => { state.ink = c; });
+  makeSwatchRow('paperSwatches', PAPERS, c => { state.paper = c; });
 
   document.getElementById('brandName').addEventListener('input', e => {
     state.brand = e.target.value.trim() || 'Ensō';
+    const tile = document.querySelector('.motif-btn[data-motif="monogram"] .big');
+    if (tile) tile.textContent = (Array.from(state.brand)[0] || 'E').toUpperCase();
     render(false);
   });
-  document.getElementById('density').addEventListener('input', e => {
+  const density = document.getElementById('density');
+  density.setAttribute('aria-valuetext', density.value + '%');
+  density.addEventListener('input', e => {
     state.density = e.target.value / 100;
+    e.target.setAttribute('aria-valuetext', e.target.value + '%');
     render(false);
   });
-  document.getElementById('genBtn').addEventListener('click', () => render(true));
-  document.getElementById('shuffleBtn').addEventListener('click', () => {
+  document.getElementById('genBtn').addEventListener('click', () => {
     state.seed = Math.floor(Math.random() * 1e9);
     render(true);
   });
@@ -722,11 +796,15 @@ const qs = new URLSearchParams(location.search);
 const qMotif = qs.get('motif');
 const validMotif = qMotif && (qMotif === 'monogram' || qMotif === 'abstract' || MOTIFS.some(m => m.id === qMotif));
 state.motif = validMotif ? qMotif : (MOTIFS[0] ? MOTIFS[0].id : 'abstract');
-if (qs.get('brand')) {
-  state.brand = qs.get('brand').slice(0, 24);
+const qBrand = (qs.get('brand') || '').trim();
+if (qBrand) {
+  state.brand = Array.from(qBrand).slice(0, 24).join('');   // コードポイント単位で切る
   document.getElementById('brandName').value = state.brand;
+  const tile = document.querySelector('.motif-btn[data-motif="monogram"] .big');
+  if (tile) tile.textContent = (Array.from(state.brand)[0] || 'E').toUpperCase();
 }
-if (qs.get('seed')) state.seed = (parseInt(qs.get('seed'), 10) >>> 0) || state.seed;
+const qSeed = qs.get('seed');
+if (qSeed !== null && /^\d+$/.test(qSeed)) state.seed = Number(qSeed) >>> 0;   // seed=0 も有効
 const first = document.querySelector(`.motif-btn[data-motif="${state.motif}"]`);
 if (first) first.classList.add('active');
 render(true);
