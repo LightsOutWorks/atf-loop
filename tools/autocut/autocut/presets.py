@@ -22,8 +22,9 @@ class Preset:
     vertical: bool
     crf: int = 20
 
-    def telop_style(self) -> TelopStyle:
-        return TelopStyle.vertical() if self.vertical else TelopStyle.landscape()
+    def telop_style(self, font: str | None = None) -> TelopStyle:
+        return (TelopStyle.vertical(font) if self.vertical
+                else TelopStyle.landscape(font))
 
 
 YOUTUBE_LONG = Preset(

@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from .fonts import default_font
 
 from .model import TimeMap, Transcript, Word
 
@@ -21,7 +23,8 @@ _WS = re.compile(r"[ \t　]+")
 
 @dataclass(frozen=True)
 class TelopStyle:
-    font: str = "Noto Sans CJK JP"
+    # 実際に入っているものから選ぶ。決め打ちすると OS が変わった瞬間に豆腐になる。
+    font: str = field(default_factory=default_font)
     size: int = 64
     bold: bool = True
     primary: str = "&H00FFFFFF"      # 白（ASS は &HAABBGGRR）
@@ -36,14 +39,17 @@ class TelopStyle:
     max_lines: int = 2
 
     @classmethod
-    def landscape(cls) -> "TelopStyle":
+    def landscape(cls, font: str | None = None) -> "TelopStyle":
         """YouTube ロング向け。落ち着いた大きさで一文ずつ出す。"""
-        return cls(size=54, outline=3.5, margin_v=70, max_chars=28, max_lines=2)
+        base = dict(size=54, outline=3.5, margin_v=70, max_chars=28, max_lines=2)
+        return cls(font=font, **base) if font else cls(**base)
 
     @classmethod
-    def vertical(cls) -> "TelopStyle":
+    def vertical(cls, font: str | None = None) -> "TelopStyle":
         """ショート / TikTok 向け。大きく、短く、画面中央寄りに出す。"""
-        return cls(size=82, outline=5.0, shadow=2.5, margin_v=380, max_chars=11, max_lines=2)
+        base = dict(size=82, outline=5.0, shadow=2.5, margin_v=380,
+                    max_chars=11, max_lines=2)
+        return cls(font=font, **base) if font else cls(**base)
 
 
 @dataclass

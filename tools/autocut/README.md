@@ -20,20 +20,21 @@ autocut 撮ったやつ.mp4
 
 ## スマホだけで使う
 
-母艦（Mac / PC）で **一度だけ** これを叩く。
+母艦（Windows / Mac / Linux）で **一度だけ** これを叩く。
 
 ```bash
-autocut autostart on
+autocut doctor        # 動く条件が揃っているか先に確かめる
+autocut autostart on  # ログオン時に自動で待ち受ける
 ```
 
-以後、母艦の電源が入っていれば自動で待ち受ける。**ターミナルを開くのはこの1回きり。**
+以後、母艦の電源が入っていれば勝手に待ち受ける。**ターミナルを開くのはこの1回きり。**
 
 ```
   autocut — スマホから使う
   ────────────────────────────────────────────────────
-  iPhone で開く:  http://hiro-mac.local:8765/
-  （繋がらなければ）http://192.168.11.5:8765/
+  iPhone で開く:  http://192.168.11.5:8765/
   PIN:            4821   （最初の1回だけ）
+  テロップ書体:    Yu Gothic UI
   ────────────────────────────────────────────────────
 ```
 
@@ -41,18 +42,35 @@ iPhone の Safari で開き、**共有 → ホーム画面に追加**。次か�
 
 **動画は母艦から外へ出ない。** クラウドも課金も要らない。
 
-3つ効かせてある。
-
-- **`.local` 名で案内する。** IP アドレスは Wi-Fi 側の都合で変わり、そのたびにブックマークが死ぬ。macOS は Bonjour で `.local` を常時広告しており iPhone はこれを解決できるので、こちらのほうが壊れない
-- **PIN を使い回す。** 初回に決めて保存する。起動のたびに変わると自動起動と噛み合わない
-- **アイコンと manifest は PIN の前で返す。** Safari はこれらを別扱いで取りに来るため、認証をかけるとホーム画面のアイコンが出ない
-
 | コマンド | |
 |---|---|
-| `autocut autostart on` | 母艦の起動時に自動で待ち受ける（macOS = launchd / Linux = systemd） |
+| `autocut doctor` | ffmpeg・日本語フォント・ポート・受信許可・宛先をまとめて調べる |
+| `autocut autostart on` | ログオン時に自動で待ち受ける |
 | `autocut autostart off` | 外す |
 | `autocut autostart status` | 入っているか見る |
 | `autocut serve` | その場だけ起動する（Ctrl+C で終わり） |
+
+自動起動の入り方は OS で違う。
+
+| OS | 仕組み | 置き場所 |
+|---|---|---|
+| Windows | スタートアップの `.vbs`（窓を出さずに起動する） | `…\Start Menu\Programs\Startup\autocut.vbs` |
+| macOS | launchd | `~/Library/LaunchAgents/works.lightsout.autocut.plist` |
+| Linux | systemd --user | `~/.config/systemd/user/autocut.service` |
+
+### Windows で先に潰してあること
+
+Windows は「起動しているのに繋がらない・出力が壊れる」が起きやすい。原因になる3つを先に埋めてある。
+
+- **ファイアウォールの受信許可。** 既定では iPhone からの接続が捨てられ、**症状は「無反応」なので原因に辿り着けない。** `autostart on` で UAC を1度出して開ける（`profile=private` に限定するので、公衆Wi-Fiでは開かない）。失敗したときは貼り付け用のコマンドを出す
+- **テロップの書体。** `Noto Sans CJK JP` を決め打ちしていたので、Windows では**テロップが全部 □ になっていた**。しかも書き出しは成功するので気付けない。いまは入っている書体（Yu Gothic UI / Meiryo / MS Gothic）から自動で選ぶ。`--font` で指定もできる
+- **窓が出ないこと。** `pythonw.exe` を使い、`.vbs` から非表示で起動する
+
+### その他
+
+- **PIN を使い回す。** 初回に決めて保存する。起動のたびに変わると自動起動と噛み合わない
+- **アイコンと manifest は PIN の前で返す。** Safari はこれらを別扱いで取りに来るため、認証をかけるとホーム画面のアイコンが出ない
+- **macOS は `.local` 名で案内する。** IP は Wi-Fi 側の都合で変わりブックマークが死ぬ。Bonjour の名前なら壊れない。Windows は mDNS の登録が環境によるため IP を案内する（変わったら `autocut doctor` で新しい宛先が出る）
 
 | `serve` のオプション | |
 |---|---|
@@ -104,20 +122,29 @@ iPhone の Safari で開き、**共有 → ホーム画面に追加**。次か�
 
 ## 入れるもの
 
-```bash
-# Ubuntu / Debian
-sudo apt-get install ffmpeg fonts-noto-cjk
+```powershell
+# Windows（PowerShell）
+winget install Python.Python.3.12
+winget install Gyan.FFmpeg
+# 入れたあと PowerShell を開き直す（PATH を読み直すため）
+```
 
+```bash
 # macOS
 brew install ffmpeg
 brew install --cask font-noto-sans-cjk-jp
 
-# 本体
+# Ubuntu / Debian
+sudo apt-get install ffmpeg fonts-noto-cjk
+```
+
+```bash
+# 本体（共通）
 cd tools/autocut
 pip install -e ".[asr]"
 ```
 
-`fonts-noto-cjk` を入れないとテロップが豆腐（□）になる。
+日本語フォントは Windows なら標準で入っている（Yu Gothic / Meiryo）。Linux では `fonts-noto-cjk` を入れないとテロップが豆腐（□）になる。**入っているかは `autocut doctor` が答える。**
 
 初回だけ Whisper のモデルを取りに行く（`medium` で約1.5GB）。以降はキャッシュから読むので、**2回目からは完全にオフラインで動く**。
 
@@ -179,16 +206,18 @@ autocut talk.mp4 --highlights picks.json
 | フィラー除去 | 仕込んだ4個（えー / あのー / えーと / うーん）を4個とも除去 |
 | テロップ | 焼き込みを目視確認。日本語が豆腐にならず、折返しと位置も意図どおり |
 | 縦型の組み直し | 背景ぼかし＋中央配置を目視確認。被写体が切れていない |
-| 単体テスト | 46件パス（`python -m unittest discover -s tests`） |
+| 単体テスト | 54件パス（`python -m unittest discover -s tests`） |
 | スマホ経路（`serve`） | 18項目パス。41.6MB の受け取りがバイト単位で一致 / 3種の生成 / Range 部分取得 206・範囲外 416 / 経路外読み出しを 403 で遮断 |
 | スマホ画面 | iPhone 相当（393×852）で PIN → 選択 → 送信 → 進捗 → 結果まで実際に操作。横スクロールの漏れなし |
 | ホーム画面対応 | manifest・各寸法アイコン・apple-touch-icon が PIN 無しで返る（7経路）。iPhone の UA で追加案内が出て閉じられる |
 | アイコン生成 | 実行時に PNG を組み立て、ffmpeg で再デコードできることを確認（画像ライブラリ不要） |
+| フォント選択 | 入っている書体から選ぶこと・`--font` が ASS ヘッダまで届くことを確認 |
 
 **まだ実測していないもの**
 
 - **faster-whisper による実音声の認識精度**。この検証環境は egress policy で HuggingFace が 403 のためモデルを取得できず、文字起こしは正解データを流し込んで代替した。パイプラインの下流（カット・テロップ・組み直し・書き出し）は全て実測済みだが、**認識そのものの精度は未測定**である
 - **人間の肉声・実撮影素材での挙動**。検証素材は espeak-ng の合成音声であり、話速が実際より遅い（1.8文字/秒。実際は5〜9文字/秒程度）
+- **Windows 実機での動作**。この検証環境は Linux であり、Windows 分岐（スタートアップ登録・ファイアウォール・`pythonw` 起動・書体の検出）は**一度も実機で動かしていない**。プラットフォーム非依存の部分（`firewall_command` の組み立て、対応OSの判定、書体の上書き）だけを単体テストで確認している。最初に `autocut doctor` を回して結果を見てほしい
 - 短尺選定の規則が、実際に再生数へ効くかどうか
 
 ## 既知の限界
@@ -203,7 +232,7 @@ autocut talk.mp4 --highlights picks.json
 ```bash
 cd tools/autocut
 
-# ffmpeg 不要（46件）
+# ffmpeg 不要（54件）
 python -m unittest discover -s tests -p 'test_*.py' -v
 
 # 通しの検証素材を作って回す（ffmpeg + espeak-ng が要る）

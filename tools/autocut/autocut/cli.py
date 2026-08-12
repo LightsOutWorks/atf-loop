@@ -32,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
             "スマホから使う:\n"
             "  autocut serve              母艦で待ち受け、iPhone のブラウザから渡す\n"
             "  autocut autostart on       母艦の起動時に自動で待ち受ける\n"
+            "  autocut doctor             動く条件が揃っているか調べる\n"
         ),
     )
     parser.add_argument("input", type=Path, help="元の動画ファイル")
@@ -73,6 +74,8 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--shorts-max", type=float, default=58.0, help="短尺の上限秒（既定: 58）")
     group.add_argument("--highlights", type=Path, default=None,
                        help="切り出し位置を外から与える JSON")
+    group.add_argument("--font", default=None,
+                       help="テロップのフォント名（既定: この機械に入っているものから自動選択）")
     group.add_argument("--reframe", default="blur", choices=["blur", "crop"],
                        help="9:16 の作り方（既定: blur = 被写体を切らない）")
 
@@ -94,6 +97,9 @@ def main(argv: list[str] | None = None) -> int:
     if argv and argv[0] == "autostart":
         from .agent import main as agent_main
         return agent_main(argv[1:])
+    if argv and argv[0] == "doctor":
+        from .doctor import main as doctor_main
+        return doctor_main(argv[1:])
 
     args = build_parser().parse_args(argv)
 
@@ -124,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         silence_min=args.silence_min,
         breath=args.breath,
         reframe=args.reframe,
+        font=args.font,
         normalize_audio=not args.no_normalize,
         encode_preset=args.encode_preset,
         keep_workdir=args.keep_workdir,

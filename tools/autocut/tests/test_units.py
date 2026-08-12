@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -289,6 +290,60 @@ class ManifestTests(unittest.TestCase):
         self.assertTrue(MANIFEST["icons"])
         self.assertTrue(any(i.get("purpose") == "maskable" for i in MANIFEST["icons"]))
         self.assertEqual(MANIFEST["start_url"], "/")
+
+
+class FontTests(unittest.TestCase):
+    def test_default_font_is_a_name(self):
+        from autocut import fonts
+        name = fonts.default_font()
+        self.assertIsInstance(name, str)
+        self.assertTrue(name)
+
+    def test_style_uses_an_installed_font(self):
+        # 決め打ちすると OS が変わった瞬間にテロップが豆腐になる（Windows で発覚）
+        from autocut import fonts
+        from autocut.telop import TelopStyle
+        found = fonts.available()
+        if found:
+            self.assertIn(TelopStyle().font, found)
+        else:
+            self.assertEqual(TelopStyle().font, fonts.FALLBACK)
+
+    def test_font_override_reaches_the_ass_header(self):
+        from autocut.telop import TelopStyle, render_ass
+        out = render_ass([], 1080, 1920, TelopStyle.vertical("Yu Gothic UI"))
+        self.assertIn("Yu Gothic UI", out)
+
+    def test_presets_pass_the_override_through(self):
+        from autocut import presets
+        self.assertEqual(presets.TIKTOK.telop_style("Meiryo").font, "Meiryo")
+        self.assertEqual(presets.YOUTUBE_LONG.telop_style("Meiryo").font, "Meiryo")
+
+    def test_install_hint_is_platform_specific(self):
+        from autocut import fonts
+        self.assertTrue(fonts.install_hint())
+
+
+class AutostartTests(unittest.TestCase):
+    def test_three_platforms_are_supported(self):
+        from autocut import agent
+        for system in ("Darwin", "Linux", "Windows"):
+            with self.subTest(system=system), \
+                 unittest.mock.patch("platform.system", return_value=system):
+                self.assertTrue(agent.supported())
+
+    def test_firewall_command_names_the_port_and_private_profile(self):
+        from autocut import agent
+        cmd = agent.firewall_command(8765)
+        self.assertIn("localport=8765", cmd)
+        # 公衆Wi-Fiで開かないよう private に絞る
+        self.assertIn("profile=private", cmd)
+
+    def test_unsupported_platform_is_reported(self):
+        from autocut import agent
+        with unittest.mock.patch("platform.system", return_value="Haiku"):
+            self.assertFalse(agent.supported())
+            self.assertFalse(agent.status())
 
 
 class TranscriptIOTests(unittest.TestCase):

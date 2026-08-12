@@ -2,8 +2,11 @@
 
     autocut autostart on
 
-macOS は launchd、Linux は systemd --user へ登録する。ログイン時に起動し、
-落ちても勝手に上がってくる。以後ヒロが触るのはスマホだけになる。
+macOS は launchd、Linux は systemd --user、Windows はスタートアップへ登録する。
+ログオン時に起動し、以後ヒロが触るのはスマホだけになる。
+
+Windows ではファイアウォールの受信許可も併せて入れる。ここが閉じていると
+iPhone から一切つながらないが、症状が「無反応」なので原因に辿り着きにくい。
 """
 
 from __future__ import annotations
@@ -157,11 +160,115 @@ def _linux_status() -> bool:
     return code == 0
 
 
+# ---------------------------------------------------------------- Windows
+
+
+def _startup_dir() -> Path:
+    return (Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+            / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup")
+
+
+def _vbs_path() -> Path:
+    return _startup_dir() / "autocut.vbs"
+
+
+def _pythonw() -> str:
+    """コンソール窓を出さない方の実行ファイルを選ぶ。"""
+    exe = Path(sys.executable)
+    silent = exe.with_name("pythonw.exe")
+    return str(silent if silent.exists() else exe)
+
+
+def is_admin() -> bool:
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())      # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def firewall_command(port: int) -> str:
+    # profile=private に絞る。カフェなどの公衆Wi-Fiでは開けない。
+    return (
+        f'netsh advfirewall firewall add rule name="autocut" '
+        f"dir=in action=allow protocol=TCP localport={port} profile=private"
+    )
+
+
+def firewall_rule_exists() -> bool:
+    code, _ = _run(["netsh", "advfirewall", "firewall", "show", "rule", "name=autocut"])
+    return code == 0
+
+
+def open_firewall(port: int) -> bool:
+    """受信を許可する。管理者でなければ UAC を出して1回だけ昇格を試みる。"""
+    if firewall_rule_exists():
+        return True
+
+    args = ["netsh", "advfirewall", "firewall", "add", "rule", "name=autocut",
+            "dir=in", "action=allow", "protocol=TCP", f"localport={port}",
+            "profile=private"]
+    if is_admin():
+        code, _ = _run(args)
+        return code == 0
+
+    quoted = ",".join(f"'{a}'" for a in args[1:])
+    _run([
+        "powershell", "-NoProfile", "-Command",
+        f"Start-Process netsh -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList {quoted}",
+    ])
+    return firewall_rule_exists()
+
+
+def _windows_on(outdir: Path, port: int, pin: str | None) -> None:
+    # スタートアップに置くだけにする。管理者権限もタスク登録の引用符地獄も要らず、
+    # 消したければファイルを1つ捨てればよい。
+    parts = [_pythonw(), "-m", "autocut", "serve",
+             "--out", str(outdir), "--port", str(port)]
+    if pin:
+        parts += ["--pin", pin]
+    command = " ".join(f'""{p}""' if " " in p else p for p in parts)
+
+    script = (
+        "' autocut — ログオン時に待ち受けを始める\n"
+        "Set sh = CreateObject(\"WScript.Shell\")\n"
+        f'sh.Run "{command}", 0, False\n'          # 0 = 窓を出さない
+    )
+    _startup_dir().mkdir(parents=True, exist_ok=True)
+    _vbs_path().write_text(script, encoding="utf-8")
+
+    print("  自動起動を入れました（Windows / スタートアップ）")
+    print(f"    設定  {_vbs_path()}")
+
+    if open_firewall(port):
+        print(f"    受信許可  ポート {port} を開けました（プライベートネットワークのみ）")
+    else:
+        print()
+        print("    ⚠ ファイアウォールを開けませんでした。これを開けないと")
+        print("      iPhone から一切つながりません。管理者のコマンドプロンプトで:")
+        print()
+        print(f"      {firewall_command(port)}")
+
+
+def _windows_off() -> None:
+    _vbs_path().unlink(missing_ok=True)
+    if is_admin():
+        _run(["netsh", "advfirewall", "firewall", "delete", "rule", "name=autocut"])
+        print("  自動起動と受信許可を外しました。")
+    else:
+        print("  自動起動を外しました。")
+        print('  受信許可も消すなら管理者権限で: netsh advfirewall firewall delete rule name="autocut"')
+
+
+def _windows_status() -> bool:
+    return _vbs_path().exists()
+
+
 # ---------------------------------------------------------------- 入口
 
 
 def supported() -> bool:
-    return platform.system() in ("Darwin", "Linux")
+    return platform.system() in ("Darwin", "Linux", "Windows")
 
 
 def on(outdir: Path, port: int, pin: str | None = None) -> None:
@@ -172,6 +279,8 @@ def on(outdir: Path, port: int, pin: str | None = None) -> None:
         _macos_on(outdir, port, pin)
     elif system == "Linux":
         _linux_on(outdir, port, pin)
+    elif system == "Windows":
+        _windows_on(outdir, port, pin)
     else:
         raise RuntimeError(f"{system} には未対応。`autocut serve` を手で起動してください。")
 
@@ -182,6 +291,8 @@ def off() -> None:
         _macos_off()
     elif system == "Linux":
         _linux_off()
+    elif system == "Windows":
+        _windows_off()
     else:
         raise RuntimeError(f"{system} には未対応。")
 
@@ -192,6 +303,8 @@ def status() -> bool:
         return _macos_status()
     if system == "Linux":
         return _linux_status()
+    if system == "Windows":
+        return _windows_status()
     return False
 
 
@@ -220,7 +333,8 @@ def main(argv: list[str]) -> int:
         if action == "on":
             on(args.out, args.port, args.pin)
             print()
-            print("  Mac の電源が入っていれば、いつでもスマホから使えます。")
+            machine = "PC" if platform.system() == "Windows" else "Mac"
+            print(f"  {machine} の電源が入っていれば、いつでもスマホから使えます。")
             print("  ターミナルを開く必要はもうありません。")
         elif action == "off":
             off()

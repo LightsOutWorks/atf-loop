@@ -42,6 +42,7 @@ class Options:
     silence_min: float = 0.35
     breath: float = 0.12
     reframe: str = "blur"
+    font: str | None = None
     normalize_audio: bool = True
     encode_preset: str = "medium"
     keep_workdir: bool = False
@@ -197,11 +198,11 @@ def _render_long(
     artifacts: Path, target_dir: Path, audio_filter: str, opts: Options, info, log: Logger,
 ) -> Path:
     events = telop.build_events(
-        transcript, timemap, mode=preset.telop_mode, style=preset.telop_style()
+        transcript, timemap, mode=preset.telop_mode, style=preset.telop_style(opts.font)
     )
     ass_path = artifacts / f"{preset.key}.ass"
     ass_path.write_text(
-        telop.render_ass(events, preset.width, preset.height, preset.telop_style()),
+        telop.render_ass(events, preset.width, preset.height, preset.telop_style(opts.font)),
         encoding="utf-8",
     )
 
@@ -260,11 +261,11 @@ def _render_vertical_set(
 
         events = telop.build_events(
             transcript, timemap, mode=preset.telop_mode,
-            style=preset.telop_style(), clip=(clip_start, clip_end),
+            style=preset.telop_style(opts.font), clip=(clip_start, clip_end),
         )
         ass_path = artifacts / f"{stem}.ass"
         ass_path.write_text(
-            telop.render_ass(events, preset.width, preset.height, preset.telop_style()),
+            telop.render_ass(events, preset.width, preset.height, preset.telop_style(opts.font)),
             encoding="utf-8",
         )
 

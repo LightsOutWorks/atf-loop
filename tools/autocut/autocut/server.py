@@ -32,7 +32,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import icon, presets
+from . import fonts, icon, presets
 from .pipeline import Options, run as run_pipeline
 from .webui import PAGE
 
@@ -663,6 +663,7 @@ def main(argv: list[str] | None = None) -> int:
     host = local_hostname()
     ip_url = f"http://{lan_ip()}:{args.port}/"
     free_gb = shutil.disk_usage(root).free / 1e9
+    windows = platform.system() == "Windows"
 
     print()
     print("  autocut — スマホから使う")
@@ -676,13 +677,28 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  PIN:            {pin}   （最初の1回だけ）")
     print(f"  置き場所:        {root}")
     print(f"  空き:            {free_gb:.0f}GB / 1本の上限 {args.max_gb:.0f}GB")
+    print(f"  テロップ書体:    {fonts.describe()}")
     print("  " + "─" * 52)
+    print("  開いたら「ホーム画面に追加」。次からはアイコンを押すだけです。")
     if host:
-        print("  開いたら「ホーム画面に追加」。次からはアイコンを押すだけです。")
         print("  .local 名なので、Wi-Fi のアドレスが変わってもそのまま使えます。")
-    else:
-        print("  開いたら「ホーム画面に追加」。次からはアイコンを押すだけです。")
+
+    if not fonts.available():
+        print()
+        print("  ⚠ 日本語フォントが見つかりません。テロップが □ になります。")
+        print(f"    {fonts.install_hint()}")
+
+    if windows:
+        from . import agent
+        if not agent.firewall_rule_exists():
+            print()
+            print("  ⚠ ファイアウォールが閉じています。iPhone から届きません。")
+            print("    管理者のコマンドプロンプトで:")
+            print(f"    {agent.firewall_command(args.port)}")
+
+    print()
     print("  終了は Ctrl+C。ずっと待たせるなら `autocut autostart on`。")
+    print("  つながらないときは `autocut doctor`。")
     print()
 
     try:
