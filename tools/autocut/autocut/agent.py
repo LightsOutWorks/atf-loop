@@ -229,9 +229,12 @@ def _windows_on(outdir: Path, port: int, pin: str | None) -> None:
         parts += ["--pin", pin]
     command = " ".join(f'""{p}""' if " " in p else p for p in parts)
 
+    # 作業フォルダを明示する。スタートアップからの起動はカレントを引き継がず、
+    # 未インストール（フォルダから直接動かしている）状態だとパッケージを見失う。
     script = (
         "' autocut — ログオン時に待ち受けを始める\n"
-        "Set sh = CreateObject(\"WScript.Shell\")\n"
+        'Set sh = CreateObject("WScript.Shell")\n'
+        f'sh.CurrentDirectory = "{Path(__file__).resolve().parent.parent}"\n'
         f'sh.Run "{command}", 0, False\n'          # 0 = 窓を出さない
     )
     _startup_dir().mkdir(parents=True, exist_ok=True)

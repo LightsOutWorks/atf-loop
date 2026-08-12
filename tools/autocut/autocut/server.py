@@ -636,8 +636,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--host", default="0.0.0.0",
                         help="待ち受ける先（既定: 0.0.0.0 = 同じWi-Fiから届く）")
-    parser.add_argument("--out", type=Path, default=Path("./autocut-web"),
-                        help="受け取った動画と出力の置き場所")
+    # autostart 側と同じ既定にする。ここがずれると PIN と出力の置き場所が
+    # 手動起動と自動起動で食い違い、原因の分かりにくい混乱になる。
+    parser.add_argument("--out", type=Path, default=Path.home() / "autocut-web",
+                        help="受け取った動画と出力の置き場所（既定: ~/autocut-web）")
     parser.add_argument("--max-gb", type=float, default=8.0, help="1本の上限（既定: 8GB）")
     parser.add_argument("--pin", default=None,
                         help="PIN を指定する（既定: 初回に決めて以後は使い回す）")
