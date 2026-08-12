@@ -3,6 +3,12 @@
 
 正本: direction/WRITING_SYSTEM_JA_2026-08.md（C1〜C52 ＋ 禁止語）
 
+運用状態: DECISIONS.md D-005 Decision 3（2026-08-10）により本スクリプトは退役方向であり、
+当面は禁止語チェックのみに使う。合否（FAIL / PASS）は禁止語のみで決まり、
+他の検査（C1/C2/C6/C24/C25/C27/段落文数/字数）は判定権のない参考値（WARN）として
+観測を継続する。janome不在の環境ではC24/C25は計測不能であり、偽値ではなく
+未計測（null）として出力する（CONSTRAINTS.md §6「確認できないことは UNKNOWN とする」）。
+
 使い方:
     python3 scripts/writing-check.py --file draft.md
     python3 scripts/writing-check.py --stdin --kind x
@@ -145,7 +151,7 @@ def analyze(text: str, kind: str = "note") -> dict:
     ends = [s[-4:] for s in sents]
     tri = any(ends[i] == ends[i + 1] == ends[i + 2] for i in range(len(ends) - 2))
 
-    # C24 汎用述語率
+    # C24 汎用述語率（janome不在時は計測不能 = None。偽値0.0を返さない）
     generic = 0
     if _TOK is not None:
         for s in sents:
@@ -153,7 +159,7 @@ def analyze(text: str, kind: str = "note") -> dict:
                     if t.part_of_speech.split(",")[0] in ("動詞", "形容詞")]
             if toks and toks[-1].base_form in GENERIC_PREDICATES:
                 generic += 1
-    generic_rate = round(generic / len(sents), 2)
+    generic_rate = round(generic / len(sents), 2) if _TOK is not None else None
 
     # C25 連言検出
     c25 = []
@@ -217,26 +223,34 @@ def analyze(text: str, kind: str = "note") -> dict:
         f"[停止中] 読点なし最長連続 {maxrun}（旧閾値 3未満）",
         f"[参考] 読点/文 {round(sum(s.count('、') for s in sents) / len(sents), 2)}（Human自然文 0.26）",
     ]
+    # D-005 Decision 3（2026-08-10）: 本スクリプトは退役方向とし、当面は禁止語チェック
+    # のみに使う。合否（FAIL）は禁止語のみで決め、以下の検査は判定権を持たない参考値
+    # （WARN）へ降格した。C23ゲート停止（上記）と同じ様式で、観測自体は継続する。
+    # 根拠: DECISIONS.md D-005（coji/natural-japanese 取り込み・書法スキル自作のKILL）。
     if tri:
-        fails.append("C1 同一語尾3連続")
+        warns.append("C1 同一語尾3連続")
     if max_sent > lim["max_sentence"]:
-        fails.append(f"C2 最長文 {max_sent} > {lim['max_sentence']}")
+        warns.append(f"C2 最長文 {max_sent} > {lim['max_sentence']}")
     if max_comma > lim["max_comma"]:
-        fails.append(f"C2 読点 {max_comma} > {lim['max_comma']}")
+        warns.append(f"C2 読点 {max_comma} > {lim['max_comma']}")
     if any(n > lim["max_para_sent"] for n in para_sent):
-        fails.append(f"段落文数 {para_sent} > {lim['max_para_sent']}")
+        warns.append(f"段落文数 {para_sent} > {lim['max_para_sent']}")
     if lim["max_chars"] and chars_nospace > lim["max_chars"]:
-        fails.append(f"字数 {chars_nospace} > {lim['max_chars']}")
-    if generic_rate > 0.30:
-        fails.append(f"C24 汎用述語率 {generic_rate} > 0.30")
-    if c25:
-        fails.append(f"C25 連言検出 {len(c25)}件: {c25[:2]}")
+        warns.append(f"字数 {chars_nospace} > {lim['max_chars']}")
+    if _TOK is None:
+        # janome不在。C24/C25は計測不能であり、FAILにもPASSにも数えない。
+        warns.append("C24/C25 未計測（janome不在のため計測不能）")
+    else:
+        if generic_rate > 0.30:
+            warns.append(f"C24 汎用述語率 {generic_rate} > 0.30")
+        if c25:
+            warns.append(f"C25 連言検出 {len(c25)}件: {c25[:2]}")
     if a_hits > b_hits:
-        fails.append(f"C27 因果圧縮 A{a_hits} > B{b_hits}")
+        warns.append(f"C27 因果圧縮 A{a_hits} > B{b_hits}")
+    if re.search(r"[!！🚀💡✅🔥😀-🿿]", body):
+        warns.append("C6 絵文字・感嘆符")
     if banned:
         fails.append(f"禁止語 {banned}")
-    if re.search(r"[!！🚀💡✅🔥😀-🿿]", body):
-        fails.append("C6 絵文字・感嘆符")
 
     return {
         "kind": kind,
@@ -249,8 +263,9 @@ def analyze(text: str, kind: str = "note") -> dict:
         "max_sentence_len": max_sent,
         "max_comma_per_sentence": max_comma,
         "paragraph_sentence_counts": para_sent,
+        "tokenizer_available": _TOK is not None,
         "generic_predicate_rate": generic_rate,
-        "c25_hits": c25,
+        "c25_hits": c25 if _TOK is not None else None,
         "shell_nouns": shells,
         "cause_A": a_hits,
         "cause_B": b_hits,
