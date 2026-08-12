@@ -55,10 +55,11 @@
     text-shadow:0 0 24px rgba(0,0,0,.9);white-space:nowrap}
   #toastSub{display:block;font-size:12px;letter-spacing:.2em;color:var(--dim);margin-top:6px;font-weight:400}
 
-  #joy{position:absolute;width:104px;height:104px;margin:-52px 0 0 -52px;border-radius:50%;
-    border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:0}
-  #joyKnob{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;
-    border-radius:50%;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4)}
+  #joy{position:absolute;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:0;
+    transition:opacity .12s linear}
+  #joyKnob{position:absolute;left:50%;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;
+    border-radius:50%;background:rgba(255,255,255,.26);border:1px solid rgba(255,255,255,.45)}
 
   /* ---------- overlays ---------- */
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
@@ -375,6 +376,7 @@ var toastTimer = 0;
 var freeChoices = 0;
 
 var MAX_ENEMIES = 190, MAX_PARTS = 340, MAX_TEXTS = 40;
+var AIM_TURN = 14;   // radians per second the blade may swing to follow a target
 
 function makePlayer(){
   return {
@@ -385,7 +387,7 @@ function makePlayer(){
     inv: 0, slowT: 0, freezeT: 0, regenAcc: 0,
     poisonT: 0, poisonAcc: 0,
     scrolls: 0, katanaLv: 1,
-    face: { x: 1, y: 0 }, aim: 0,
+    face: { x: 1, y: 0 }, aim: 0, target: null,
     weapons: [], passives: {},
     hitFlash: 0
   };
@@ -469,6 +471,9 @@ function sfx(kind, vol){
 // ============================================================
 var keys = {};
 var stick = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
+// A resting thumb wanders a few pixels, so anything inside DEAD is treated as
+// still. THROW is deliberately short — a long throw makes a phone feel sluggish.
+var STICK_DEAD = 6, STICK_THROW = 34;
 
 window.addEventListener('keydown', function(e){
   var k = (e.key || '').toLowerCase();
@@ -504,11 +509,24 @@ function stickStart(e){
 function stickMove(e){
   if (!stick.active || e.pointerId !== stick.id) return;
   var dx = e.clientX - stick.ox, dy = e.clientY - stick.oy;
-  var d = len(dx, dy), max = 52;
-  if (d > max){ dx = dx / d * max; dy = dy / d * max; d = max; }
-  stick.x = dx / max; stick.y = dy / max;
-  elKnob.style.left = (50 + dx / max * 46) + '%';
-  elKnob.style.top = (50 + dy / max * 46) + '%';
+  var d = len(dx, dy);
+  if (d > STICK_THROW){
+    // floating base: past full throw the stick follows the thumb instead of
+    // pinning against its own edge, so a long drag never runs out of room
+    var pull = (d - STICK_THROW) / d;
+    stick.ox += dx * pull; stick.oy += dy * pull;
+    dx -= dx * pull; dy -= dy * pull; d = STICK_THROW;
+    elJoy.style.left = stick.ox + 'px';
+    elJoy.style.top = stick.oy + 'px';
+  }
+  if (d <= STICK_DEAD){
+    stick.x = 0; stick.y = 0;
+  } else {
+    var mag = (d - STICK_DEAD) / (STICK_THROW - STICK_DEAD);
+    stick.x = dx / d * mag; stick.y = dy / d * mag;
+  }
+  elKnob.style.left = (50 + dx / STICK_THROW * 44) + '%';
+  elKnob.style.top = (50 + dy / STICK_THROW * 44) + '%';
 }
 function stickEnd(e){
   if (!stick.active || (e.pointerId != null && e.pointerId !== stick.id)) return;
@@ -1869,17 +1887,35 @@ function updatePlayer(dt){
   var slowMul = player.slowT > 0 ? 0.56 : 1;
   var target = player.spd * statSpd() * slowMul;
 
-  // the frozen expanse is slippery on purpose: you commit to a direction
-  var accel = (stage.id === 'ice') ? 4.4 : 15.0;
-  var k = 1 - Math.exp(-accel * dt);
+  // Starting is quick and stopping is quicker — in a bullet-hell the lag
+  // between releasing a key and actually halting is what reads as "floaty".
+  // The frozen expanse keeps its slide, just not an uncontrollable one.
+  var ice = (stage.id === 'ice');
+  var accel = ice ? 7.0 : 30.0, brake = ice ? 9.0 : 42.0;
+  var k = 1 - Math.exp(-(iv.m > 0.05 ? accel : brake) * dt);
   player.vx = lerp(player.vx, iv.x * target, k);
   player.vy = lerp(player.vy, iv.y * target, k);
   player.x = clamp(player.x + player.vx * dt, player.r, world.w - player.r);
   player.y = clamp(player.y + player.vy * dt, player.r, world.h - player.r);
 
   if (iv.m > 0.1){ player.face.x = iv.x; player.face.y = iv.y; }
-  var t = nearestTarget(player.x, player.y, 900);
-  player.aim = t ? angTo(player.x, player.y, t.x, t.y) : Math.atan2(player.face.y, player.face.x);
+
+  // Hold the current target until it dies, leaves range, or something is
+  // clearly closer. Re-picking the nearest enemy every frame made the blade
+  // spin ~10 turns a second in a crowd (measured), which is what made the
+  // whole game feel like it was fighting the player.
+  var cur = player.target;
+  if (cur && (cur.dead || len(cur.x - player.x, cur.y - player.y) > 900)) cur = null;
+  var best = nearestTarget(player.x, player.y, 900);
+  if (!cur) cur = best;
+  else if (best && best !== cur){
+    var dCur = len(cur.x - player.x, cur.y - player.y);
+    var dBest = len(best.x - player.x, best.y - player.y);
+    if (dBest < dCur * 0.7) cur = best;      // hysteresis: clearly closer, not a tie
+  }
+  player.target = cur;
+  var want = cur ? angTo(player.x, player.y, cur.x, cur.y) : Math.atan2(player.face.y, player.face.x);
+  player.aim += clamp(angDiff(player.aim, want), -AIM_TURN * dt, AIM_TURN * dt);
 
   if (player.inv > 0) player.inv -= dt;
   if (player.hitFlash > 0) player.hitFlash -= dt;
@@ -2044,7 +2080,7 @@ function beginStage(){
   scrolls = [];
   spawnTimer = 0.6; eventTimer = stageIndex === 0 ? 14 : 10;
   player.x = world.w / 2; player.y = world.h / 2;
-  player.vx = player.vy = 0; player.inv = 1.2; player.slowT = 0;
+  player.vx = player.vy = 0; player.inv = 1.2; player.slowT = 0; player.target = null;
   buildDecos();
   hide(elBossWrap);
   setAccent(stage.accent);
@@ -3344,6 +3380,9 @@ window.__GAME__ = {
   get scrollsOnGround(){ return scrolls.length; },
   get poisoned(){ return player ? player.poisonT > 0 : false; },
   get poisonDrained(){ return poisonDrained; },
+  get speed(){ return player ? len(player.vx, player.vy) : 0; },
+  get maxSpeed(){ return player ? player.spd * statSpd() : 0; },
+  get aim(){ return player ? player.aim : 0; },
   get enemyTypes(){
     var o = {};
     for (var i = 0; i < enemies.length; i++) if (!enemies[i].dead) o[enemies[i].type] = (o[enemies[i].type] || 0) + 1;
