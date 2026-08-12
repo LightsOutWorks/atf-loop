@@ -226,7 +226,7 @@
 const PHI = 1.6180339887;
 
 /* ── モチーフデータ（512×512、painter's algorithm） ── */
-const MOTIFS = /*__MOTIF_DATA__*/[{"id":"lion","nameEn":"Lion","nameJa":"ライオン","concept":"A lion in regal left-facing profile plants one forepaw on a low angular rock, its full mane a scalloped ring of circles encircling the head and flowing down onto the chest. The short boxy muzzle opens in a measured roar, and the tail sweeps up into a teardrop tuft — flat minimal masses forming a crest of sovereign strength.","conceptJa":"低い岩に前脚をかけた横向きのライオン。円を連ねたたてがみの環が頭を包み胸へ流れ、短い箱形の口吻が静かに咆哮する。王者の紋章。","shapes":[{"type":"path","op":"add","d":"M 366 266 C 398 256 412 234 409 200 L 398 198 C 398 228 386 248 360 256 Z"},{"type":"path","op":"add","d":"M 404 142 C 420 158 424 182 405 210 C 388 188 388 162 396 148 Z"},{"type":"polygon","op":"add","points":[[112,416],[122,378],[148,368],[198,374],[212,394],[206,416]]},{"type":"polygon","op":"add","points":[[346,322],[382,314],[374,405],[350,405]]},{"type":"ellipse","op":"add","cx":362,"cy":408,"rx":15,"ry":8},{"type":"polygon","op":"add","points":[[308,326],[340,328],[332,405],[310,403]]},{"type":"ellipse","op":"add","cx":321,"cy":408,"rx":15,"ry":8},{"type":"polygon","op":"add","points":[[222,290],[254,294],[246,403],[222,403]]},{"type":"ellipse","op":"add","cx":235,"cy":407,"rx":15,"ry":8},{"type":"polygon","op":"add","points":[[198,288],[226,298],[188,368],[164,360]]},{"type":"ellipse","op":"add","cx":174,"cy":368,"rx":14,"ry":8},{"type":"ellipse","op":"add","cx":290,"cy":310,"rx":92,"ry":48},{"type":"circle","op":"add","cx":350,"cy":300,"r":50},{"type":"path","op":"add","d":"M 162 246 C 166 290 186 312 216 316 L 264 296 C 268 272 262 250 254 242 Z"},{"type":"circle","op":"add","cx":210,"cy":204,"r":40},{"type":"circle","op":"add","cx":264,"cy":204,"r":31},{"type":"circle","op":"add","cx":251.4,"cy":238.7,"r":31},{"type":"circle","op":"add","cx":219.4,"cy":257.2,"r":31},{"type":"circle","op":"add","cx":183,"cy":250.8,"r":31},{"type":"circle","op":"add","cx":165,"cy":228,"r":31},{"type":"circle","op":"add","cx":156,"cy":189,"r":31},{"type":"circle","op":"add","cx":183,"cy":157.2,"r":31},{"type":"circle","op":"add","cx":219.4,"cy":150.8,"r":31},{"type":"circle","op":"add","cx":251.4,"cy":169.3,"r":31},{"type":"path","op":"add","d":"M 168 176 L 130 180 L 100 196 L 96 212 L 124 220 L 132 226 L 104 242 L 100 254 L 126 263 L 168 256 Z"},{"type":"circle","op":"cut","cx":129,"cy":203,"r":7}]},{"id":"gorilla","nameEn":"Gorilla","nameJa":"ゴリラ","concept":"A silverback knuckle-walks to the right, its mountainous shoulder hump rolling down one long diagonal of muscle to the hips while the heavy forearm drops like a stone pillar onto planted knuckles. The crested head rides low in the shoulders, a heavy brow shading the eye above a short flat muzzle. Flat minimal masses give it the quiet, immovable authority of a guardian crest.","conceptJa":"ナックルウォークで進むシルバーバック。山のような肩から腰へ流れる一本の斜線と、大地に杭のように立つ前腕、庇のような眉と短く平らな口元が、動じない守護者の風格を刻む。","shapes":[{"type":"circle","op":"add","cx":272,"cy":187,"r":75},{"type":"circle","op":"add","cx":210,"cy":230,"r":65},{"type":"ellipse","op":"add","cx":230,"cy":285,"rx":85,"ry":55,"rot":0},{"type":"circle","op":"add","cx":150,"cy":285,"r":55},{"type":"ellipse","op":"add","cx":158,"cy":322,"rx":40,"ry":45,"rot":15},{"type":"polygon","op":"add","points":[[112,316],[176,340],[188,401],[104,401],[108,352]]},{"type":"ellipse","op":"add","cx":322,"cy":250,"rx":46,"ry":75,"rot":-5},{"type":"ellipse","op":"add","cx":338,"cy":328,"rx":34,"ry":58,"rot":-3},{"type":"circle","op":"add","cx":344,"cy":374,"r":27},{"type":"ellipse","op":"add","cx":330,"cy":168,"rx":36,"ry":40,"rot":25},{"type":"circle","op":"add","cx":368,"cy":176,"r":48},{"type":"ellipse","op":"add","cx":358,"cy":142,"rx":32,"ry":18,"rot":-15},{"type":"ellipse","op":"add","cx":362,"cy":140,"rx":34,"ry":26,"rot":-10},{"type":"ellipse","op":"add","cx":397,"cy":165,"rx":24,"ry":14,"rot":8},{"type":"ellipse","op":"add","cx":383,"cy":215,"rx":31,"ry":23,"rot":-5},{"type":"polygon","op":"add","points":[[370,192],[423,192],[426,234],[364,242]]},{"type":"ellipse","op":"cut","cx":390,"cy":290,"rx":28,"ry":40,"rot":0},{"type":"polygon","op":"cut","points":[[70,399],[450,399],[450,460],[70,460]]},{"type":"circle","op":"cut","cx":393,"cy":181,"r":5.5}]},{"id":"fox","nameEn":"Fox","nameJa":"キツネ","concept":"A fox sits poised in side profile, ears pricked, its great brush of a tail sweeping around the front paws and rising until the notched tip nearly touches its chest. One elegant S-curve runs from ear through neck to haunch, casting the mark as a crest of quiet cunning and composure.","conceptJa":"耳を立てて端座するキツネ。豊かな尾が前足を包み胸元へ立ち上がり、切り欠きの入った尾先が静かな賢さと気品を語ります。","shapes":[{"type":"polygon","op":"add","points":[[142,76],[185,120],[145,144]]},{"type":"polygon","op":"add","points":[[238,70],[226,142],[197,114]]},{"type":"circle","op":"add","cx":187,"cy":168,"r":48},{"type":"polygon","op":"add","points":[[92,184],[160,148],[200,202]]},{"type":"ellipse","op":"add","cx":252,"cy":288,"rx":68,"ry":130,"rot":-18},{"type":"circle","op":"add","cx":306,"cy":348,"r":70},{"type":"path","op":"add","d":"M 349,388 C 406,404 424,426 410,444 C 386,464 304,463 228,452 C 164,441 110,414 94,368 C 80,332 84,268 102,232 C 108,222 121,213 136,211 C 152,229 163,251 169,270 C 172,306 184,332 202,352 C 222,374 264,392 314,400 C 336,400 344,396 349,388 Z"},{"type":"path","op":"cut","d":"M 212,368 C 258,400 314,418 370,400 L 363,388 C 316,404 266,388 222,358 Z"},{"type":"polygon","op":"cut","points":[[115,205],[102,214],[120,228]]},{"type":"circle","op":"cut","cx":161,"cy":159,"r":7}]},{"id":"owl","nameEn":"Owl","nameJa":"フクロウ","concept":"A front-facing owl sits upright on a straight branch, its huge twin eye discs locking the viewer in a level, unblinking stare. Folded wing arcs sweep from the shoulders down around the belly to talons gripping the bar, making one calm vertical column. Flat minimal masses turn it into an emblem of quiet, watchful intelligence.","conceptJa":"枝にとまり、正面からまっすぐこちらを見据えるフクロウ。肩から腹を包み込む翼の弧が一本の静かな柱をつくり、揺るがぬ知性と見守りの紋章となる。","shapes":[{"type":"polygon","op":"add","points":[[106,424],[406,424],[406,436],[106,436]]},{"type":"ellipse","op":"add","cx":256,"cy":300,"rx":108,"ry":126},{"type":"ellipse","op":"cut","cx":238,"cy":324,"rx":70,"ry":86,"rot":-12},{"type":"ellipse","op":"add","cx":249,"cy":324,"rx":70,"ry":86,"rot":-12},{"type":"ellipse","op":"cut","cx":274,"cy":324,"rx":70,"ry":86,"rot":12},{"type":"ellipse","op":"add","cx":263,"cy":324,"rx":70,"ry":86,"rot":12},{"type":"circle","op":"add","cx":256,"cy":185,"r":95},{"type":"polygon","op":"add","points":[[176,68],[238,98],[194,156]]},{"type":"polygon","op":"add","points":[[336,68],[274,98],[318,156]]},{"type":"circle","op":"cut","cx":213,"cy":178,"r":38},{"type":"circle","op":"cut","cx":299,"cy":178,"r":38},{"type":"circle","op":"add","cx":213,"cy":178,"r":18},{"type":"circle","op":"add","cx":299,"cy":178,"r":18},{"type":"polygon","op":"cut","points":[[256,200],[240,214],[256,250],[272,214]]},{"type":"circle","op":"add","cx":199,"cy":438,"r":10},{"type":"circle","op":"add","cx":213,"cy":442,"r":10},{"type":"circle","op":"add","cx":227,"cy":438,"r":10},{"type":"circle","op":"add","cx":285,"cy":438,"r":10},{"type":"circle","op":"add","cx":299,"cy":442,"r":10},{"type":"circle","op":"add","cx":313,"cy":438,"r":10}]},{"id":"bear","nameEn":"Bear","nameJa":"クマ","concept":"A bear stands four-square in left profile, its blunt snout running in one straight line up past a small round ear to the shoulder hump that crowns the silhouette, then down an unbroken ridge of back to a tiny tail. Column-thick legs and flat forward paws root the deep body to the ground in a calm, unhurried stance. Built almost entirely from circles and ellipses, it is a crest of quiet, immovable strength.","conceptJa":"鼻先から小さな丸い耳、そして最高点となる肩の隆起へと一本の稜線が流れ、そのまま尾まで途切れず下る横向きのクマ。太い脚と平らな足が大地を踏みしめ、静かで揺るがない強さの紋章となる。","shapes":[{"type":"ellipse","op":"add","cx":300,"cy":235,"rx":130,"ry":68,"rot":10},{"type":"circle","op":"add","cx":258,"cy":180,"r":56},{"type":"circle","op":"add","cx":380,"cy":244,"r":50},{"type":"circle","op":"add","cx":200,"cy":232,"r":48},{"type":"circle","op":"add","cx":426,"cy":218,"r":13},{"type":"polygon","op":"add","points":[[184,240],[222,240],[222,390],[174,390],[184,370]]},{"type":"polygon","op":"add","points":[[232,255],[268,255],[268,390],[232,390]]},{"type":"polygon","op":"add","points":[[330,255],[366,255],[366,390],[320,390],[330,370]]},{"type":"polygon","op":"add","points":[[376,255],[414,255],[414,390],[376,390]]},{"type":"path","op":"add","d":"M 98 172 L 200 148 Q 212 152 213 164 L 210 224 Q 158 233 126 216 Q 108 208 103 200 Q 90 188 98 172 Z"},{"type":"circle","op":"add","cx":200,"cy":146,"r":15},{"type":"circle","op":"cut","cx":130,"cy":178,"r":5.5}]},{"id":"cat","nameEn":"Cat","nameJa":"ネコ","concept":"A cat sits tall in left profile like an Egyptian temple guardian, its chest dropping in one straight vertical line while the tail sweeps around the front paws in a long grounded curve that curls up to a rounded tip. Head and haunch are stacked circles over that single upright axis, keeping the mark iconic as a crest of poised, watchful elegance.","conceptJa":"エジプトの神殿像のように背筋を伸ばして座るネコ。まっすぐ落ちる胸のラインと、前足を包んで先端で丸くカールする尾の長い曲線が、静かな気品と落ち着いた観察眼を象徴する。","shapes":[{"type":"ellipse","cx":237,"cy":288,"rx":98,"ry":56,"rot":50,"op":"add"},{"type":"polygon","points":[[147,196],[147,419],[201,428],[207,262]],"op":"add"},{"type":"circle","cx":320,"cy":343,"r":85,"op":"add"},{"type":"path","d":"M 388 380 C 402 406 380 428 330 434 C 275 440 185 438 138 422 C 118 415 106 400 110 384 L 138 392 C 128 404 140 412 170 418 C 225 424 260 420 300 410 C 330 402 350 390 360 370 Z","op":"add"},{"type":"circle","cx":120,"cy":390,"r":19,"op":"add"},{"type":"ellipse","cx":141,"cy":186,"rx":15,"ry":10,"rot":25,"op":"add"},{"type":"circle","cx":185,"cy":173,"r":50,"op":"add"},{"type":"polygon","points":[[136,75],[152,147],[186,125]],"op":"add"},{"type":"polygon","points":[[232,73],[186,125],[226,149]],"op":"add"},{"type":"ellipse","cx":168,"cy":169,"rx":11,"ry":8,"rot":-12,"op":"cut"}]}]/*__END_MOTIF_DATA__*/;
+const MOTIFS = /*__MOTIF_DATA__*/[]/*__END_MOTIF_DATA__*/;
 
 /* ── 色 ── */
 const INKS = [
@@ -266,25 +266,15 @@ function mulberry32(a) {
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const fmt = n => Math.round(n * 10) / 10;
 
-function shapeEl(s, fill, extra) {
-  extra = extra || '';
-  const rot = s.rot ? ` transform="rotate(${fmt(s.rot)} ${fmt(s.cx)} ${fmt(s.cy)})"` : '';
-  switch (s.type) {
-    case 'circle':
-      return `<circle cx="${fmt(s.cx)}" cy="${fmt(s.cy)}" r="${fmt(s.r)}" fill="${fill}"${extra}/>`;
-    case 'ellipse':
-      return `<ellipse cx="${fmt(s.cx)}" cy="${fmt(s.cy)}" rx="${fmt(s.rx)}" ry="${fmt(s.ry)}" fill="${fill}"${extra}${rot}/>`;
-    case 'polygon':
-      return `<polygon points="${s.points.map(p => fmt(p[0]) + ',' + fmt(p[1])).join(' ')}" fill="${fill}"${extra}/>`;
-    case 'path':
-      return `<path d="${esc(s.d)}" fill="${fill}"${extra}/>`;
-  }
-  return '';
-}
-
-/* 塗りのマーク本体（texts対応: モノグラム用） */
+/* 塗りのマーク本体（paths＋circles＋texts、painter's algorithm） */
 function markBody(motif, ink, paper) {
-  let out = motif.shapes.map(s => shapeEl(s, s.op === 'cut' ? paper : ink)).join('');
+  let out = '';
+  (motif.paths || []).forEach(p => {
+    out += `<path d="${esc(p.d)}" fill="${p.op === 'cut' ? paper : ink}"/>`;
+  });
+  (motif.circles || []).forEach(c => {
+    out += `<circle cx="${fmt(c.cx)}" cy="${fmt(c.cy)}" r="${fmt(c.r)}" fill="${c.op === 'cut' ? paper : ink}"/>`;
+  });
   (motif.texts || []).forEach(t => {
     out += `<text x="${fmt(t.x)}" y="${fmt(t.y)}" font-size="${fmt(t.size)}" font-family="Georgia,'Times New Roman','Hiragino Mincho ProN',serif" fill="${ink}" text-anchor="middle" dominant-baseline="middle" letter-spacing="0">${esc(t.ch)}</text>`;
   });
@@ -302,43 +292,132 @@ function placedMark(motif, ink, paper, x, y, size) {
 }
 const fmt2 = n => Math.round(n * 10000) / 10000;
 
-/* ── 作図補助線エンジン ──
-   構成図形をそのまま stroke し、接線・中心線・辺の延長・黄金比円・
-   半径注記を seeded に選んで重ねる。座標系はマーク座標（512）。
-   延長線は十分長く引き、シート側の clipPath で切る。 */
+/* ── 作図補助線エンジン v2 ──
+   完成パスの輪郭を高密度サンプリングし、円弧らしい区間へ最小二乗
+   （Kåsa法）で円をフィットして「コンパスで作図した」構図を逆算する。
+   参考にした本物の黄金比ロゴシートと同じ後付けの作法。座標系はマーク座標（512）。 */
+
+function parsePathPoints(d) {
+  // 絶対座標 M/L/C/Q/Z を想定。サブパスごとの高密度サンプル点列を返す
+  const tokens = String(d).match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g) || [];
+  const subs = [];
+  let pts = null, cur = null, start = null, i = 0;
+  const num = () => parseFloat(tokens[i++]);
+  while (i < tokens.length) {
+    const t = tokens[i++];
+    if (t === 'M') { if (pts && pts.length > 8) subs.push(pts); pts = []; cur = [num(), num()]; start = cur; pts.push(cur); }
+    else if (t === 'L') { const p = [num(), num()]; samplePolyline(pts, cur, p); cur = p; }
+    else if (t === 'C') { const c1 = [num(), num()], c2 = [num(), num()], p = [num(), num()]; sampleCubic(pts, cur, c1, c2, p); cur = p; }
+    else if (t === 'Q') {
+      const c = [num(), num()], p = [num(), num()];
+      sampleCubic(pts, cur,
+        [cur[0] + (c[0] - cur[0]) * 2 / 3, cur[1] + (c[1] - cur[1]) * 2 / 3],
+        [p[0] + (c[0] - p[0]) * 2 / 3, p[1] + (c[1] - p[1]) * 2 / 3], p);
+      cur = p;
+    }
+    else if (t === 'Z' || t === 'z') { if (start && cur) samplePolyline(pts, cur, start); cur = start; }
+  }
+  if (pts && pts.length > 8) subs.push(pts);
+  return subs;
+}
+function samplePolyline(out, a, b) {
+  const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 7));
+  for (let k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+}
+function sampleCubic(out, p0, c1, c2, p3) {
+  const n = 22;
+  for (let k = 1; k <= n; k++) {
+    const t = k / n, u = 1 - t;
+    out.push([
+      u * u * u * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p3[0],
+      u * u * u * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p3[1],
+    ]);
+  }
+}
+
+/* Kåsa法: Σ(x²+y²+Dx+Ey+F)² を最小化する円フィット */
+function kasaFit(pts) {
+  let sxx = 0, sxy = 0, sx = 0, syy = 0, sy = 0, bx = 0, by = 0, bc = 0;
+  const n = pts.length;
+  for (const [x, y] of pts) {
+    const z = x * x + y * y;
+    sxx += x * x; sxy += x * y; sx += x; syy += y * y; sy += y;
+    bx -= x * z; by -= y * z; bc -= z;
+  }
+  const M = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]];
+  const B = [bx, by, bc];
+  const det = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+               - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+               + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D0 = det(M);
+  if (Math.abs(D0) < 1e-9) return null;
+  const rep = (m, col, v) => m.map((row, ri) => row.map((x, ci) => ci === col ? v[ri] : x));
+  const Dv = det(rep(M, 0, B)) / D0, Ev = det(rep(M, 1, B)) / D0, Fv = det(rep(M, 2, B)) / D0;
+  const cx = -Dv / 2, cy = -Ev / 2, r2 = cx * cx + cy * cy - Fv;
+  if (r2 <= 0) return null;
+  const r = Math.sqrt(r2);
+  let rms = 0;
+  for (const [x, y] of pts) { const e = Math.hypot(x - cx, y - cy) - r; rms += e * e; }
+  return { cx, cy, r, rms: Math.sqrt(rms / n) };
+}
+
+/* 輪郭のスライディングウィンドウに円を当て、弧として成立する区間だけ残す */
+function fitConstructionCircles(motif) {
+  const fits = [];
+  for (const p of motif.paths || []) {
+    for (const pts of parsePathPoints(p.d)) {
+      const N = pts.length;
+      const win = Math.max(12, Math.round(N * 0.13));
+      const step = Math.max(4, Math.round(N * 0.05));
+      for (let s0 = 0; s0 < N; s0 += step) {
+        const w = [];
+        for (let k = 0; k < win; k++) w.push(pts[(s0 + k) % N]);
+        const f = kasaFit(w);
+        if (!f || f.r < 12 || f.r > 380) continue;
+        if (f.rms > Math.max(0.9, f.r * 0.02)) continue;
+        let arc = 0;
+        for (let k = 1; k < w.length; k++) arc += Math.hypot(w[k][0] - w[k - 1][0], w[k][1] - w[k - 1][1]);
+        if (arc / f.r < 0.55) continue;   // ほぼ直線は捨てる
+        fits.push(f);
+      }
+    }
+  }
+  fits.sort((a, b) => a.rms - b.rms);
+  const kept = [];
+  for (const f of fits) {
+    const dup = kept.some(k => {
+      const m = Math.max(k.r, f.r);
+      // 中心も半径も近い場合のみ重複扱い（同心の別半径円は残す）
+      return Math.hypot(k.cx - f.cx, k.cy - f.cy) < m * 0.22 && Math.abs(k.r - f.r) < m * 0.08;
+    });
+    if (!dup) kept.push(f);
+  }
+  for (const c of motif.circles || []) kept.push({ cx: c.cx, cy: c.cy, r: c.r, rms: 0 });
+  return kept;
+}
+
 function buildGuides(motif, seed, density) {
   const rng = mulberry32(seed);
   const g = { strokes: [], lines: [], dashed: [], ticks: [], labels: [] };
-  const circles = motif.shapes.filter(s => s.type === 'circle');
-  const ellipses = motif.shapes.filter(s => s.type === 'ellipse');
-  const polys = motif.shapes.filter(s => s.type === 'polygon');
-  const paths = motif.shapes.filter(s => s.type === 'path');
+  const fits = fitConstructionCircles(motif);
 
-  // 1. 構成プリミティブは全て stroke（これが主役）
-  circles.forEach(s => g.strokes.push(shapeEl(s, 'none')));
-  ellipses.forEach(s => g.strokes.push(shapeEl(s, 'none')));
-  paths.forEach(s => g.strokes.push(shapeEl(s, 'none')));
-  polys.forEach(s => g.strokes.push(shapeEl(s, 'none')));
+  // 大きい円を優先しつつ seeded に採用本数を決める
+  const byR = fits.slice().sort((a, b) => b.r - a.r);
+  const want = Math.round(7 + 15 * density);
+  const chosen = [];
+  for (const f of byR) {
+    if (chosen.length >= want) break;
+    if (rng() < 0.42 + 0.5 * density) chosen.push(f);
+  }
+  for (const f of byR) {
+    if (chosen.length >= want) break;
+    if (!chosen.includes(f)) chosen.push(f);
+  }
 
-  // 2. 中心の十字ティック
-  [...circles, ...ellipses].forEach(s => {
-    const t = 4;
-    g.ticks.push(`M ${fmt(s.cx - t)} ${fmt(s.cy)} H ${fmt(s.cx + t)} M ${fmt(s.cx)} ${fmt(s.cy - t)} V ${fmt(s.cy + t)}`);
-  });
-
-  // 接線・中心線の対象: 円に加え、ほぼ無回転の楕円も含める（キツネ・ネコ等の楕円主体モチーフ対策）
-  const rounds = circles.map(s => ({ cx: s.cx, cy: s.cy, r: s.r, rx: s.r, ry: s.r, circle: true }))
-    .concat(ellipses.filter(e => {
-      const a = Math.abs((e.rot || 0) % 180);
-      return a <= 20 || a >= 160;
-    }).map(e => ({ cx: e.cx, cy: e.cy, r: Math.max(e.rx, e.ry), rx: e.rx, ry: e.ry, circle: false })));
-  const majors = rounds.sort((a, b) => b.r - a.r).slice(0, 8);
   const clipLine = (x1, y1, x2, y2) => {
-    // 点(x1,y1)-(x2,y2) を通る直線を大きく延長する
     const dx = x2 - x1, dy = y2 - y1;
     const L = Math.hypot(dx, dy) || 1;
-    const ux = dx / L, uy = dy / L;
-    const far = 3000;
+    const ux = dx / L, uy = dy / L, far = 3000;
     return { x1: x1 - ux * far, y1: y1 - uy * far, x2: x1 + ux * far, y2: y1 + uy * far };
   };
   const pushLine = (x1, y1, x2, y2) => {
@@ -346,52 +425,73 @@ function buildGuides(motif, seed, density) {
     g.lines.push(`<line x1="${fmt(l.x1)}" y1="${fmt(l.y1)}" x2="${fmt(l.x2)}" y2="${fmt(l.y2)}"/>`);
   };
 
-  // 3. 主要図形の水平・垂直接線
-  majors.forEach(s => {
-    if (rng() < 0.62 * density) pushLine(s.cx - 10, s.cy - s.ry, s.cx + 10, s.cy - s.ry);
-    if (rng() < 0.62 * density) pushLine(s.cx - 10, s.cy + s.ry, s.cx + 10, s.cy + s.ry);
-    if (rng() < 0.45 * density) pushLine(s.cx - s.rx, s.cy - 10, s.cx - s.rx, s.cy + 10);
-    if (rng() < 0.45 * density) pushLine(s.cx + s.rx, s.cy - 10, s.cx + s.rx, s.cy + 10);
+  // 1. フィットした円を stroke（これが主役）＋中心の十字ティック
+  chosen.forEach(f => {
+    g.strokes.push(`<circle cx="${fmt(f.cx)}" cy="${fmt(f.cy)}" r="${fmt(f.r)}" fill="none"/>`);
+    const t = 4;
+    g.ticks.push(`M ${fmt(f.cx - t)} ${fmt(f.cy)} H ${fmt(f.cx + t)} M ${fmt(f.cx)} ${fmt(f.cy - t)} V ${fmt(f.cy + t)}`);
   });
 
-  // 4. 主要図形ペアの中心を貫く線
+  // 2. シルエット外接の水平・垂直接線
+  const subsAll = (motif.paths || []).flatMap(p => parsePathPoints(p.d));
+  const allPts = subsAll.flat();
+  if (allPts.length) {
+    const xs = allPts.map(p => p[0]), ys = allPts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    if (rng() < 0.85 * density) pushLine(minX, 0, minX, 10);
+    if (rng() < 0.85 * density) pushLine(maxX, 0, maxX, 10);
+    if (rng() < 0.85 * density) pushLine(0, minY, 10, minY);
+    if (rng() < 0.85 * density) pushLine(0, maxY, 10, maxY);
+  }
+
+  // 3. 主要円の水平・垂直接線
+  chosen.slice(0, 8).forEach(f => {
+    if (rng() < 0.4 * density) pushLine(f.cx - 10, f.cy - f.r, f.cx + 10, f.cy - f.r);
+    if (rng() < 0.4 * density) pushLine(f.cx - 10, f.cy + f.r, f.cx + 10, f.cy + f.r);
+    if (rng() < 0.3 * density) pushLine(f.cx - f.r, f.cy - 10, f.cx - f.r, f.cy + 10);
+    if (rng() < 0.3 * density) pushLine(f.cx + f.r, f.cy - 10, f.cx + f.r, f.cy + 10);
+  });
+
+  // 4. 円ペアの中心を貫く線
+  const majors = chosen.slice(0, 9);
   for (let i = 0; i < majors.length; i++) {
     for (let j = i + 1; j < majors.length; j++) {
-      if (rng() < 0.38 * density) {
+      if (rng() < 0.2 * density) {
         const a = majors[i], b = majors[j];
-        if (Math.hypot(a.cx - b.cx, a.cy - b.cy) > 20) pushLine(a.cx, a.cy, b.cx, b.cy);
+        if (Math.hypot(a.cx - b.cx, a.cy - b.cy) > 24) pushLine(a.cx, a.cy, b.cx, b.cy);
       }
     }
   }
 
-  // 5. 多角形の辺の延長線
-  polys.forEach(p => {
-    for (let i = 0; i < p.points.length; i++) {
-      if (rng() < 0.34 * density) {
-        const a = p.points[i], b = p.points[(i + 1) % p.points.length];
-        if (Math.hypot(a[0] - b[0], a[1] - b[1]) > 12) pushLine(a[0], a[1], b[0], b[1]);
-      }
-    }
-  });
+  // 5. 輪郭の接ベクトル延長（斜めの長い線）
+  const longSubs = subsAll.filter(s => s.length > 30);
+  const nTan = Math.round(5 * density) + 2;
+  for (let k = 0; k < nTan && longSubs.length; k++) {
+    const sp = longSubs[Math.floor(rng() * longSubs.length)];
+    const i0 = Math.floor(rng() * sp.length);
+    const a = sp[i0], b = sp[(i0 + 4) % sp.length];
+    if (Math.hypot(a[0] - b[0], a[1] - b[1]) > 2) pushLine(a[0], a[1], b[0], b[1]);
+  }
 
   // 6. 黄金比の同心円（破線）
-  majors.filter(s => s.circle).slice(0, 3).forEach((s, i) => {
-    if (rng() < 0.8 * density) {
-      const r2 = i === 0 ? s.r * PHI : s.r / PHI;
-      g.dashed.push(`<circle cx="${fmt(s.cx)}" cy="${fmt(s.cy)}" r="${fmt(r2)}" fill="none"/>`);
+  majors.slice(0, 2).forEach((f, i) => {
+    if (rng() < 0.85 * density) {
+      const r2 = i === 0 ? f.r * PHI : f.r / PHI;
+      g.dashed.push(`<circle cx="${fmt(f.cx)}" cy="${fmt(f.cy)}" r="${fmt(r2)}" fill="none"/>`);
     }
   });
 
   // 7. 半径注記（r = 96）
-  majors.filter(s => s.circle).slice(0, 3).forEach(s => {
-    if (rng() < 0.9 * density) {
+  majors.slice(0, 3).forEach(f => {
+    if (rng() < 0.85 * density) {
       const th = rng() * Math.PI * 2;
-      const ex = s.cx + Math.cos(th) * s.r, ey = s.cy + Math.sin(th) * s.r;
+      const ex = f.cx + Math.cos(th) * f.r, ey = f.cy + Math.sin(th) * f.r;
       g.labels.push({
-        line: `<line x1="${fmt(s.cx)}" y1="${fmt(s.cy)}" x2="${fmt(ex)}" y2="${fmt(ey)}"/>`,
-        x: s.cx + Math.cos(th) * s.r * 0.55,
-        y: s.cy + Math.sin(th) * s.r * 0.55,
-        text: 'r ' + Math.round(s.r),
+        line: `<line x1="${fmt(f.cx)}" y1="${fmt(f.cy)}" x2="${fmt(ex)}" y2="${fmt(ey)}"/>`,
+        x: f.cx + Math.cos(th) * f.r * 0.55,
+        y: f.cy + Math.sin(th) * f.r * 0.55,
+        text: 'r ' + Math.round(f.r),
       });
     }
   });
@@ -551,13 +651,29 @@ function logoSVG(motif, opts) {
 </svg>`;
 }
 
-/* ── モノグラム生成（円相＝欠けた円環＋頭文字） ── */
+/* ── モノグラム生成（円相＝欠けた円環＋頭文字） ──
+   円弧は3次ベジェ近似で出力する（パーサ・フィッタが M/L/C/Q/Z のみ対応のため） */
+function arcCubics(cx, cy, r, a0, a1) {
+  // a0→a1 の円弧を90°以下の C セグメント列で返す（先頭のM無し）
+  const segs = Math.max(1, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 2)));
+  const da = (a1 - a0) / segs;
+  const k = 4 / 3 * Math.tan(da / 4);
+  let out = '';
+  for (let s = 0; s < segs; s++) {
+    const t0 = a0 + s * da, t1 = t0 + da;
+    const x0 = cx + r * Math.cos(t0), y0 = cy + r * Math.sin(t0);
+    const x1 = cx + r * Math.cos(t1), y1 = cy + r * Math.sin(t1);
+    out += ` C ${fmt(x0 - k * r * Math.sin(t0))} ${fmt(y0 + k * r * Math.cos(t0))}`
+        + ` ${fmt(x1 + k * r * Math.sin(t1))} ${fmt(y1 - k * r * Math.cos(t1))}`
+        + ` ${fmt(x1)} ${fmt(y1)}`;
+  }
+  return out;
+}
 function annularArc(cx, cy, rOut, rIn, a0, a1) {
-  const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-  const large = (a1 - a0) % (Math.PI * 2) > Math.PI ? 1 : 0;
-  const [x0, y0] = p(rOut, a0), [x1, y1] = p(rOut, a1);
-  const [x2, y2] = p(rIn, a1), [x3, y3] = p(rIn, a0);
-  return `M ${fmt(x0)} ${fmt(y0)} A ${fmt(rOut)} ${fmt(rOut)} 0 ${large} 1 ${fmt(x1)} ${fmt(y1)} L ${fmt(x2)} ${fmt(y2)} A ${fmt(rIn)} ${fmt(rIn)} 0 ${large} 0 ${fmt(x3)} ${fmt(y3)} Z`;
+  const sx = cx + rOut * Math.cos(a0), sy = cy + rOut * Math.sin(a0);
+  const ix = cx + rIn * Math.cos(a1), iy = cy + rIn * Math.sin(a1);
+  return `M ${fmt(sx)} ${fmt(sy)}${arcCubics(cx, cy, rOut, a0, a1)}`
+    + ` L ${fmt(ix)} ${fmt(iy)}${arcCubics(cx, cy, rIn, a1, a0)} Z`;
 }
 function monogramMotif(brand, seed) {
   // Array.from でコードポイント単位に切る（絵文字・非BMP漢字でサロゲートを割らない）
@@ -570,12 +686,7 @@ function monogramMotif(brand, seed) {
     id: 'monogram', nameEn: 'Monogram', nameJa: 'モノグラム',
     concept: `A single brushed ring opens at one point, leaving room for the initial "${ch}" to breathe at its center. The incomplete circle borrows the ensō gesture: a mark of intention, finished by the eye of the viewer.`,
     conceptJa: `一箇所だけ開いた円環の中心に、頭文字「${ch}」を据えたモノグラム。見る者の目が円を完成させる、円相の所作を借りた印。`,
-    shapes: [
-      { type: 'path', d: annularArc(256, 256, 208, 186, a0, a1), op: 'add' },
-      { type: 'circle', cx: 256, cy: 256, r: 208, op: 'guide-only' },
-      { type: 'circle', cx: 256, cy: 256, r: 186, op: 'guide-only' },
-      { type: 'circle', cx: 256, cy: 256, r: 128, op: 'guide-only' },
-    ].filter(s => s.op !== 'guide-only' || true), // guide-only は塗らず線のみ
+    paths: [{ d: annularArc(256, 256, 208, 186, a0, a1), op: 'add' }],
     texts: [{ ch, x: 256, y: 268, size: 176 }],
   };
 }
@@ -583,12 +694,12 @@ function monogramMotif(brand, seed) {
 /* ── 抽象マーク生成（黄金角スパイラル上の円の集積） ── */
 function abstractMotif(seed) {
   const rng = mulberry32(seed);
-  const shapes = [];
+  const circles = [];
   const n = 8 + Math.floor(rng() * 4);
   let cx = 256, cy = 262, r = 96 + rng() * 26;
   const golden = Math.PI * (3 - Math.sqrt(5));
   let a = rng() * Math.PI * 2;
-  shapes.push({ type: 'circle', cx, cy, r, op: 'add' });
+  circles.push({ cx, cy, r, op: 'add' });
   let px = cx, py = cy, pr = r;
   for (let i = 1; i < n; i++) {
     a += golden;
@@ -596,34 +707,26 @@ function abstractMotif(seed) {
     const d = (pr + nr) * (0.52 + rng() * 0.22);
     const nx = px + Math.cos(a) * d, ny = py + Math.sin(a) * d;
     const op = i > 2 && rng() < 0.25 && nr < pr * 0.75 ? 'cut' : 'add';
-    shapes.push({ type: 'circle', cx: fmt(nx), cy: fmt(ny), r: fmt(nr), op });
+    circles.push({ cx: fmt(nx), cy: fmt(ny), r: fmt(nr), op });
     if (op === 'add') { px = nx; py = ny; pr = nr; }
   }
   // cut が一度も出なかったら1つ彫り、必ず表情を作る
-  if (!shapes.some(s => s.op === 'cut')) {
-    shapes.push({ type: 'circle', cx: fmt(cx + r * 0.55), cy: fmt(cy - r * 0.45), r: fmt(r * 0.34), op: 'cut' });
+  if (!circles.some(s => s.op === 'cut')) {
+    circles.push({ cx: fmt(cx + r * 0.55), cy: fmt(cy - r * 0.45), r: fmt(r * 0.34), op: 'cut' });
   }
   // 光学センタリング: add円のバウンディングボックス中心を (256,262) へ寄せる
-  const adds = shapes.filter(s => s.op === 'add');
+  const adds = circles.filter(s => s.op === 'add');
   const minX = Math.min(...adds.map(s => s.cx - s.r)), maxX = Math.max(...adds.map(s => s.cx + s.r));
   const minY = Math.min(...adds.map(s => s.cy - s.r)), maxY = Math.max(...adds.map(s => s.cy + s.r));
   const dx = 256 - (minX + maxX) / 2, dy = 262 - (minY + maxY) / 2;
-  shapes.forEach(s => { s.cx = fmt(s.cx + dx); s.cy = fmt(s.cy + dy); });
+  circles.forEach(s => { s.cx = fmt(s.cx + dx); s.cy = fmt(s.cy + dy); });
   return {
     id: 'abstract', nameEn: 'Abstract', nameJa: '抽象',
     concept: 'Circles descend along the golden angle, each borrowing its radius from the last, until a single asymmetric constellation remains. The mark is pure construction: nothing depicted, everything derived.',
     conceptJa: '黄金角に沿って円が連なり、ひとつの非対称な星座として結晶する。何も描かず、すべてが作図から導かれた印。',
-    shapes,
+    circles,
   };
 }
-
-/* ── guide-only 対応: markBody は op==='guide-only' を塗らない ── */
-// (shapes の filter で除外する代わりに、markBody 側で無視)
-const _markBody = markBody;
-markBody = function (motif, ink, paper) {
-  const m = Object.assign({}, motif, { shapes: motif.shapes.filter(s => s.op !== 'guide-only') });
-  return _markBody(m, ink, paper);
-};
 
 /* ── 現在のモチーフを解決 ── */
 function currentMotif() {
