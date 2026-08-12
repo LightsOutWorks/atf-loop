@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>DRAGONFALL</title>
+<title>ドラゴンフォール</title>
 <style>
   :root{
     --accent:#7fe3a0;
@@ -21,12 +21,15 @@
   .hidden{display:none !important}
 
   /* ---------- HUD ---------- */
+  /* Japanese needs far less tracking than the uppercase Latin this HUD was
+     first set in — the wide letter-spacing that made ROTTING FIELDS read as a
+     title just pulls 腐蝕の野 apart. Every value below is deliberately tighter. */
   #hud{position:absolute;inset:0;pointer-events:none;
-    padding:calc(10px + env(safe-area-inset-top)) 12px 12px 12px;font-size:13px;letter-spacing:.06em}
+    padding:calc(10px + env(safe-area-inset-top)) 12px 12px 12px;font-size:13px;letter-spacing:.02em}
   #topbar{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   #stageName{font-weight:700;color:var(--accent);font-size:13px;text-shadow:0 0 10px rgba(0,0,0,.9)}
   #timer{font-family:monospace;font-size:15px;color:var(--ink);opacity:.9}
-  #phaseTag{font-size:11px;color:var(--dim);letter-spacing:.14em;margin-top:2px}
+  #phaseTag{font-size:11px;color:var(--dim);letter-spacing:.08em;margin-top:2px}
 
   .bar{position:relative;height:12px;border:1px solid var(--line);background:rgba(0,0,0,.55);
     border-radius:2px;overflow:hidden}
@@ -44,16 +47,19 @@
 
   #bosswrap{position:absolute;left:50%;transform:translateX(-50%);
     top:calc(10px + env(safe-area-inset-top));width:min(560px,86vw);text-align:center}
-  #bossname{font-size:12px;font-weight:700;letter-spacing:.22em;color:#ffd9d9;
+  #bossname{font-size:13px;font-weight:700;letter-spacing:.1em;color:#ffd9d9;
     text-shadow:0 0 12px rgba(0,0,0,.9)}
   #bossbar{height:14px;margin-top:4px;border-color:rgba(255,120,120,.5)}
+  #bossnote{font-size:11px;letter-spacing:.04em;color:#ffb1b1;margin-top:3px;min-height:13px}
   #bossfill{background:linear-gradient(90deg,#ff3b3b,#ff8a3b);transition:width .18s linear}
-  #bossnote{font-size:10px;letter-spacing:.14em;color:#ffb1b1;margin-top:3px;min-height:12px}
 
   #toast{position:absolute;left:50%;top:38%;transform:translateX(-50%);text-align:center;
-    font-size:clamp(18px,5vw,32px);font-weight:700;letter-spacing:.24em;opacity:0;
-    text-shadow:0 0 24px rgba(0,0,0,.9);white-space:nowrap}
-  #toastSub{display:block;font-size:12px;letter-spacing:.2em;color:var(--dim);margin-top:6px;font-weight:400}
+    font-size:clamp(18px,5vw,32px);font-weight:700;letter-spacing:.1em;opacity:0;
+    text-shadow:0 0 24px rgba(0,0,0,.9);white-space:nowrap;max-width:92vw}
+  /* the sub-line is a full sentence in Japanese, so it wraps rather than
+     running off a phone screen the way a two-word English line never would */
+  #toastSub{display:block;font-size:12px;letter-spacing:.04em;color:var(--dim);margin-top:6px;
+    font-weight:400;white-space:normal;line-height:1.6}
 
   #joy{position:absolute;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;
     border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:0;
@@ -65,19 +71,20 @@
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:14px;padding:24px;text-align:center;
     background:radial-gradient(ellipse at 50% 40%,rgba(10,14,20,.86),rgba(3,5,8,.97))}
-  .big{font-size:clamp(30px,9vw,64px);font-weight:800;letter-spacing:.16em;line-height:1.05}
-  .sub{font-size:clamp(11px,2.6vw,14px);letter-spacing:.24em;color:var(--dim)}
-  .body{font-size:13px;line-height:1.85;color:#c3ccd5;max-width:620px}
+  .big{font-size:clamp(28px,8vw,58px);font-weight:800;letter-spacing:.08em;line-height:1.15}
+  .sub{font-size:clamp(11px,2.6vw,14px);letter-spacing:.1em;color:var(--dim);line-height:1.7}
+  .body{font-size:13px;line-height:1.95;color:#c3ccd5;max-width:600px;word-break:auto-phrase}
   .body b{color:var(--accent);font-weight:700}
   .btn{pointer-events:auto;cursor:pointer;border:1px solid var(--accent);color:#03110a;
-    background:var(--accent);font:inherit;font-weight:700;letter-spacing:.2em;font-size:14px;
+    background:var(--accent);font:inherit;font-weight:700;letter-spacing:.1em;font-size:15px;
     padding:13px 34px;border-radius:3px}
   .btn:active{transform:translateY(1px)}
   .btn.ghost{background:transparent;color:var(--accent)}
 
-  #stageList{display:grid;gap:5px;font-family:monospace;font-size:12px;text-align:left}
-  #stageList > div{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:baseline}
-  #stageList i{font-style:normal;color:#6f7c88;letter-spacing:.14em}
+  #stageList{display:grid;grid-template-columns:auto auto auto;gap:5px 16px;
+    font-size:12.5px;text-align:left;align-items:baseline}
+  #stageList > div{display:contents}
+  #stageList i{font-style:normal;color:#6f7c88;letter-spacing:.04em}
   #stageList b{color:#e9eef2;font-weight:700}
   #stageList em{font-style:normal;color:#93a1ad}
 
@@ -87,22 +94,29 @@
     border-radius:5px;padding:14px;display:flex;flex-direction:column;gap:7px;text-align:left}
   .card:active{transform:translateY(1px)}
   .card.ult{border-color:#ffcf5a;box-shadow:0 0 0 1px rgba(255,207,90,.35),0 0 26px rgba(255,180,60,.25)}
-  .cTier{font-size:9px;letter-spacing:.24em;color:var(--dim)}
+  .cTier{font-size:10px;letter-spacing:.1em;color:var(--dim)}
   .card.ult .cTier{color:#ffcf5a}
-  .cName{font-size:15px;font-weight:800;letter-spacing:.08em}
-  .cLv{font-size:10px;letter-spacing:.16em;color:var(--accent);font-family:monospace}
-  .cDesc{font-size:12px;line-height:1.65;color:#b7c1cb;flex:1}
+  .cName{font-size:16px;font-weight:800;letter-spacing:.02em}
+  .cLv{font-size:10.5px;letter-spacing:.06em;color:var(--accent);font-variant-numeric:tabular-nums}
+  .cDesc{font-size:12px;line-height:1.8;color:#b7c1cb;flex:1}
 
-  #cardHint{font-size:11px;letter-spacing:.16em;color:var(--dim)}
+  #cardHint{font-size:11px;letter-spacing:.06em;color:var(--dim)}
   /* stacked on a phone, three cards must still fit without scrolling */
   @media (max-width:560px){
     .overlay{gap:10px;padding:16px}
     .card{width:100%;max-width:420px;min-height:0;padding:11px;gap:4px}
-    .cDesc{font-size:11.5px;line-height:1.5}
+    .cDesc{font-size:11.5px;line-height:1.65}
+    .body{font-size:12px;line-height:1.9}
     #cards{gap:8px}
   }
-  .statGrid{font-family:monospace;font-size:12px;color:#a9b5c0;line-height:1.9}
-  .statGrid b{color:var(--ink)}
+  /* The English result panel aligned its columns by padding labels with spaces.
+     Japanese labels are full-width and that trick stops working, so the panel
+     is a real two-column grid and lines up by layout instead. */
+  .statGrid{display:grid;grid-template-columns:auto auto;gap:5px 20px;font-size:12.5px;
+    line-height:1.6;text-align:left;justify-content:center}
+  .statGrid .k{color:#7d8996;letter-spacing:.04em;white-space:nowrap}
+  .statGrid .v{color:var(--ink);max-width:min(340px,62vw)}
+  .statGrid .num{font-family:monospace}
 </style>
 </head>
 <body>
@@ -112,67 +126,69 @@
   <div id="hud" class="hidden">
     <div id="topbar">
       <div>
-        <div id="stageName">STAGE 1 &mdash; ROTTING FIELDS</div>
-        <div id="phaseTag">SURVIVE</div>
+        <div id="stageName">第一章 &mdash; 腐蝕の野</div>
+        <div id="phaseTag">生存</div>
       </div>
       <div id="timer">0:00</div>
     </div>
     <div id="hpwrap" class="bar"><i id="hpfill"></i><span id="hptext" class="barTxt">100 / 100</span></div>
     <div id="xpwrap" class="bar"><i id="xpfill"></i></div>
-    <div id="statline">LV 1 &middot; KILLS 0</div>
+    <div id="statline">Lv 1 &middot; 討伐 0</div>
     <div id="loadout"></div>
 
     <div id="bosswrap" class="hidden">
-      <div id="bossname">BOSS</div>
+      <div id="bossname">ボス</div>
       <div id="bossbar" class="bar"><i id="bossfill"></i></div>
       <div id="bossnote"></div>
     </div>
 
-    <div id="toast"><span id="toastMain">READY</span><span id="toastSub"></span></div>
+    <div id="toast"><span id="toastMain">用意</span><span id="toastSub"></span></div>
     <div id="joy"><div id="joyKnob"></div></div>
   </div>
 
   <div id="title" class="overlay">
-    <div class="sub">SURVIVE THREE REALMS &middot; SLAY WHAT WAITS BENEATH</div>
-    <div class="big">DRAGONFALL</div>
+    <div class="sub">三つの地を越え、最後に待つものを討て</div>
+    <div class="big">ドラゴンフォール</div>
     <div id="stageList">
-      <div><i>STAGE 1</i><b>ROTTING FIELDS</b><em>THE HORDE KING</em></div>
-      <div><i>STAGE 2</i><b>FROZEN EXPANSE</b><em>THE FROST MONARCH</em></div>
-      <div><i>STAGE 3</i><b>THUNDER PEAK</b><em>THE STORM LORD</em></div>
-      <div><i>FINAL</i><b>DRAGON'S ROOST</b><em>THE DRAGON</em></div>
+      <div><i>第一章</i><b>腐蝕の野</b><em>屍群の王</em></div>
+      <div><i>第二章</i><b>氷結の原</b><em>氷獄の王</em></div>
+      <div><i>第三章</i><b>雷鳴の峰</b><em>雷帝</em></div>
+      <div><i>最終章</i><b>竜の巣</b><em>終焉の竜</em></div>
     </div>
     <div class="body">
-      You attack on your own. You only choose <b>where to stand</b> and <b>what to become</b>.<br>
-      Move: <b>WASD / arrows</b>, or <b>drag anywhere</b> on touch. Pause: <b>P</b>.<br>
-      Stronger gear appears only in later realms. The <b>ultimate</b> waits in the final one.
+      攻撃は自動。選ぶのは<b>どこに立つか</b>と<b>何になるか</b>だけ。<br>
+      移動は<b>WASD / 矢印キー</b>。<br>
+      スマホは<b>画面のどこでもドラッグ</b>。一時停止は<b>P</b>。<br>
+      強い装備は先の章にしか出ない。<br>
+      <b>最強</b>は最終章で待っている。
     </div>
-    <button id="startBtn" class="btn">START</button>
+    <button id="startBtn" class="btn">はじめる</button>
   </div>
 
   <div id="levelup" class="overlay hidden">
-    <div class="sub" id="luSub">LEVEL UP</div>
-    <div class="big" id="luTitle" style="font-size:clamp(20px,5vw,34px)">CHOOSE ONE</div>
+    <div class="sub" id="luSub">レベルアップ</div>
+    <div class="big" id="luTitle" style="font-size:clamp(20px,5vw,34px)">ひとつ選べ</div>
     <div id="cards">
       <div class="card" id="card0"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
       <div class="card" id="card1"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
       <div class="card" id="card2"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
     </div>
-    <div id="cardHint">CLICK OR TAP A CARD &middot; KEYS 1 2 3</div>
+    <div id="cardHint">カードをクリック／タップ &middot; キー 1 2 3</div>
   </div>
 
   <div id="clear" class="overlay hidden">
-    <div class="sub" id="clearSub">STAGE CLEAR</div>
-    <div class="big" id="clearTitle">THE HORDE KING FALLS</div>
+    <div class="sub" id="clearSub">ステージクリア</div>
+    <div class="big" id="clearTitle">屍群の王 撃破</div>
     <div class="body" id="clearBody"></div>
     <div class="statGrid" id="clearStats"></div>
-    <button id="nextBtn" class="btn">DESCEND</button>
+    <button id="nextBtn" class="btn">次の章へ</button>
   </div>
 
   <div id="over" class="overlay hidden">
-    <div class="sub" id="overSub">YOU FELL IN THE ROTTING FIELDS</div>
-    <div class="big" id="overTitle">YOU DIED</div>
+    <div class="sub" id="overSub">腐蝕の野で倒れた</div>
+    <div class="big" id="overTitle">力尽きた</div>
     <div class="statGrid" id="overStats"></div>
-    <button id="replayBtn" class="btn">REPLAY</button>
+    <button id="replayBtn" class="btn">もう一度</button>
   </div>
 </div>
 <script>
@@ -231,48 +247,48 @@ function setAccent(c){
 // ============================================================
 var STAGES = [
   {
-    id: 'rot', label: 'STAGE 1', name: 'ROTTING FIELDS',
+    id: 'rot', label: '第一章', name: '腐蝕の野',
     accent: '#7fe3a0', fog: 'rgba(12,26,16,0.55)',
     ground: ['#0d1711', '#070c09'], grid: 'rgba(120,200,150,0.06)', deco: 'grave',
     end: 80, tier: 1, hpMul: 1.0, spawnBase: 1.45, burst: 2,
     enemies: [['walker', 44], ['runner', 20], ['rothound', 22], ['bloater', 8], ['beetle', 6]],
     events: ['rot', 'hounds', 'shrike'],
-    boss: 'horde', bossName: 'THE HORDE KING',
-    line: 'The dead do not tire. They only accumulate.',
-    clockLine: 'FIVE MINUTES UNTIL IT WAKES',
-    clearLine: 'The mound stops moving. Cold air pours in from below.'
+    boss: 'horde', bossName: '屍群の王',
+    line: '死者は疲れない。ただ増えていくだけだ。',
+    clockLine: '五分後、あれが目を覚ます',
+    clearLine: '屍の山が動きを止めた。下から冷たい風が吹き上げる。'
   },
   {
-    id: 'ice', label: 'STAGE 2', name: 'FROZEN EXPANSE',
+    id: 'ice', label: '第二章', name: '氷結の原',
     accent: '#7fd3ff', fog: 'rgba(20,40,60,0.5)',
     ground: ['#0c1620', '#060b12'], grid: 'rgba(150,220,255,0.07)', deco: 'ice',
     end: 175, tier: 2, hpMul: 1.9, spawnBase: 1.02, burst: 2,
     enemies: [['shade', 32], ['shardling', 24], ['brute', 18], ['beetle', 14], ['onibi', 12]],
     events: ['rot', 'swarm', 'shrike', 'yokai'],
-    boss: 'frost', bossName: 'THE FROST MONARCH',
-    line: 'The floor is glass. You will not stop where you mean to.',
-    clearLine: 'The ice splits. Far above, something is already thundering.'
+    boss: 'frost', bossName: '氷獄の王',
+    line: '床は氷。止まりたい場所では止まれない。',
+    clearLine: '氷が割れた。はるか上で、すでに何かが鳴っている。'
   },
   {
-    id: 'thunder', label: 'STAGE 3', name: 'THUNDER PEAK',
+    id: 'thunder', label: '第三章', name: '雷鳴の峰',
     accent: '#ffe27f', fog: 'rgba(40,36,60,0.5)',
     ground: ['#161426', '#08070f'], grid: 'rgba(255,225,150,0.06)', deco: 'pylon',
     end: 270, tier: 3, hpMul: 3.4, spawnBase: 0.90, burst: 3,
     enemies: [['wisp', 28], ['hound', 24], ['sentinel', 18], ['tengu', 18], ['onibi', 12]],
     events: ['yokai', 'swarm', 'shrike', 'hounds'],
-    boss: 'storm', bossName: 'THE STORM LORD',
-    line: 'Every strike is announced. Only the slow are surprised.',
-    clearLine: 'The storm collapses inward. Something enormous inhales.'
+    boss: 'storm', bossName: '雷帝',
+    line: '攻撃はすべて予告される。驚くのは、遅い者だけだ。',
+    clearLine: '嵐が内側へ崩れていく。巨大な何かが息を吸った。'
   },
   {
-    id: 'roost', label: 'FINAL', name: "DRAGON'S ROOST",
+    id: 'roost', label: '最終章', name: '竜の巣',
     accent: '#ff9b5a', fog: 'rgba(50,20,14,0.5)',
     ground: ['#1a0e0a', '#0a0505'], grid: 'rgba(255,150,90,0.07)', deco: 'ember',
     end: 300, tier: 4, hpMul: 5.2, spawnBase: 1.55, burst: 2,
     enemies: [['oni', 18], ['onibi', 22], ['tengu', 20], ['beetle', 14], ['hound', 16], ['walker', 10]],
     events: ['yokai', 'shrike', 'rot'],
-    boss: 'dragon', bossName: 'THE DRAGON',
-    line: 'It has been awake the whole time.',
+    boss: 'dragon', bossName: '終焉の竜',
+    line: '奴は、最初から起きていた。',
     clearLine: ''
   }
 ];
@@ -284,75 +300,74 @@ var STAGES = [
 // ============================================================
 var ITEMS = {
   // ---- the katana: never offered as a card. Scrolls sharpen it, nothing else. ----
-  katana: { kind: 'weapon', tier: 0, max: 6, name: 'KATANA', scroll: true,
+  katana: { kind: 'weapon', tier: 0, max: 6, name: '日本刀', scroll: true,
     desc: function(l){
-      if (l >= KATANA_AWAKEN_LV) return 'AWAKENED. A full circle of ruin for ' + bd(340) +
-        ', doubled against yokai, and a shockwave behind every cut.';
-      return 'Cuts ' + (1 + Math.floor((l - 1) / 2)) + ' arc' + (1 + Math.floor((l - 1) / 2) > 1 ? 's' : '') +
-        ' for ' + bd(26 + 26 * (l - 1)) + ', doubled against yokai. Sixteen scrolls sharpen it once.';
+      if (l >= KATANA_AWAKEN_LV) return '覚醒。全周を薙ぎ払って' + bd(340) +
+        'ダメージ。妖怪には二倍、斬るたびに衝撃波が走る。';
+      return (1 + Math.floor((l - 1) / 2)) + '本の斬撃で' + bd(26 + 26 * (l - 1)) +
+        'ダメージ。妖怪には二倍。巻物十六個で一段階研ぎ上がる。';
     } },
 
   // ---- tier 1 weapons ----
-  blade: { kind: 'weapon', tier: 1, max: 8, name: 'BLADE ARC',
-    desc: function(l){ return 'Sweeps a ' + (l >= 7 ? 'triple' : l >= 4 ? 'double' : 'wide') +
-      ' arc at the nearest threat. ' + bd(16 + 8 * l) + ' damage, ' + Math.round(96 + 11 * l) + ' reach.'; } },
-  shard: { kind: 'weapon', tier: 1, max: 8, name: 'BONE SHARD',
-    desc: function(l){ return 'Throws ' + (1 + Math.floor(l / 2)) + ' seeking shard' +
-      (1 + Math.floor(l / 2) > 1 ? 's' : '') + ' for ' + bd(10 + 5 * l) + ' damage' +
-      (l >= 5 ? ', piercing one extra body' : '') + '.'; } },
-  orb: { kind: 'weapon', tier: 1, max: 8, name: 'CINDER ORB',
-    desc: function(l){ return (2 + Math.floor((l - 1) / 2)) + ' embers circle you, burning for ' +
-      bd(9 + 5 * l) + ' on contact. Orbit ' + Math.round(74 + 7 * l) + '.'; } },
+  blade: { kind: 'weapon', tier: 1, max: 8, name: '剣閃',
+    desc: function(l){ return '一番近い敵へ' + (l >= 7 ? '三連の' : l >= 4 ? '二連の' : '大きな') +
+      '弧を薙ぐ。' + bd(16 + 8 * l) + 'ダメージ、間合い' + Math.round(96 + 11 * l) + '。'; } },
+  shard: { kind: 'weapon', tier: 1, max: 8, name: '骨片',
+    desc: function(l){ return '追尾する骨片を' + (1 + Math.floor(l / 2)) + '本投げる。1本' +
+      bd(10 + 5 * l) + 'ダメージ' + (l >= 5 ? '、敵を1体多く貫通する' : '') + '。'; } },
+  orb: { kind: 'weapon', tier: 1, max: 8, name: '炎の珠',
+    desc: function(l){ return (2 + Math.floor((l - 1) / 2)) + '個の火の玉が周りを回り、触れた敵を' +
+      bd(9 + 5 * l) + '焼く。回転半径' + Math.round(74 + 7 * l) + '。'; } },
 
   // ---- tier 2 weapons ----
-  nova: { kind: 'weapon', tier: 2, max: 8, name: 'FROST NOVA',
-    desc: function(l){ return 'A ring of cold bursts outward for ' + bd(24 + 12 * l) +
-      ' and slows everything it touches by ' + Math.round(40 + 3 * l) + '%.'; } },
-  icicle: { kind: 'weapon', tier: 2, max: 8, name: 'ICICLE VOLLEY',
-    desc: function(l){ return 'Fires ' + (3 + Math.floor(l / 2)) + ' piercing icicles for ' +
-      bd(16 + 8 * l) + ' each. Pierces ' + (2 + Math.floor(l / 3)) + ' bodies.'; } },
+  nova: { kind: 'weapon', tier: 2, max: 8, name: '氷結波',
+    desc: function(l){ return '冷気の輪が外へ広がって' + bd(24 + 12 * l) +
+      'ダメージ。触れた敵すべてを' + Math.round(40 + 3 * l) + '%鈍らせる。'; } },
+  icicle: { kind: 'weapon', tier: 2, max: 8, name: '氷柱の雨',
+    desc: function(l){ return '貫通する氷柱を' + (3 + Math.floor(l / 2)) + '本撃つ。1本' +
+      bd(16 + 8 * l) + 'ダメージ、' + (2 + Math.floor(l / 3)) + '体まで貫く。'; } },
 
   // ---- tier 3 weapons ----
-  chain: { kind: 'weapon', tier: 3, max: 8, name: 'CHAIN BOLT',
-    desc: function(l){ return 'A bolt leaps between up to ' + (3 + l) + ' enemies, dealing ' +
-      bd(30 + 16 * l) + ' with each jump.'; } },
-  storm: { kind: 'weapon', tier: 3, max: 8, name: 'STORM FIELD',
-    desc: function(l){ return 'A charged field of radius ' + Math.round(88 + 13 * l) +
-      ' burns everything inside for ' + bd(26 + 13 * l) + ' per second.'; } },
+  chain: { kind: 'weapon', tier: 3, max: 8, name: '連鎖雷',
+    desc: function(l){ return '雷が最大' + (3 + l) + '体の敵へ飛び移り、跳ぶたびに' +
+      bd(30 + 16 * l) + 'ダメージ。'; } },
+  storm: { kind: 'weapon', tier: 3, max: 8, name: '雷の領域',
+    desc: function(l){ return '半径' + Math.round(88 + 13 * l) +
+      'の帯電領域が、中にいる敵を毎秒' + bd(26 + 13 * l) + '焼き続ける。'; } },
 
   // ---- tier 4: THE ULTIMATE WEAPON (final stage only) ----
-  fang: { kind: 'weapon', tier: 4, max: 5, name: 'DRAGONFANG', ult: true,
-    desc: function(l){ return 'Hurls ' + (2 + l) + ' homing dragonfire lances. ' + bd(95 + 55 * l) +
-      ' on impact plus a blast of radius ' + Math.round(76 + 10 * l) +
-      (l >= 3 ? '. Every other volley exhales a breath of fire.' : '.'); } },
+  fang: { kind: 'weapon', tier: 4, max: 5, name: '竜牙', ult: true,
+    desc: function(l){ return '追尾する竜火の槍を' + (2 + l) + '本放つ。着弾で' + bd(95 + 55 * l) +
+      'ダメージ、さらに半径' + Math.round(76 + 10 * l) + 'の爆発' +
+      (l >= 3 ? '。二射に一度、炎の息を吐く。' : '。'); } },
 
   // ---- tier 1 passives ----
-  vitality: { kind: 'passive', tier: 1, max: 6, name: 'VITALITY',
-    desc: function(){ return '+28 maximum life, and heal 28 right now.'; } },
-  boots: { kind: 'passive', tier: 1, max: 5, name: 'SWIFT BOOTS',
-    desc: function(){ return '+9% movement speed. Positioning is the only real defence.'; } },
-  lodestone: { kind: 'passive', tier: 1, max: 4, name: 'LODESTONE',
-    desc: function(){ return '+35% pickup radius and +6% experience gained.'; } },
+  vitality: { kind: 'passive', tier: 1, max: 6, name: '生命力',
+    desc: function(){ return '最大体力+28。いますぐ28回復する。'; } },
+  boots: { kind: 'passive', tier: 1, max: 5, name: '疾風の靴',
+    desc: function(){ return '移動速度+9%。立ち位置だけが本当の防御だ。'; } },
+  lodestone: { kind: 'passive', tier: 1, max: 4, name: '引き寄せの石',
+    desc: function(){ return '拾える範囲+35%、得られる経験値+6%。'; } },
 
   // ---- tier 2 passives ----
-  heart: { kind: 'passive', tier: 2, max: 5, name: 'FROZEN HEART',
-    desc: function(){ return '-8% cooldown on every weapon you carry.'; } },
-  hide: { kind: 'passive', tier: 2, max: 5, name: 'THICK HIDE',
-    desc: function(){ return '-7% damage taken from every source.'; } },
+  heart: { kind: 'passive', tier: 2, max: 5, name: '氷の心臓',
+    desc: function(){ return '持っている武器すべての待ち時間-8%。'; } },
+  hide: { kind: 'passive', tier: 2, max: 5, name: '鉄の皮膚',
+    desc: function(){ return 'あらゆる攻撃から受けるダメージ-7%。'; } },
 
   // ---- tier 3 passives ----
-  overcharge: { kind: 'passive', tier: 3, max: 6, name: 'OVERCHARGE',
-    desc: function(){ return '+13% damage dealt by all weapons.'; } },
-  split: { kind: 'passive', tier: 3, max: 2, name: 'SPLIT CORE',
-    desc: function(){ return '+1 projectile for every weapon that fires them.'; } },
+  overcharge: { kind: 'passive', tier: 3, max: 6, name: '力の増幅',
+    desc: function(){ return '全武器の与ダメージ+13%。'; } },
+  split: { kind: 'passive', tier: 3, max: 2, name: '分裂核',
+    desc: function(){ return '弾を撃つ武器すべてに、弾を1発追加する。'; } },
 
   // ---- tier 4: THE ULTIMATE PASSIVE (final stage only) ----
-  ancient: { kind: 'passive', tier: 4, max: 1, name: 'ANCIENT CORE', ult: true,
-    desc: function(){ return '+45% damage, -25% cooldown, +1 projectile, +12% speed, and 2.5 life per second. Taken from the hoard itself.'; } }
+  ancient: { kind: 'passive', tier: 4, max: 1, name: '古代の核', ult: true,
+    desc: function(){ return 'ダメージ+45%、待ち時間-25%、弾+1、移動速度+12%、毎秒2.5回復。竜の宝の山そのものから抜き取った核。'; } }
 };
 function bd(n){ return String(Math.round(n)); }
 
-var TIER_LABEL = ['', 'COMMON', 'FROSTBOUND', 'STORMFORGED', 'ULTIMATE'];
+var TIER_LABEL = ['', '通常', '氷結', '雷鍛', '究極'];
 
 // ============================================================
 // RUNTIME STATE
@@ -482,7 +497,7 @@ window.addEventListener('keydown', function(e){
     if (state === 'levelup') chooseCard(parseInt(k, 10) - 1);
   }
   if (k === 'p' || k === 'escape'){
-    if (state === 'play') { state = 'paused'; showToast('PAUSED', 'PRESS P TO RESUME', 9); }
+    if (state === 'play') { state = 'paused'; showToast('一時停止', 'Pキーで再開', 9); }
     else if (state === 'paused') { state = 'play'; toastTimer = 0; }
   }
   if (k === ' ' || k === 'enter'){
@@ -684,11 +699,11 @@ function updateSpawning(dt){
 }
 
 var EVENTS = {
-  rot:    { name: 'ROT SURGE',     sub: 'THE GROUND GIVES UP ITS DEAD',  types: ['walker', 'runner', 'bloater'], n: 18, col: '#a8d07a' },
-  hounds: { name: 'HOUND PACK',    sub: 'THEY HUNT IN NUMBERS',          types: ['rothound'],                    n: 16, col: '#c8e08a' },
-  swarm:  { name: 'BLIGHT SWARM',  sub: 'EVERY TOUCH IS POISON',         types: ['beetle'],                      n: 14, col: '#a8f06a' },
-  yokai:  { name: 'HYAKKI YAGYO',  sub: 'THE NIGHT PARADE — USE THE BLADE', types: ['onibi', 'tengu', 'oni'],    n: 14, col: '#c08aff' },
-  shrike: { name: 'SHRIKE VOLLEY', sub: 'INCOMING — DO NOT STAND STILL', types: ['shrike'],                      n: 4,  col: '#ffd0a0' }
+  rot:    { name: 'ゾンビ大量発生', sub: '地面が死者を吐き出している',        types: ['walker', 'runner', 'bloater'], n: 18, col: '#a8d07a' },
+  hounds: { name: '屍犬の群れ',     sub: 'こいつらは数で狩る',                types: ['rothound'],                    n: 16, col: '#c8e08a' },
+  swarm:  { name: '毒蟲の大発生',   sub: '触れたら毒。当たるな',              types: ['beetle'],                      n: 14, col: '#a8f06a' },
+  yokai:  { name: '百鬼夜行',       sub: '妖怪の行列 ― 刀で斬れ',             types: ['onibi', 'tengu', 'oni'],       n: 14, col: '#c08aff' },
+  shrike: { name: '鉄鵙の斉射',     sub: '着弾する ― 立ち止まるな',           types: ['shrike'],                      n: 4,  col: '#ffd0a0' }
 };
 
 function runEvent(id){
@@ -723,7 +738,7 @@ function collectScroll(){
   var w = katanaEntry();
   if (!w) return;
   if (w.lv >= ITEMS.katana.max){
-    floatText(player.x, player.y - 34, 'SCROLL', '#ffd9a0');
+    floatText(player.x, player.y - 34, '巻物', '#ffd9a0');
     return;
   }
   var into = player.scrolls % SCROLLS_PER_LEVEL;
@@ -737,13 +752,13 @@ function levelKatana(){
   player.katanaLv = w.lv;
   sfx('level');
   if (w.lv >= KATANA_AWAKEN_LV){
-    showToast('THE BLADE AWAKENS', 'PAST LEVEL FIVE IT IS NO LONGER A SWORD', 3.0);
-    floatText(player.x, player.y - 46, 'AWAKENED', '#ff8aa8', true);
+    showToast('刀が覚醒した', 'レベル五を超えた刀は、もう剣ではない', 3.0);
+    floatText(player.x, player.y - 46, '覚醒', '#ff8aa8', true);
     flash('255,180,200', 0.6); shake(18);
     fx.push({ kind: 'ring', x: player.x, y: player.y, r0: 10, r1: 340, t: 0, life: 0.7, col: '#ff6a8a', w: 6 });
   } else {
-    showToast('KATANA LV ' + w.lv, SCROLLS_PER_LEVEL + ' SCROLLS SHARPENED IT', 1.8);
-    floatText(player.x, player.y - 46, 'KATANA LV ' + w.lv, '#ffd9a0', true);
+    showToast('日本刀 Lv' + w.lv, '巻物' + SCROLLS_PER_LEVEL + '個で研ぎ上がった', 1.8);
+    floatText(player.x, player.y - 46, '刀 Lv' + w.lv, '#ffd9a0', true);
   }
 }
 
@@ -926,7 +941,7 @@ function updateEnemies(dt){
 function poisonPlayer(){
   var fresh = player.poisonT <= 0;
   player.poisonT = 5.0;
-  if (fresh) floatText(player.x, player.y - 40, 'POISONED', '#a8f06a', true);
+  if (fresh) floatText(player.x, player.y - 40, '毒', '#a8f06a', true);
 }
 
 function fireEnemyShot(e){
@@ -1247,9 +1262,9 @@ function updatePickups(dt){
       drops.splice(k, 1);
       if (dr.kind === 'heal'){
         player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.25);
-        floatText(player.x, player.y - 30, '+LIFE', '#7fe3a0', true);
+        floatText(player.x, player.y - 30, '回復', '#7fe3a0', true);
       } else {
-        floatText(player.x, player.y - 30, 'PURGE', '#ffe07a', true);
+        floatText(player.x, player.y - 30, '一掃', '#ffe07a', true);
         flash('255,255,255', 0.55); shake(16); sfx('blast');
         var dmgN = 260 + runTime * 4;
         eachTarget(function(e){ if (!e.isBoss) hurtEnemy(e, dmgN, 0, 0, '#ffffff'); });
@@ -1361,7 +1376,7 @@ var BOSSES = {
       // steep enough that ignoring the horde is wrong, shallow enough that
       // a crowded screen never makes the king mathematically immortal
       b.armorMul = Math.max(0.40, 1 - 0.028 * near);
-      bossNote('HORDE ARMOUR ' + Math.round((1 - b.armorMul) * 100) + '%  ·  ' + near + ' STANDING');
+      bossNote('屍の護り ' + Math.round((1 - b.armorMul) * 100) + '%  ·  周囲 ' + near + ' 体');
 
       var enraged = b.hp < b.maxHp * 0.5;
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1386,7 +1401,7 @@ var BOSSES = {
             b.x + Math.cos(ang) * rr, b.y + Math.sin(ang) * rr, false, 0.75);
         }
         fx.push({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: b.r + 80, t: 0, life: 0.4, col: '#8fbf74', w: 3 });
-        floatText(b.x, b.y - b.r - 18, 'RISE', '#bfe3a0', true);
+        floatText(b.x, b.y - b.r - 18, '蘇生', '#bfe3a0', true);
         sfx('boss', 0.4);
       }
 
@@ -1400,7 +1415,7 @@ var BOSSES = {
       if (b.chargeCd <= 0 && b.charge <= 0){
         b.chargeCd = enraged ? 6.0 : 9.0;
         b.ca = a; b.charge = 1.0;
-        floatText(b.x, b.y - b.r - 30, 'CHARGE', '#ffd0a0', true);
+        floatText(b.x, b.y - b.r - 30, '突進', '#ffd0a0', true);
         hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 380, w: 40, tw: 0.6, life: 0.62, dmg: 0, col: '#c8e0a0' });
       }
     },
@@ -1448,7 +1463,7 @@ var BOSSES = {
     init: function(b){ b.ringCd = 3.0; b.spikeCd = 5.2; b.tpCd = 7.0; b.spiral = 0; b.spiralA = 0; },
     update: function(b, dt){
       var enraged = b.hp < b.maxHp * 0.5;
-      bossNote(enraged ? 'BLIZZARD · THE AIR ITSELF SLOWS YOU' : 'FIND THE GAP IN THE RING');
+      bossNote(enraged ? '吹雪 · 空気そのものが足を止める' : '氷の輪の切れ目を抜けろ');
       b.armorMul = 1;
 
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1460,7 +1475,7 @@ var BOSSES = {
         var gap = angTo(b.x, b.y, player.x, player.y) + rnd(-2.4, 2.4);
         hz({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: 620, tw: 0.7, life: 2.4,
           dmg: 26, gap: gap, gapW: enraged ? 0.34 : 0.48, chill: true, col: '#9fe0ff' });
-        floatText(b.x, b.y - b.r - 20, 'FROST RING', '#c8f0ff', true);
+        floatText(b.x, b.y - b.r - 20, '氷輪', '#c8f0ff', true);
         sfx('blast', 0.5);
       }
 
@@ -1539,7 +1554,7 @@ var BOSSES = {
     init: function(b){ b.strikeCd = 2.4; b.beamCd = 6.0; b.tpCd = 5.0; b.pylons = []; b.pylonCd = 0; b.beamA = 0; },
     update: function(b, dt){
       var enraged = b.hp < b.maxHp * 0.5;
-      bossNote(enraged ? 'PYLONS LIVE · ARCS BETWEEN THEM KILL' : 'MARKED GROUND BECOMES LIGHTNING');
+      bossNote(enraged ? '避雷塔が生きている · 塔の間の雷に触れるな' : '光った地面に雷が落ちる');
       b.armorMul = 1;
 
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1566,7 +1581,7 @@ var BOSSES = {
           hz({ kind: 'beam', x: b.x, y: b.y, a: a + (k - 1) * 0.9, len: 900, w: 26,
             tw: 1.0 + k * 0.18, life: 1.5 + k * 0.18, dmg: 30, col: '#fff2a8' });
         }
-        floatText(b.x, b.y - b.r - 22, 'ARC LANCE', '#fff2a8', true);
+        floatText(b.x, b.y - b.r - 22, '雷槍', '#fff2a8', true);
       }
 
       b.tpCd -= dt;
@@ -1591,7 +1606,7 @@ var BOSSES = {
             b.pylons.push({ x: clamp(b.x + Math.cos(pa) * 300, 60, world.w - 60),
               y: clamp(b.y + Math.sin(pa) * 300, 60, world.h - 60) });
           }
-          floatText(b.x, b.y - 70, 'PYLONS', '#fff2a8', true);
+          floatText(b.x, b.y - 70, '避雷塔', '#fff2a8', true);
         }
         b.pylonCd -= dt;
         if (b.pylonCd <= 0){
@@ -1660,16 +1675,16 @@ var BOSSES = {
         b.ph = wantPh;
         b.invuln = 1.3; b.at = 1.4;
         shake(24); flash('255,150,60', 0.65); sfx('boss');
-        floatText(b.x, b.y - b.r - 34, 'PHASE ' + b.ph, '#ffd08a', true);
-        showToast(b.ph === 2 ? 'IT REMEMBERS THE COLD' : 'IT TAKES THE SKY',
-          b.ph === 2 ? 'FROST AND LIGHTNING' : 'FINAL PHASE', 2.4);
+        floatText(b.x, b.y - b.r - 34, '第' + ['','一','二','三'][b.ph] + '形態', '#ffd08a', true);
+        showToast(b.ph === 2 ? '竜が冷気を思い出した' : '竜が空を取った',
+          b.ph === 2 ? '氷と雷' : '最終形態', 2.4);
         if (b.ph === 2){
           // it stops fighting alone and starts calling yokai up out of the roost
           for (var i = 0; i < 5; i++){
             var a2 = i / 5 * TAU;
             spawnEnemy(i % 2 ? 'onibi' : 'oni', b.x + Math.cos(a2) * 160, b.y + Math.sin(a2) * 160, i === 0, 0.7);
           }
-          floatText(b.x, b.y - b.r - 52, 'IT CALLS THE YOKAI', '#c08aff', true);
+          floatText(b.x, b.y - b.r - 52, '妖怪を呼んだ', '#c08aff', true);
         }
         if (b.ph === 3){
           b.mask = true;   // it puts on an oni's face for the last third
@@ -1680,8 +1695,8 @@ var BOSSES = {
         }
       }
       b.armorMul = b.invuln > 0 ? 0 : 1;
-      if (b.invuln > 0){ b.invuln -= dt; bossNote('SCALES GLOW · DAMAGE ABSORBED'); }
-      else bossNote(b.ph === 1 ? 'PHASE I · FIRE' : b.ph === 2 ? 'PHASE II · FROST AND LIGHTNING' : 'PHASE III · THE SKY FALLS');
+      if (b.invuln > 0){ b.invuln -= dt; bossNote('鱗が光っている · ダメージ無効'); }
+      else bossNote(b.ph === 1 ? '第一形態 · 炎' : b.ph === 2 ? '第二形態 · 氷と雷' : '第三形態 · 空が落ちてくる');
 
       b.hover += dt;
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1706,7 +1721,7 @@ var BOSSES = {
           if (b.sub % 3 === 0){
             // sweeping breath
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 620, w: 46, tw: 1.0, life: 1.8, dmg: 34, col: '#ff8a3a' });
-            floatText(b.x, b.y - b.r - 30, 'BREATH', '#ffb87a', true);
+            floatText(b.x, b.y - b.r - 30, '竜の息', '#ffb87a', true);
           } else {
             for (var k = -3; k <= 3; k++){
               var bb = { x: b.x, y: b.y, vx: Math.cos(a + k * 0.22) * 250, vy: Math.sin(a + k * 0.22) * 250,
@@ -1720,7 +1735,7 @@ var BOSSES = {
           if (b.sub % 2 === 0){
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 560, w: 60, tw: 0.9, life: 1.7,
               dmg: 30, chill: true, col: '#9fe0ff' });
-            floatText(b.x, b.y - b.r - 30, 'FROST BREATH', '#c8f0ff', true);
+            floatText(b.x, b.y - b.r - 30, '氷の息', '#c8f0ff', true);
           } else {
             for (var s = 0; s < 6; s++){
               hz({ kind: 'circle', x: player.x + rnd(-230, 230), y: player.y + rnd(-230, 230),
@@ -1731,11 +1746,11 @@ var BOSSES = {
           b.at = 1.75;
           if (b.sub % 4 === 0){
             b.da = a; b.dive = 0.75;
-            floatText(b.x, b.y - b.r - 30, 'DIVE', '#ffd0a0', true);
+            floatText(b.x, b.y - b.r - 30, '急降下', '#ffd0a0', true);
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 520, w: 52, tw: 0.55, life: 0.6, dmg: 0, col: '#ffcf90' });
           } else if (b.sub % 7 === 0){
             // hyakki yagyo: a marching line of spirits crosses the arena
-            floatText(b.x, b.y - b.r - 30, 'HYAKKI YAGYO', '#c08aff', true);
+            floatText(b.x, b.y - b.r - 30, '百鬼夜行', '#c08aff', true);
             var ma = Math.random() * TAU, mx = player.x - Math.cos(ma) * 520, my = player.y - Math.sin(ma) * 520;
             for (var mi = 0; mi < 10; mi++){
               spawnEnemy(mi % 4 === 0 ? 'tengu' : 'onibi',
@@ -1960,7 +1975,7 @@ var pendingLevels = 0, clearDelay = 0, pendingUlt = false;
 function queueLevelUp(){
   pendingLevels++;
   sfx('level');
-  floatText(player.x, player.y - 40, 'LEVEL ' + player.level, '#a98bff', true);
+  floatText(player.x, player.y - 40, 'Lv' + player.level, '#a98bff', true);
 }
 
 function itemLevel(id){
@@ -2011,12 +2026,12 @@ function openChoice(kind){
     if (!third){ for (var j = 0; j < pool.length; j++) if (!ITEMS[pool[j]].ult){ third = pool[j]; break; } }
     pendingChoices = ['fang', 'ancient'];
     if (third) pendingChoices.push(third);
-    $('luSub').textContent = "THE HOARD OPENS";
-    $('luTitle').textContent = 'TAKE THE ULTIMATE';
+    $('luSub').textContent = '竜の宝の山が開く';
+    $('luTitle').textContent = '最強を選べ';
   } else {
     pendingChoices = rollChoices();
-    $('luSub').textContent = 'LEVEL ' + player.level;
-    $('luTitle').textContent = 'CHOOSE ONE';
+    $('luSub').textContent = 'レベル ' + player.level;
+    $('luTitle').textContent = 'ひとつ選べ';
   }
   if (!pendingChoices.length){                       // fully maxed: heal instead
     player.hp = Math.min(player.maxHp, player.hp + 40);
@@ -2029,9 +2044,9 @@ function openChoice(kind){
     show(el);
     var id = pendingChoices[c], it = ITEMS[id], lv = itemLevel(id);
     el.className = 'card' + (it.ult ? ' ult' : '');
-    el.children[0].textContent = TIER_LABEL[it.tier] + ' ' + (it.kind === 'weapon' ? 'WEAPON' : 'RELIC');
+    el.children[0].textContent = TIER_LABEL[it.tier] + '  ' + (it.kind === 'weapon' ? '武器' : '装備');
     el.children[1].textContent = it.name;
-    el.children[2].textContent = lv === 0 ? 'NEW' : ('LV ' + lv + '  →  LV ' + (lv + 1));
+    el.children[2].textContent = lv === 0 ? '新しく手に入れる' : ('Lv' + lv + '  →  Lv' + (lv + 1));
     el.children[3].textContent = it.desc(lv + 1);
   }
   state = 'levelup';
@@ -2062,7 +2077,7 @@ function applyItem(id){
     if (id === 'split' || id === 'ancient') refreshOrbs();
     if (id === 'ancient'){ player.maxHp += 40; player.hp = Math.min(player.maxHp, player.hp + 40); }
   }
-  if (it.ult) showToast(it.name + ' TAKEN', 'THE LAST THING THIS PLACE HAD', 2.4);
+  if (it.ult) showToast(it.name + ' を手にした', 'この場所が最後に隠していたもの', 2.4);
 }
 
 // ============================================================
@@ -2094,15 +2109,11 @@ function beginStage(){
 function stageCleared(){
   if (stageIndex >= STAGES.length - 1){ winRun(); return; }
   state = 'clear';
-  $('clearTitle').textContent = stage.bossName + ' FALLS';
+  $('clearTitle').textContent = stage.bossName + ' 撃破';
   $('clearBody').textContent = stage.clearLine;
-  var ckw = katanaEntry();
-  $('clearStats').textContent =
-    'CLOCK ' + fmtTime(runClock) + ' / 5:00   KATANA LV ' + (ckw ? ckw.lv : 0) +
-      '   SCROLLS ' + player.scrolls + '\n' +
-    'LEVEL ' + player.level + '   KILLS ' + kills + '   TIME ' + fmtTime(runTime) + '\n' +
-    'NEXT: ' + STAGES[stageIndex + 1].label + ' — ' + STAGES[stageIndex + 1].name;
-  $('nextBtn').textContent = (stageIndex === STAGES.length - 2) ? 'ENTER THE ROOST' : 'DESCEND';
+  var nx = STAGES[stageIndex + 1];
+  fillStats($('clearStats'), [['次の章', nx.label + '  ' + nx.name, false]]);
+  $('nextBtn').textContent = (stageIndex === STAGES.length - 2) ? '竜の巣へ' : '次の章へ';
   show(elClear);
   sfx('win', 0.7);
 }
@@ -2118,10 +2129,10 @@ function nextStage(){
 function gameOver(){
   state = 'over';
   sfx('die');
-  $('overSub').textContent = 'YOU FELL IN ' + stage.name;
-  $('overTitle').textContent = 'YOU DIED';
-  $('overStats').textContent = statsBlock();
-  $('replayBtn').textContent = 'REPLAY';
+  $('overSub').textContent = stage.name + 'で倒れた';
+  $('overTitle').textContent = '力尽きた';
+  fillStats($('overStats'));
+  $('replayBtn').textContent = 'もう一度';
   hide(elBossWrap);
   show(elOver);
 }
@@ -2130,28 +2141,45 @@ function winRun(){
   state = 'win';
   sfx('win');
   flash('255,255,255', 0.8);
-  $('overSub').textContent = 'THE ROOST IS QUIET';
-  $('overTitle').textContent = 'DRAGON SLAIN';
-  $('overStats').textContent = statsBlock();
-  $('replayBtn').textContent = 'RUN AGAIN';
+  $('overSub').textContent = '竜の巣は静まりかえった';
+  $('overTitle').textContent = '竜を討ち取った';
+  fillStats($('overStats'));
+  $('replayBtn').textContent = 'もう一度挑む';
   hide(elBossWrap);
   show(elOver);
 }
 
-function statsBlock(){
+// The English result panel lined its columns up by padding the labels with
+// spaces. Japanese labels are full-width and that stops working, so the panel
+// is now a real two-column grid: statRows() produces the pairs, fillStats()
+// writes them in, and the layout does the aligning.
+function statRows(){
   var loadout = [];
-  for (var i = 0; i < player.weapons.length; i++) loadout.push(ITEMS[player.weapons[i].id].name + ' ' + player.weapons[i].lv);
-  for (var k in player.passives) if (player.passives[k] > 0) loadout.push(ITEMS[k].name + ' ' + player.passives[k]);
+  for (var i = 0; i < player.weapons.length; i++) loadout.push(ITEMS[player.weapons[i].id].name + ' Lv' + player.weapons[i].lv);
+  for (var k in player.passives) if (player.passives[k] > 0) loadout.push(ITEMS[k].name + ' Lv' + player.passives[k]);
   var kw = katanaEntry();
-  return 'STAGE   ' + stage.label + '  ' + stage.name + '\n' +
-         'CLOCK   ' + fmtTime(runClock) + ' / 5:00' + (phase === 'boss' ? '  (held)' : '') + '\n' +
-         'KATANA  LV ' + (kw ? kw.lv : 0) + (kw && kw.lv >= KATANA_AWAKEN_LV ? '  AWAKENED' : '') +
-           '   SCROLLS ' + player.scrolls + '\n' +
-         'LEVEL   ' + player.level + '\n' +
-         'KILLS   ' + kills + '\n' +
-         'TIME    ' + fmtTime(runTime) + '\n' +
-         'DAMAGE  ' + Math.round(dmgDealt) + '\n' +
-         'BUILD   ' + (loadout.join(', ') || 'nothing at all');
+  return [
+    ['ステージ',   stage.label + '  ' + stage.name, false],
+    ['時計',       fmtTime(runClock) + ' / 5:00' + (phase === 'boss' ? '（停止中）' : ''), true],
+    ['日本刀',     (kw && kw.lv >= KATANA_AWAKEN_LV ? '覚醒' : 'Lv' + (kw ? kw.lv : 0)) +
+                     '　巻物 ' + player.scrolls + '個', false],
+    ['レベル',     String(player.level), true],
+    ['討伐数',     String(kills), true],
+    ['生存時間',   fmtTime(runTime), true],
+    ['与ダメージ', String(Math.round(dmgDealt)), true],
+    ['武器と装備', loadout.join('、') || '何も持たなかった', false]
+  ];
+}
+function esc(s){
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function fillStats(el, extra){
+  var rows = statRows().concat(extra || []), out = '';
+  for (var i = 0; i < rows.length; i++){
+    out += '<span class="k">' + esc(rows[i][0]) + '</span>' +
+           '<span class="v' + (rows[i][2] ? ' num' : '') + '">' + esc(rows[i][1]) + '</span>';
+  }
+  el.innerHTML = out;
 }
 
 function fmtTime(s){
@@ -2168,8 +2196,8 @@ function updateStageFlow(dt){
     if (runClock >= stage.end){
       phase = 'warning'; bossWarn = 3.0;
       var last = (stageIndex === STAGES.length - 1);
-      showToast(last ? 'FIVE MINUTES' : 'WARNING',
-        last ? 'THE CLOCK STOPS — ' + stage.bossName + ' WAKES' : stage.bossName + ' APPROACHES', 3.0);
+      showToast(last ? '五分' : '警告',
+        last ? '時計が止まる ― ' + stage.bossName + ' が目を覚ます' : stage.bossName + ' が近づいている', 3.0);
       sfx('boss');
       flash('255,60,60', 0.4);
     }
@@ -2209,26 +2237,26 @@ function syncHud(){
   elHp.style.width = clamp(player.hp / player.maxHp * 100, 0, 100) + '%';
   elHpText.textContent = Math.max(0, Math.ceil(player.hp)) + ' / ' + Math.round(player.maxHp);
   elXp.style.width = clamp(player.xp / player.xpNext * 100, 0, 100) + '%';
-  elStat.textContent = 'LV ' + player.level + '  ·  KILLS ' + kills + '  ·  DPS+ ' +
+  elStat.textContent = 'Lv' + player.level + '  ·  討伐 ' + kills + '  ·  攻撃力 ' +
     Math.round(statDmg() * 100) + '%';
   var parts2 = [];
   for (var i = 0; i < player.weapons.length; i++){
     var w = player.weapons[i];
     if (w.id === 'katana'){
       parts2.push(w.lv >= KATANA_AWAKEN_LV
-        ? 'KATANA AWAKENED'
-        : 'KATANA·' + w.lv + ' [' + (player.scrolls % SCROLLS_PER_LEVEL) + '/' + SCROLLS_PER_LEVEL + ']');
-    } else parts2.push(ITEMS[w.id].name + '·' + w.lv);
+        ? '日本刀 覚醒'
+        : '日本刀 Lv' + w.lv + ' [' + (player.scrolls % SCROLLS_PER_LEVEL) + '/' + SCROLLS_PER_LEVEL + ']');
+    } else parts2.push(ITEMS[w.id].name + ' Lv' + w.lv);
   }
   var pas = [];
-  for (var k in player.passives) if (player.passives[k] > 0) pas.push(ITEMS[k].name + '·' + player.passives[k]);
+  for (var k in player.passives) if (player.passives[k] > 0) pas.push(ITEMS[k].name + ' Lv' + player.passives[k]);
   elLoad.textContent = parts2.join('  ') + (pas.length ? '\n' + pas.join('  ') : '');
 
   elTimer.textContent = fmtTime(runClock) + ' / 5:00';
-  if (phase === 'survive') elPhase.textContent = 'SURVIVE';
-  else if (phase === 'warning') elPhase.textContent = 'INCOMING ' + Math.max(0, Math.ceil(bossWarn));
-  else if (phase === 'boss') elPhase.textContent = 'BOSS · CLOCK HELD';
-  else elPhase.textContent = 'CLEAR';
+  if (phase === 'survive') elPhase.textContent = '生存';
+  else if (phase === 'warning') elPhase.textContent = 'ボス出現まで ' + Math.max(0, Math.ceil(bossWarn));
+  else if (phase === 'boss') elPhase.textContent = 'ボス戦 · 時計停止中';
+  else elPhase.textContent = '撃破';
 }
 
 // ============================================================

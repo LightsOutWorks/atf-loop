@@ -28,6 +28,7 @@
 //  16  every named outbreak spawns its own swarm
 //  17  the clock advances only while surviving, and freezes for every boss
 //  18  a boss killed by ordinary damage actually clears the stage
+//  19  every string the game shows the player is Japanese
 //
 // Weakening a check, deleting one, or relaxing an expectation to force a
 // pass is forbidden (CONSTRAINTS.md Part I §6).
@@ -96,12 +97,19 @@ function makeCtx(){
         return function(){ return { addColorStop: function(){} }; };
       }
       if (k === 'measureText') return function(){ return { width: 10 }; };
+      if (k === 'fillText' || k === 'strokeText') return function(txt){ show(txt); };
       if (typeof k === 'symbol') return undefined;
       return function(){};
     },
     set(t, k, v){ t[k] = v; return true; }
   });
 }
+
+// Everything the game writes into the page or paints as floating text is
+// recorded here, so check 19 can look at what a player would actually read
+// rather than at the source.
+const SHOWN = [];
+function show(v){ const t = String(v).replace(/<[^>]*>/g, ' ').trim(); if (t) SHOWN.push(t); }
 
 function makeEl(id, childCount){
   const classes = new Set();
@@ -134,7 +142,11 @@ function makeEl(id, childCount){
   };
   Object.defineProperty(el, 'textContent', {
     get: function(){ return el._text; },
-    set: function(v){ el._text = String(v); }
+    set: function(v){ el._text = String(v); show(v); }
+  });
+  Object.defineProperty(el, 'innerHTML', {
+    get: function(){ return el._html || ''; },
+    set: function(v){ el._html = String(v); show(v); }
   });
   for (let i = 0; i < (childCount || 0); i++) el.children.push(makeEl(id + ':' + i, 0));
   return el;
@@ -263,7 +275,7 @@ if (results[3].ok){
     startGame();
     assert(G.state === 'play', 'state after START is not play: ' + G.state);
     assert(G.stageIndex === 0, 'did not begin at stage 1: ' + G.stageIndex);
-    assert(G.stageName === 'ROTTING FIELDS', 'stage 1 name wrong: ' + G.stageName);
+    assert(G.stageName === '腐蝕の野', 'stage 1 name wrong: ' + G.stageName);
     assert(G.level === 1 && G.kills === 0, 'run did not start clean');
     assert(G.build.weapons.katana === 1, 'the katana is not the starting weapon: ' + JSON.stringify(G.build));
     assert(G.katanaLv === 1 && G.scrollCount === 0, 'the blade did not start unsharpened');
@@ -355,10 +367,10 @@ if (results[6].ok){
 
 // ---------- 9 + 10. the stage chain and the ultimate gate ----------
 const EXPECT = [
-  { idx: 0, boss: 'horde',  name: 'ROTTING FIELDS', clock: 80 },
-  { idx: 1, boss: 'frost',  name: 'FROZEN EXPANSE', clock: 175 },
-  { idx: 2, boss: 'storm',  name: 'THUNDER PEAK',   clock: 270 },
-  { idx: 3, boss: 'dragon', name: "DRAGON'S ROOST", clock: 300 }
+  { idx: 0, boss: 'horde',  name: '腐蝕の野', clock: 80 },
+  { idx: 1, boss: 'frost',  name: '氷結の原', clock: 175 },
+  { idx: 2, boss: 'storm',  name: '雷鳴の峰', clock: 270 },
+  { idx: 3, boss: 'dragon', name: '竜の巣',   clock: 300 }
 ];
 const clockAtBoss = [];
 let chainOk = false, chainDetail = '', ultOk = false, ultDetail = '';
@@ -467,7 +479,7 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
     env.pump(3);
     assert(G.state === 'play', 'replay did not enter play: ' + G.state);
     assert(G.stageIndex === 0, 'replay did not return to stage 1: ' + G.stageIndex);
-    assert(G.stageName === 'ROTTING FIELDS', 'replay stage name: ' + G.stageName);
+    assert(G.stageName === '腐蝕の野', 'replay stage name: ' + G.stageName);
     assert(G.level === 1, 'replay kept the old level: ' + G.level);
     assert(G.kills === 0, 'replay kept the old kills: ' + G.kills);
     assert(G.bossAlive === false, 'replay kept a boss alive');
@@ -635,6 +647,52 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
     ok = true;
   } catch (e){ detail = String(e && e.message || e); }
   record(18, 'a boss killed by ordinary damage clears the stage', ok, detail);
+}
+
+// ---------- 19. every string shown to the player is Japanese ----------
+{
+  let ok = false, detail = '';
+  try {
+    // 'Lv' is the one Latin token the HUD keeps on purpose, and 'WASD' / 'P'
+    // in the title screen are the names of physical keys. Everything else the
+    // player reads has to be Japanese.
+    const ALLOWED = /Lv|WASD|\bP\b/g;
+    const latin = s => s.replace(ALLOWED, '').match(/[A-Za-z]{1,}/g);
+
+    // -- the shipped markup: every text node between <body> and <script> --
+    const markup = html.split('<body>')[1].split('<script>')[0];
+    const markupBad = [];
+    for (const m of markup.matchAll(/>([^<>]+)</g)){
+      const t = m[1].replace(/&[a-z]+;/g, ' ').trim();
+      if (!t) continue;
+      const hit = latin(t);
+      if (hit) markupBad.push(t + '  <- ' + hit.join(','));
+    }
+    assert(!markupBad.length, 'English left in the markup: ' + markupBad.join(' | '));
+
+    // -- everything written or painted during a run that touches every screen --
+    SHOWN.length = 0;
+    G.start(); env.pump(3);
+    for (const ev of ['rot', 'hounds', 'swarm', 'yokai', 'shrike']){ G.fireEvent(ev); env.pump(4); }
+    G.grantScrolls(G.constants.scrollsPerLevel * G.constants.awakenLv);   // pickup, level-up and awakening text
+    G.grantLevels(1); resolveChoices(); env.pump(3);
+    env.fire(env.win, 'keydown', { key: 'p' }); env.pump(2);   // pause toast
+    env.fire(env.win, 'keydown', { key: 'p' }); env.pump(2);
+    for (let st = 0; st < 4; st++){
+      if (G.state === 'play' && G.phase === 'survive'){ G.skipToBoss(); env.pump(2); }
+      for (let i = 0; i < 60 && !G.bossAlive; i++){ pumpMoving(0.3); resolveChoices(); }
+      for (let i = 0; i < 400 && G.bossAlive; i++){ G.hurtBoss(600); env.pump(2); }   // drives every dragon phase
+      for (let i = 0; i < 240 && G.state === 'play'; i++){ pumpMoving(0.1); resolveChoices(); }
+      if (G.state === 'clear'){ G.next(); env.pump(4); resolveChoices(); }
+    }
+    assert(SHOWN.length > 60, 'the sweep barely showed anything: ' + SHOWN.length + ' strings');
+    const bad = [];
+    for (const t of SHOWN){ const hit = latin(t); if (hit) bad.push(t + '  <- ' + hit.join(',')); }
+    assert(!bad.length, 'English shown to the player: ' + [...new Set(bad)].slice(0, 8).join(' | '));
+    detail = SHOWN.length + ' strings shown, all Japanese';
+    ok = true;
+  } catch (e){ detail = String(e && e.message || e); }
+  record(19, 'every string the game shows the player is Japanese', ok, detail);
 }
 
 releaseAll();
