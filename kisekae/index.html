@@ -188,7 +188,12 @@ const PAL={
  red:{a:'#f57286',b:'#e04b60',c:'#ffeef0'},
  navy:{a:'#5f6fae',b:'#46538e',c:'#e8ecff'},
  black:{a:'#4d4856',b:'#393441',c:'#efeef4'},
- peach:{a:'#ffc5a4',b:'#ff9f70',c:'#fff3ea'}
+ peach:{a:'#ffc5a4',b:'#ff9f70',c:'#fff3ea'},
+ rose:{a:'#d9a3ad',b:'#c2848f',c:'#f7e9ec'},
+ sage:{a:'#adc4a5',b:'#8ba883',c:'#eef4ec'},
+ beige:{a:'#dcc8ab',b:'#c2a983',c:'#f8f2e8'},
+ bordeaux:{a:'#9e5266',b:'#7d3a4d',c:'#f2e4e8'},
+ greige:{a:'#c5bcb4',b:'#a89e94',c:'#f4f1ee'}
 };
 const P6=[PAL.pink,PAL.lav,PAL.sky,PAL.mint,PAL.lemon,PAL.red];
 const P6W=[PAL.white,PAL.pink,PAL.lav,PAL.sky,PAL.navy,PAL.black];
@@ -218,7 +223,7 @@ function scal(x0,x1,y,n,r){
 }
 function MIR(inner){return '<g transform="translate(440,0) scale(-1,1)">'+inner+'</g>';}
 /* ================= doll base ================= */
-const LEGT='transform="translate(0,342) scale(1,0.9) translate(0,-342)"';
+const LEGT='transform="translate(0,342) scale(1,0.96) translate(0,-342)"';
 function drawBody(s){
   const k=SKIN[s.skin];
   const armL='<path d="M184,258 C168,272 158,298 153,330 C151,344 149,352 150,357" stroke="'+k.base+'" stroke-width="17" stroke-linecap="round" fill="none"/>'+
@@ -248,9 +253,9 @@ function drawFace(s){
   function openEye(cx,dir){
     let e='';
     if(mk.shadow>=0)e+=shadowArc(cx);
-    e+='<ellipse cx="'+cx+'" cy="169" rx="15.5" ry="18.5" fill="#fff"/>'+
-    '<circle cx="'+cx+'" cy="170" r="12.8" fill="'+ec+'"/>'+
-    '<circle cx="'+cx+'" cy="173" r="7" fill="#2c2033"/>'+
+    e+='<ellipse cx="'+cx+'" cy="169" rx="14.8" ry="17.8" fill="#fff"/>'+
+    '<circle cx="'+cx+'" cy="170" r="12.2" fill="'+ec+'"/>'+
+    '<circle cx="'+cx+'" cy="173" r="6.6" fill="#2c2033"/>'+
     '<circle cx="'+(cx-4.5)+'" cy="162" r="4.4" fill="#fff"/>'+
     '<circle cx="'+(cx+5)+'" cy="175" r="2.3" fill="#fff" opacity=".9"/>'+
     '<path d="M'+(cx-14.5)+',164 Q'+cx+',150.5 '+(cx+14.5)+',164" stroke="#4a3040" stroke-width="5" stroke-linecap="round" fill="none"/>';
@@ -273,14 +278,14 @@ function drawFace(s){
   else if(mk.cheek===1){cheeks='<circle cx="170" cy="192" r="9.5" fill="#ff8fa0" opacity=".62"/><circle cx="270" cy="192" r="9.5" fill="#ff8fa0" opacity=".62"/><circle cx="167" cy="189" r="3" fill="#fff" opacity=".65"/><circle cx="267" cy="189" r="3" fill="#fff" opacity=".65"/>';}
   else if(mk.cheek===2){cheeks=heart(170,192,8,'rgba(255,120,150,.6)')+heart(270,192,8,'rgba(255,120,150,.6)');}
   else if(mk.cheek===3){cheeks='<path d="M162,187 l8,9 M170,186 l8,9 M178,185 l8,9" stroke="#ff8fa0" stroke-width="3.5" stroke-linecap="round" opacity=".7"/><path d="M254,185 l8,9 M262,186 l8,9 M270,187 l8,9" stroke="#ff8fa0" stroke-width="3.5" stroke-linecap="round" opacity=".7"/>';}
-  else{cheeks='<ellipse cx="170" cy="191" rx="11.5" ry="7" fill="#ff9d94" opacity=".5"/><ellipse cx="270" cy="191" rx="11.5" ry="7" fill="#ff9d94" opacity=".5"/>';}
+  else{cheeks='<ellipse cx="170" cy="191" rx="10.5" ry="6.5" fill="#ff9d94" opacity=".45"/><ellipse cx="270" cy="191" rx="10.5" ry="6.5" fill="#ff9d94" opacity=".45"/>';}
   let mouth='';
   if(ex===1||ex===2){
     mouth='<path d="M204,202 Q220,226 236,202 Q220,212 204,202 Z" fill="#d95f6b"/><path d="M211,209 Q220,217 229,209 L227,213 Q220,218 213,213 Z" fill="#f2949c"/>';
     if(lip)mouth+='<path d="M204,202 Q220,214 236,202" stroke="'+lip.c+'" stroke-width="3.5" stroke-linecap="round" fill="none" opacity=".9"/>';
   }
   else if(ex===3){mouth='<path d="M211,207 Q220,211 229,207" stroke="'+mouthCol+'" stroke-width="4" stroke-linecap="round" fill="none"/>';}
-  else{mouth='<path d="M207,202 Q220,215 233,202" stroke="'+mouthCol+'" stroke-width="'+(lip?5.5:4.5)+'" stroke-linecap="round" fill="none"/>';}
+  else{mouth='<path d="M208,202 Q220,214 232,202" stroke="'+mouthCol+'" stroke-width="'+(lip?5.5:4.5)+'" stroke-linecap="round" fill="none"/>';}
   if(lip&&ex!==1&&ex!==2)mouth+='<ellipse cx="224" cy="207" rx="3.5" ry="2" fill="#fff" opacity=".7"/>';
   let gems='';
   if(mk.gem===0)gems=star(173,184,5.5,'#f2c94c')+star(267,184,5.5,'#f2c94c');
@@ -345,7 +350,29 @@ const HAIR=[
    '<path d="M148,58 a27,27 0 0 1 22,-18" stroke="'+h.b+'" stroke-width="6" stroke-linecap="round" fill="none" opacity=".8"/>'+
    '<path d="M292,58 a27,27 0 0 0 -22,-18" stroke="'+h.b+'" stroke-width="6" stroke-linecap="round" fill="none" opacity=".8"/>',
   front:h=>'<path d="M150,142 C144,80 178,52 220,52 C262,52 296,80 290,142 q-13,20 -26,0 q-15,24 -30,0 q-14,26 -28,0 q-15,24 -30,0 q-13,20 -26,0 Z" fill="'+h.a+'"/>'+
-   '<path d="M180,74 C196,64 244,64 260,74" stroke="'+h.b+'" stroke-width="8" stroke-linecap="round" fill="none" opacity=".8"/>'}
+   '<path d="M180,74 C196,64 244,64 260,74" stroke="'+h.b+'" stroke-width="8" stroke-linecap="round" fill="none" opacity=".8"/>'},
+ {nm:'ゆるまきロング',
+  back:h=>'<path d="M220,46 C146,46 118,106 126,190 C132,258 116,324 128,382 C134,404 158,406 162,386 C154,340 160,300 158,264 L282,264 C280,300 286,340 278,386 C282,406 306,404 312,382 C324,324 308,258 314,190 C322,106 294,46 220,46 Z" fill="'+h.a+'"/>'+
+   '<circle cx="146" cy="330" r="17" fill="'+h.a+'"/><circle cx="138" cy="362" r="15" fill="'+h.a+'"/><circle cx="150" cy="390" r="13" fill="'+h.a+'"/>'+
+   '<circle cx="294" cy="330" r="17" fill="'+h.a+'"/><circle cx="302" cy="362" r="15" fill="'+h.a+'"/><circle cx="290" cy="390" r="13" fill="'+h.a+'"/>'+
+   '<path d="M138,326 a14,14 0 0 1 16,-8 M130,358 a12,12 0 0 1 14,-7 M142,386 a10,10 0 0 1 12,-6" stroke="'+h.b+'" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/>'+
+   '<path d="M302,326 a14,14 0 0 0 -16,-8 M310,358 a12,12 0 0 0 -14,-7 M298,386 a10,10 0 0 0 -12,-6" stroke="'+h.b+'" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/>'+
+   '<path d="M150,210 C144,260 148,300 146,330 M290,210 C296,260 292,300 294,330" stroke="'+h.b+'" stroke-width="6" fill="none" stroke-linecap="round" opacity=".55"/>',
+  front:h=>'<path d="M150,142 C144,78 178,50 220,50 C264,50 296,80 290,144 C292,154 284,158 276,150 C266,141 252,137 240,138 C226,138 214,114 208,98 C205,90 200,88 197,94 C191,108 183,126 172,138 C165,144 155,146 150,142 Z" fill="'+h.a+'"/>'+
+   '<path d="M210,100 C222,122 236,132 252,138" stroke="'+h.b+'" stroke-width="5" stroke-linecap="round" fill="none" opacity=".7"/>'+
+   '<path d="M152,136 C142,186 144,236 156,278 C161,294 176,292 175,272 C171,232 169,188 173,146 Z" fill="'+h.a+'"/>'+
+   '<path d="M288,136 C298,186 296,236 284,278 C279,294 264,292 265,272 C269,232 271,188 267,146 Z" fill="'+h.a+'"/>'+
+   '<circle cx="166" cy="284" r="10" fill="'+h.a+'"/><circle cx="274" cy="284" r="10" fill="'+h.a+'"/>'},
+ {nm:'サイドテール',
+  back:h=>'<path d="M220,52 C168,52 148,92 150,150 C152,196 162,224 178,238 L262,238 C278,224 288,196 290,150 C292,92 272,52 220,52 Z" fill="'+h.a+'"/>'+
+   '<path d="M162,104 C112,130 100,210 116,286 C124,326 112,352 126,376 C138,396 160,390 158,366 C154,326 166,286 156,246 C148,206 152,152 168,120 Z" fill="'+h.a+'"/>'+
+   '<circle cx="140" cy="380" r="12" fill="'+h.a+'"/>'+
+   '<path d="M128,190 C120,240 132,300 128,344" stroke="'+h.b+'" stroke-width="6" fill="none" stroke-linecap="round" opacity=".6"/>'+
+   '<circle cx="160" cy="112" r="13" fill="'+h.b+'"/>',
+  front:h=>'<path d="M150,142 C144,78 178,50 220,50 C264,50 296,80 290,144 C292,154 284,158 276,150 C266,141 252,137 240,138 C226,138 214,114 208,98 C205,90 200,88 197,94 C191,108 183,126 172,138 C165,144 155,146 150,142 Z" fill="'+h.a+'"/>'+
+   '<path d="M210,100 C222,122 236,132 252,138" stroke="'+h.b+'" stroke-width="5" stroke-linecap="round" fill="none" opacity=".7"/>'+
+   '<path d="M288,136 C298,186 296,236 284,278 C279,294 264,292 265,272 C269,232 271,188 267,146 Z" fill="'+h.a+'"/>'+
+   '<path d="M152,136 C146,162 148,188 156,210 C162,222 172,218 171,202 C168,178 166,158 170,144 Z" fill="'+h.a+'"/>'}
 ];
 /* ================= clothes ================= */
 function puffSleeves(c){
@@ -421,7 +448,24 @@ const DRESS=[
    '<path d="M196,326 C180,368 180,414 196,442 C206,424 210,398 212,368 Z" fill="'+c.b+'" opacity=".9" '+O+'/>'+
    '<path d="M244,326 C260,368 260,414 244,442 C234,424 230,398 228,368 Z" fill="'+c.b+'" opacity=".9" '+O+'/>'+
    '<path d="M220,328 C206,376 206,428 220,456 C234,428 234,376 220,328 Z" fill="'+c.a+'" '+O+'/>'+
-   star(220,300,9,c.c)+star(200,344,5,'#fff')+star(240,344,5,'#fff')+star(220,420,6,'#fff')}
+   star(220,300,9,c.c)+star(200,344,5,'#fff')+star(240,344,5,'#fff')+star(220,420,6,'#fff')},
+ {nm:'シックワンピ',pals:[PAL.bordeaux,PAL.black,PAL.navy,PAL.rose,PAL.beige,PAL.sage],
+  d:c=>'<path d="M162,282 q20,8 34,-4 M278,282 q-20,8 -34,-4" stroke="'+c.a+'" stroke-width="13" stroke-linecap="round" fill="none"/>'+
+   bodice(c)+
+   '<ellipse cx="211" cy="254" rx="9" ry="7" fill="'+c.c+'"/><ellipse cx="229" cy="254" rx="9" ry="7" fill="'+c.c+'"/>'+
+   '<path d="M170,404 C176,358 190,334 198,328 L242,328 C250,334 264,358 270,404 C248,417 192,417 170,404 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="M174,398 C196,410 244,410 266,398" stroke="'+c.b+'" stroke-width="4" fill="none" opacity=".6"/>'+
+   '<path d="M190,326 h60 v9 h-60 Z" fill="'+c.b+'"/><rect x="215" y="327.5" width="10" height="6" rx="2" fill="'+c.c+'"/>'+
+   '<circle cx="220" cy="282" r="3" fill="'+c.c+'"/><circle cx="220" cy="300" r="3" fill="'+c.c+'"/><circle cx="220" cy="316" r="3" fill="'+c.c+'"/>'},
+ {nm:'チェックジャンスカ',pals:[PAL.rose,PAL.bordeaux,PAL.sage,PAL.beige,PAL.navy,PAL.black],
+  d:c=>'<path d="M160,280 q20,8 34,-2 M280,280 q-20,8 -34,-2" stroke="#ffffff" stroke-width="15" stroke-linecap="round" fill="none"/>'+
+   bodice(PAL.white)+
+   '<path d="M198,262 L188,250 M242,262 L252,250" stroke="'+c.a+'" stroke-width="9" stroke-linecap="round"/>'+
+   '<path d="M198,262 h44 v66 h-44 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="M170,400 C176,356 190,334 198,328 L242,328 C250,334 264,356 270,400 C246,412 194,412 170,400 Z" fill="'+c.a+'" '+O+'/>'+
+   '<g stroke="'+c.b+'" stroke-width="5" opacity=".5"><path d="M180,352 h80 M174,376 h92 M203,268 h34 M203,296 h34"/><path d="M198,330 L192,404 M220,330 L220,408 M242,330 L248,404 M208,262 v66 M232,262 v66"/></g>'+
+   '<g stroke="#fff" stroke-width="1.6" opacity=".8"><path d="M180,360 h80 M204,338 L200,402 M236,338 L240,402"/></g>'+
+   bow(220,252,8,c.b,c.c)}
 ];
 const TOP=[
  {nm:'Tシャツ',pals:[PAL.white,PAL.pink,PAL.sky,PAL.lemon,PAL.mint,PAL.red],
@@ -463,7 +507,21 @@ const TOP=[
    '<path d="M210,248 C210,258 230,258 230,248" stroke="'+c.b+'" stroke-width="4" fill="none"/>'+
    '<path d="M218,262 h4 v66 h-4 Z" fill="'+c.b+'" opacity=".5"/>'+
    '<circle cx="220" cy="280" r="3.5" fill="'+c.b+'"/><circle cx="220" cy="300" r="3.5" fill="'+c.b+'"/><circle cx="220" cy="320" r="3.5" fill="'+c.b+'"/>'+
-   bow(220,256,12,c.b,c.c)}
+   bow(220,256,12,c.b,c.c)},
+ {nm:'オフショル',pals:[PAL.rose,PAL.white,PAL.black,PAL.sage,PAL.beige,PAL.pink],
+  d:c=>'<path d="M158,264 C180,244 260,244 282,264 C283,274 275,278 266,272 C240,258 200,258 174,272 C165,278 157,274 158,264 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="'+scal(174,266,271,5,7)+'" stroke="'+c.c+'" stroke-width="4" fill="none" opacity=".9"/>'+
+   '<path d="M186,268 C186,264 254,264 254,268 C254,298 250,322 246,336 L194,336 C190,322 186,298 186,268 Z" fill="'+c.a+'" '+O+'/>'+
+   heart(220,302,8,c.c)+
+   '<path d="M192,334 h56" stroke="'+c.b+'" stroke-width="4" opacity=".6"/>'},
+ {nm:'ロングカーデ',pals:[PAL.beige,PAL.greige,PAL.rose,PAL.sage,PAL.bordeaux,PAL.navy],
+  d:c=>'<path d="M182,258 C166,272 158,300 154,332 C152,344 150,352 151,357" stroke="'+c.a+'" stroke-width="20" stroke-linecap="round" fill="none"/>'+
+   '<path d="M258,258 C274,272 282,300 286,332 C288,344 290,352 289,357" stroke="'+c.a+'" stroke-width="20" stroke-linecap="round" fill="none"/>'+
+   '<path d="M196,250 C196,246 244,246 244,250 C244,288 242,318 240,334 L200,334 C198,318 196,288 196,250 Z" fill="#ffffff" '+O+'/>'+
+   '<path d="M208,248 q12,10 24,0" stroke="'+c.b+'" stroke-width="3" fill="none" opacity=".5"/>'+
+   '<path d="M184,250 C184,246 198,246 198,250 L200,396 C200,406 186,408 182,398 C178,368 178,290 184,250 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="M256,250 C256,246 242,246 242,250 L240,396 C240,406 254,408 258,398 C262,368 262,290 256,250 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="M186,362 h10 M244,362 h10" stroke="'+c.b+'" stroke-width="3" opacity=".6"/>'}
 ];
 const BOTTOM=[
  {nm:'フリルスカート',pals:[PAL.pink,PAL.lav,PAL.sky,PAL.mint,PAL.lemon,PAL.red],
@@ -495,7 +553,12 @@ const BOTTOM=[
   d:c=>'<path d="M158,520 C164,420 184,344 196,328 L244,328 C256,344 276,420 282,520 C282,534 268,538 260,528 C252,520 246,524 238,530 C228,538 212,538 202,530 C194,524 188,520 180,528 C172,538 158,534 158,520 Z" fill="'+c.a+'" '+O+'/>'+
    '<path d="M204,336 C196,400 192,470 194,524 M236,336 C244,400 248,470 246,524" stroke="'+c.b+'" stroke-width="4" fill="none" opacity=".5"/>'+
    '<path d="'+scal(162,278,524,7,8)+'" stroke="'+c.c+'" stroke-width="6" fill="none" opacity=".9"/>'+
-   '<path d="M190,328 h60 v9 h-60 Z" fill="'+c.b+'"/>'}
+   '<path d="M190,328 h60 v9 h-60 Z" fill="'+c.b+'"/>'},
+ {nm:'チェックスカート',pals:[PAL.bordeaux,PAL.rose,PAL.navy,PAL.sage,PAL.beige,PAL.black],
+  d:c=>'<path d="M174,392 C178,352 190,332 197,328 L243,328 C250,332 262,352 266,392 C246,404 194,404 174,392 Z" fill="'+c.a+'" '+O+'/>'+
+   '<g stroke="'+c.b+'" stroke-width="5" opacity=".5"><path d="M182,352 h76 M176,374 h88"/><path d="M197,330 L191,396 M220,330 v70 M243,330 L249,396"/></g>'+
+   '<g stroke="#fff" stroke-width="1.6" opacity=".8"><path d="M180,362 h80 M208,330 L205,399 M232,330 L235,399"/></g>'+
+   '<path d="M190,326 h60 v8 h-60 Z" fill="'+c.b+'"/>'}
 ];
 const SOCKS=[
  {nm:'しろソックス',pals:[PAL.white,PAL.pink,PAL.sky,PAL.mint,PAL.lemon,PAL.black],
@@ -534,7 +597,16 @@ const SHOES=[
  {nm:'サンダル',pals:[PAL.lemon,PAL.pink,PAL.sky,PAL.mint,PAL.white,PAL.red],
   d:c=>{const s='<path d="M186,558 C186,554 217,554 217,558 L217,561 C217,566 186,566 186,561 Z" fill="'+c.a+'" '+O+'/>'+
    '<path d="M190,557 L201,548 L212,557" stroke="'+c.b+'" stroke-width="4.5" fill="none" stroke-linecap="round"/>'+
-   heart(201,547,4,c.b);return s+MIR(s);}}
+   heart(201,547,4,c.b);return s+MIR(s);}},
+ {nm:'ヒールブーツ',pals:[PAL.black,PAL.beige,PAL.bordeaux,PAL.rose,PAL.white,PAL.navy],
+  d:c=>{const s='<path d="M189,506 L213,506 L215,548 C221,551 224,556 223,561 C222,566 206,567 200,565 L198,556 L193,556 C188,554 186,548 188,540 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="M214,559 L222,559 L221,569 L215,569 Z" fill="'+c.b+'"/>'+
+   '<path d="M188,506 h27 v9 h-27 Z" fill="'+c.b+'"/>';return s+MIR(s);}},
+ {nm:'ローファー',pals:[PAL.black,PAL.bordeaux,PAL.beige,PAL.navy,PAL.rose,PAL.white],
+  d:c=>{const s='<path d="M186,548 C186,540 216,540 216,548 L217,556 C217,562 208,565 201,565 C194,565 185,562 185,556 Z" fill="'+c.a+'" '+O+'/>'+
+   '<path d="M190,546 h23" stroke="'+c.b+'" stroke-width="5"/>'+
+   '<path d="M185,559 C192,564 210,564 217,559" stroke="#fff" stroke-width="3" fill="none" opacity=".7"/>'+
+   '<circle cx="201" cy="546" r="2.5" fill="'+c.c+'"/>';return s+MIR(s);}}
 ];
 const HEADACC=[
  {nm:'ティアラ',pals:[PAL.lemon,PAL.pink,PAL.sky,PAL.lav,PAL.white,PAL.mint],
@@ -566,7 +638,10 @@ const HEADACC=[
    '<path d="M222,58 C226,30 240,6 262,2 C258,22 274,40 276,58 Q250,70 222,58 Z" fill="'+c.a+'" '+O+'/>'+
    '<path d="M226,52 h48" stroke="'+c.b+'" stroke-width="8"/>'+star(262,26,7,c.c)+'</g>'},
  {nm:'ハートピン',pals:[PAL.pink,PAL.red,PAL.lemon,PAL.sky,PAL.lav,PAL.mint],
-  d:c=>heart(174,74,10,c.a)+heart(192,62,7,c.b)}
+  d:c=>heart(174,74,10,c.a)+heart(192,62,7,c.b)},
+ {nm:'パールカチューシャ',pals:[PAL.white,PAL.rose,PAL.lemon,PAL.black,PAL.lav,PAL.mint],
+  d:c=>'<path d="M160,86 C178,58 262,58 280,86" stroke="'+c.b+'" stroke-width="5" fill="none" stroke-linecap="round"/>'+
+   '<g fill="'+c.a+'" stroke="#fff" stroke-width="1.4"><circle cx="170" cy="75" r="4.5"/><circle cx="186" cy="65" r="4.5"/><circle cx="203" cy="59" r="4.5"/><circle cx="220" cy="57" r="4.5"/><circle cx="237" cy="59" r="4.5"/><circle cx="254" cy="65" r="4.5"/><circle cx="270" cy="75" r="4.5"/></g>'}
 ];
 const FACEACC=[
  {nm:'まるめがね',pals:[PAL.red,PAL.navy,PAL.pink,PAL.black,PAL.sky,PAL.lemon],
@@ -633,7 +708,13 @@ const HAND=[
   d:c=>'<path d="M150,360 C146,320 132,290 136,250" stroke="#b99" stroke-width="2.5" fill="none"/>'+
    '<ellipse cx="136" cy="222" rx="26" ry="31" fill="'+c.a+'" '+O+'/>'+
    '<path d="M136,252 l-5,8 h10 Z" fill="'+c.b+'"/>'+
-   '<ellipse cx="128" cy="212" rx="7" ry="10" fill="#fff" opacity=".55" transform="rotate(-18 128 212)"/>'}
+   '<ellipse cx="128" cy="212" rx="7" ry="10" fill="#fff" opacity=".55" transform="rotate(-18 128 212)"/>'},
+ {nm:'スマホ',pals:[PAL.rose,PAL.black,PAL.sky,PAL.lemon,PAL.lav,PAL.white],
+  d:c=>'<g transform="rotate(-14 152 356)"><rect x="139" y="326" width="27" height="50" rx="6" fill="'+c.a+'" '+O+'/>'+
+   '<rect x="143" y="334" width="19" height="30" rx="2" fill="#fdfdff"/>'+
+   '<circle cx="152.5" cy="370" r="2.5" fill="'+c.c+'"/><circle cx="147" cy="330.5" r="1.5" fill="#3a3340"/>'+
+   heart(152.5,348,5,'#ffa8c8')+
+   '<path d="M164,328 q8,-8 4,-16" stroke="'+c.b+'" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="169" cy="309" r="3.5" fill="'+c.b+'"/></g>'}
 ];
 const BG=[
  {nm:'おへや',d:()=>'<rect width="440" height="660" fill="#fff4ec"/>'+
@@ -688,8 +769,30 @@ const BG=[
  {nm:'パステル',d:()=>'<rect width="440" height="660" fill="#fdf3ff"/>'+
   '<g fill="#ffd9ec"><circle cx="50" cy="60" r="16"/><circle cx="200" cy="40" r="12"/><circle cx="350" cy="70" r="16"/><circle cx="120" cy="170" r="12"/><circle cx="290" cy="180" r="13"/><circle cx="420" cy="180" r="11"/><circle cx="40" cy="300" r="13"/><circle cx="390" cy="320" r="14"/><circle cx="60" cy="460" r="13"/><circle cx="400" cy="480" r="12"/><circle cx="150" cy="580" r="14"/><circle cx="330" cy="600" r="13"/></g>'+
   '<g fill="#d9e8ff"><circle cx="120" cy="90" r="10"/><circle cx="280" cy="110" r="11"/><circle cx="410" cy="120" r="9"/><circle cx="70" cy="220" r="10"/><circle cx="350" cy="250" r="10"/><circle cx="30" cy="390" r="10"/><circle cx="410" cy="400" r="10"/><circle cx="100" cy="540" r="11"/><circle cx="260" cy="620" r="10"/></g>'+
-  star(160,240,8,'#f7e07a')+star(310,420,8,'#f7e07a')+star(80,600,7,'#ffb1d4')}
+  star(160,240,8,'#f7e07a')+star(310,420,8,'#f7e07a')+star(80,600,7,'#ffb1d4')},
+ {nm:'カフェ',d:()=>'<rect width="440" height="660" fill="#f6ecdd"/>'+
+  '<rect y="440" width="440" height="60" fill="#e2cdb2"/><path d="M0,440 h440" stroke="#cbb190" stroke-width="4"/>'+
+  '<rect y="500" width="440" height="160" fill="#c9a37a"/><path d="M0,545 h440 M0,590 h440 M0,635 h440" stroke="#b8905f" stroke-width="3" opacity=".6"/>'+
+  '<path d="M110,500 v45 M330,545 v45 M220,590 v45" stroke="#b8905f" stroke-width="3" opacity=".6"/>'+
+  '<rect x="34" y="90" width="140" height="200" rx="8" fill="#f7d9b0" stroke="#fff" stroke-width="9"/><path d="M104,90 v200 M34,190 h140" stroke="#fff" stroke-width="7"/>'+
+  '<circle cx="72" cy="142" r="18" fill="#ffcf8a"/>'+
+  '<path d="M300,0 v70 M370,0 v96" stroke="#8a7460" stroke-width="4"/>'+
+  '<circle cx="300" cy="104" r="16" fill="#ffe9b0" opacity=".5"/><circle cx="370" cy="130" r="16" fill="#ffe9b0" opacity=".5"/>'+
+  '<path d="M282,70 h36 l-6,26 h-24 Z" fill="#e8b05f"/><circle cx="300" cy="100" r="6" fill="#fff3d2"/>'+
+  '<path d="M352,96 h36 l-6,26 h-24 Z" fill="#e8b05f"/><circle cx="370" cy="126" r="6" fill="#fff3d2"/>'+
+  '<rect x="196" y="120" width="86" height="110" rx="6" fill="#5a4a3c"/><rect x="202" y="126" width="74" height="98" rx="4" fill="#6b594a"/>'+
+  '<path d="M210,144 h56 M210,162 h44 M210,180 h52 M210,198 h38" stroke="#f2e6d2" stroke-width="4" stroke-linecap="round" opacity=".85"/>'+
+  '<rect x="330" y="382" width="102" height="13" rx="6" fill="#9a6a4a"/><rect x="372" y="395" width="13" height="105" fill="#9a6a4a"/>'+
+  '<path d="M350,366 h24 v12 c0,6 -24,6 -24,0 Z" fill="#fff"/><path d="M375,368 q9,4 0,9" stroke="#fff" stroke-width="3.5" fill="none"/>'+
+  '<path d="M355,358 q3,-6 0,-11 M365,358 q3,-6 0,-11" stroke="#cbb190" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+  '<path d="M60,468 q-16,-40 8,-64 q4,34 12,44 q10,-30 26,-38 q-4,34 -14,50 Z" fill="#8fb480"/>'+
+  '<path d="M52,468 h48 l-6,30 h-36 Z" fill="#c47a5a"/>'+
+  '<path d="M0,40 C80,70 180,20 260,44 C330,64 400,30 440,48" stroke="#b9a48a" stroke-width="2.5" fill="none"/>'+
+  '<g fill="#ffd98a"><circle cx="40" cy="52" r="4"/><circle cx="100" cy="57" r="4"/><circle cx="160" cy="37" r="4"/><circle cx="220" cy="40" r="4"/><circle cx="280" cy="51" r="4"/><circle cx="340" cy="45" r="4"/><circle cx="400" cy="36" r="4"/></g>'}
 ];
+/* mature dusty-color additions to existing favorites */
+[DRESS[0],DRESS[5],TOP[0],TOP[1],TOP[4],TOP[5],BOTTOM[0],BOTTOM[1],SHOES[0],SHOES[1],HEADACC[1],NECK[0]].forEach(function(it){it.pals.push(PAL.rose,PAL.beige);});
+[DRESS[1],BOTTOM[2],HEADACC[0]].forEach(function(it){it.pals.push(PAL.bordeaux);});
 /* ================= registry ================= */
 const DB={
  hair:{lb:'かみがた',ic:'🎀',items:HAIR,crop:'90 10 260 300',opt:false},
@@ -698,8 +801,8 @@ const DB={
  dress:{lb:'ドレス',ic:'👗',items:DRESS,crop:'100 220 240 320',opt:true},
  top:{lb:'トップス',ic:'👚',items:TOP,crop:'120 225 200 150',opt:true},
  bottom:{lb:'スカート',ic:'🌸',items:BOTTOM,crop:'110 300 220 180',opt:true},
- socks:{lb:'くつした',ic:'🧦',items:SOCKS,crop:'150 400 140 145',opt:true},
- shoes:{lb:'くつ',ic:'👟',items:SHOES,crop:'140 440 160 112',opt:true},
+ socks:{lb:'くつした',ic:'🧦',items:SOCKS,crop:'150 408 140 146',opt:true},
+ shoes:{lb:'くつ',ic:'👟',items:SHOES,crop:'140 452 160 114',opt:true},
  head:{lb:'あたま',ic:'👑',items:HEADACC,crop:'110 0 220 140',opt:true},
  faceacc:{lb:'かおアクセ',ic:'👓',items:FACEACC,crop:'140 110 160 110',opt:true},
  neck:{lb:'くび',ic:'📿',items:NECK,crop:'160 230 120 70',opt:true},
@@ -752,7 +855,7 @@ function drawDoll(){
 function stageInner(withSpark){
  const bg=BG[S.bg.i]||BG[0];
  let s='<g>'+bg.d()+'</g>';
- s+='<ellipse cx="220" cy="574" rx="86" ry="13" fill="rgba(120,80,140,.16)"/>';
+ s+='<ellipse cx="220" cy="586" rx="86" ry="13" fill="rgba(120,80,140,.16)"/>';
  s+='<g id="dollG" class="bob">'+drawDoll()+'</g>';
  if(withSpark){
   s+='<g pointer-events="none">'+
