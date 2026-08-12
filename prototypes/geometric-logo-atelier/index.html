@@ -677,8 +677,23 @@ function render(animate) {
   }
 }
 
-/* ── ダウンロード ── */
+/* ── ダウンロード ──
+   claude.ai Artifact ビューア内では window.claude.downloads 経由で保存を提案し、
+   通常のブラウザ（file:// 含む）ではアンカー要素で直接保存する */
 function download(name, blob) {
+  if (window.claude && window.claude.downloads) {
+    window.claude.downloads.save({ filename: name, data: blob }).catch(e => {
+      const code = e && e.code;
+      if (code === 'declined') return;                     // 利用者が断った: 何もしない
+      if (code === 'extension_not_enabled') {
+        alert('この環境ではSVG形式の保存が許可されていません。PNGをご利用ください。');
+      } else if (code === 'rate_limited') {
+        alert('保存の確認が開いています。少し待ってからもう一度お試しください。');
+      }
+      // unavailable 等はここでは通知しない（保存UI自体は他環境で有効）
+    });
+    return;
+  }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
