@@ -28,7 +28,7 @@
 //  16  every named outbreak spawns its own swarm
 //  17  the clock advances only while surviving, and freezes for every boss
 //  18  a boss killed by ordinary damage actually clears the stage
-//  19  every string the game shows the player is Japanese
+//  19  every string the game shows the player is hiragana only
 //
 // Weakening a check, deleting one, or relaxing an expectation to force a
 // pass is forbidden (CONSTRAINTS.md Part I §6).
@@ -275,7 +275,7 @@ if (results[3].ok){
     startGame();
     assert(G.state === 'play', 'state after START is not play: ' + G.state);
     assert(G.stageIndex === 0, 'did not begin at stage 1: ' + G.stageIndex);
-    assert(G.stageName === '腐蝕の野', 'stage 1 name wrong: ' + G.stageName);
+    assert(G.stageName === 'くさった のはら', 'stage 1 name wrong: ' + G.stageName);
     assert(G.level === 1 && G.kills === 0, 'run did not start clean');
     assert(G.build.weapons.katana === 1, 'the katana is not the starting weapon: ' + JSON.stringify(G.build));
     assert(G.katanaLv === 1 && G.scrollCount === 0, 'the blade did not start unsharpened');
@@ -367,10 +367,10 @@ if (results[6].ok){
 
 // ---------- 9 + 10. the stage chain and the ultimate gate ----------
 const EXPECT = [
-  { idx: 0, boss: 'horde',  name: '腐蝕の野', clock: 80 },
-  { idx: 1, boss: 'frost',  name: '氷結の原', clock: 175 },
-  { idx: 2, boss: 'storm',  name: '雷鳴の峰', clock: 270 },
-  { idx: 3, boss: 'dragon', name: '竜の巣',   clock: 300 }
+  { idx: 0, boss: 'horde',  name: 'くさった のはら',   clock: 80 },
+  { idx: 1, boss: 'frost',  name: 'こおりの せかい',   clock: 175 },
+  { idx: 2, boss: 'storm',  name: 'かみなりの やま',   clock: 270 },
+  { idx: 3, boss: 'dragon', name: 'どらごんの す',     clock: 300 }
 ];
 const clockAtBoss = [];
 let chainOk = false, chainDetail = '', ultOk = false, ultDetail = '';
@@ -479,7 +479,7 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
     env.pump(3);
     assert(G.state === 'play', 'replay did not enter play: ' + G.state);
     assert(G.stageIndex === 0, 'replay did not return to stage 1: ' + G.stageIndex);
-    assert(G.stageName === '腐蝕の野', 'replay stage name: ' + G.stageName);
+    assert(G.stageName === 'くさった のはら', 'replay stage name: ' + G.stageName);
     assert(G.level === 1, 'replay kept the old level: ' + G.level);
     assert(G.kills === 0, 'replay kept the old kills: ' + G.kills);
     assert(G.bossAlive === false, 'replay kept a boss alive');
@@ -649,15 +649,21 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
   record(18, 'a boss killed by ordinary damage clears the stage', ok, detail);
 }
 
-// ---------- 19. every string shown to the player is Japanese ----------
+// ---------- 19. every string shown to the player is hiragana only ----------
 {
   let ok = false, detail = '';
   try {
-    // 'Lv' is the one Latin token the HUD keeps on purpose, and 'WASD' / 'P'
-    // in the title screen are the names of physical keys. Everything else the
-    // player reads has to be Japanese.
-    const ALLOWED = /Lv|WASD|\bP\b/g;
-    const latin = s => s.replace(ALLOWED, '').match(/[A-Za-z]{1,}/g);
+    // The game is written for a young reader: no kanji, no katakana, nothing
+    // but hiragana. 'WASD' and 'P' survive because they are the names printed
+    // on physical keys, and U+30FC (ー) survives because hiragana spellings of
+    // borrowed words need it (どらごん・ふぉーる). Anything else fails.
+    const ALLOWED = /WASD|\bP\b/g;
+    const strip = t => t.replace(ALLOWED, '');
+    const latin = s => strip(s).match(/[A-Za-z]+/g);
+    const kanji = s => strip(s).match(/[\u3400-\u9FFF\uF900-\uFAFF]/g);
+    // katakana block minus the prolonged sound mark ー (U+30FC)
+    const kana  = s => strip(s).match(/[\u30A1-\u30FB\u30FD-\u30FF\uFF66-\uFF9D]/g);
+    const wrong = s => { const h = [].concat(latin(s) || [], kanji(s) || [], kana(s) || []); return h.length ? h : null; };
 
     // -- the shipped markup: every text node between <body> and <script> --
     const markup = html.split('<body>')[1].split('<script>')[0];
@@ -665,10 +671,10 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
     for (const m of markup.matchAll(/>([^<>]+)</g)){
       const t = m[1].replace(/&[a-z]+;/g, ' ').trim();
       if (!t) continue;
-      const hit = latin(t);
+      const hit = wrong(t);
       if (hit) markupBad.push(t + '  <- ' + hit.join(','));
     }
-    assert(!markupBad.length, 'English left in the markup: ' + markupBad.join(' | '));
+    assert(!markupBad.length, 'not hiragana in the markup: ' + markupBad.join(' | '));
 
     // -- everything written or painted during a run that touches every screen --
     SHOWN.length = 0;
@@ -687,12 +693,12 @@ record(10, 'the ultimate items appear only in the final stage', ultOk, ultDetail
     }
     assert(SHOWN.length > 60, 'the sweep barely showed anything: ' + SHOWN.length + ' strings');
     const bad = [];
-    for (const t of SHOWN){ const hit = latin(t); if (hit) bad.push(t + '  <- ' + hit.join(',')); }
-    assert(!bad.length, 'English shown to the player: ' + [...new Set(bad)].slice(0, 8).join(' | '));
-    detail = SHOWN.length + ' strings shown, all Japanese';
+    for (const t of SHOWN){ const hit = wrong(t); if (hit) bad.push(t + '  <- ' + hit.join(',')); }
+    assert(!bad.length, 'not hiragana on screen: ' + [...new Set(bad)].slice(0, 8).join(' | '));
+    detail = SHOWN.length + ' strings shown, all hiragana';
     ok = true;
   } catch (e){ detail = String(e && e.message || e); }
-  record(19, 'every string the game shows the player is Japanese', ok, detail);
+  record(19, 'every string the game shows the player is hiragana only', ok, detail);
 }
 
 releaseAll();

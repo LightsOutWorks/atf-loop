@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>ドラゴンフォール</title>
+<title>どらごん ふぉーる</title>
 <style>
   :root{
     --accent:#7fe3a0;
@@ -13,8 +13,15 @@
     --line:rgba(255,255,255,.14);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  /* Every line of text is hiragana written with spaces between words, the way
+     a picture book sets it. Chromium would otherwise break CJK between any two
+     characters and split words in half; keep-all confines breaks to the spaces
+     that are already there. anywhere is the escape hatch for a run of text
+     longer than its own line. Both properties inherit, so this is the only
+     place they are set. */
   html,body{height:100%;overflow:hidden;background:#05070b;color:var(--ink);
-    font-family:sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
+    font-family:sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;
+    word-break:keep-all;overflow-wrap:anywhere}
   #stage{position:fixed;inset:0;overflow:hidden}
   #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 
@@ -71,9 +78,10 @@
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:14px;padding:24px;text-align:center;
     background:radial-gradient(ellipse at 50% 40%,rgba(10,14,20,.86),rgba(3,5,8,.97))}
-  .big{font-size:clamp(28px,8vw,58px);font-weight:800;letter-spacing:.08em;line-height:1.15}
+  .big{font-size:clamp(26px,7.4vw,54px);font-weight:800;letter-spacing:.08em;line-height:1.2;
+    text-wrap:balance}
   .sub{font-size:clamp(11px,2.6vw,14px);letter-spacing:.1em;color:var(--dim);line-height:1.7}
-  .body{font-size:13px;line-height:1.95;color:#c3ccd5;max-width:600px;word-break:auto-phrase}
+  .body{font-size:13px;line-height:1.95;color:#c3ccd5;max-width:600px}
   .body b{color:var(--accent);font-weight:700}
   .btn{pointer-events:auto;cursor:pointer;border:1px solid var(--accent);color:#03110a;
     background:var(--accent);font:inherit;font-weight:700;letter-spacing:.1em;font-size:15px;
@@ -126,69 +134,70 @@
   <div id="hud" class="hidden">
     <div id="topbar">
       <div>
-        <div id="stageName">第一章 &mdash; 腐蝕の野</div>
-        <div id="phaseTag">生存</div>
+        <div id="stageName">すてーじ1 &mdash; くさった のはら</div>
+        <div id="phaseTag">いきのこれ</div>
       </div>
       <div id="timer">0:00</div>
     </div>
     <div id="hpwrap" class="bar"><i id="hpfill"></i><span id="hptext" class="barTxt">100 / 100</span></div>
     <div id="xpwrap" class="bar"><i id="xpfill"></i></div>
-    <div id="statline">Lv 1 &middot; 討伐 0</div>
+    <div id="statline">れべる1 &middot; たおした 0</div>
     <div id="loadout"></div>
 
     <div id="bosswrap" class="hidden">
-      <div id="bossname">ボス</div>
+      <div id="bossname">ぼす</div>
       <div id="bossbar" class="bar"><i id="bossfill"></i></div>
       <div id="bossnote"></div>
     </div>
 
-    <div id="toast"><span id="toastMain">用意</span><span id="toastSub"></span></div>
+    <div id="toast"><span id="toastMain">よういは いい？</span><span id="toastSub"></span></div>
     <div id="joy"><div id="joyKnob"></div></div>
   </div>
 
   <div id="title" class="overlay">
-    <div class="sub">三つの地を越え、最後に待つものを討て</div>
-    <div class="big">ドラゴンフォール</div>
+    <div class="sub">みっつの ばしょを こえて<br>さいごに まってる やつを たおせ</div>
+    <div class="big">どらごん ふぉーる</div>
     <div id="stageList">
-      <div><i>第一章</i><b>腐蝕の野</b><em>屍群の王</em></div>
-      <div><i>第二章</i><b>氷結の原</b><em>氷獄の王</em></div>
-      <div><i>第三章</i><b>雷鳴の峰</b><em>雷帝</em></div>
-      <div><i>最終章</i><b>竜の巣</b><em>終焉の竜</em></div>
+      <div><i>すてーじ1</i><b>くさった のはら</b><em>ぞんびの おうさま</em></div>
+      <div><i>すてーじ2</i><b>こおりの せかい</b><em>こおりの まおう</em></div>
+      <div><i>すてーじ3</i><b>かみなりの やま</b><em>かみなりの まじん</em></div>
+      <div><i>さいご</i><b>どらごんの す</b><em>さいごの どらごん</em></div>
     </div>
     <div class="body">
-      攻撃は自動。選ぶのは<b>どこに立つか</b>と<b>何になるか</b>だけ。<br>
-      移動は<b>WASD / 矢印キー</b>。<br>
-      スマホは<b>画面のどこでもドラッグ</b>。一時停止は<b>P</b>。<br>
-      強い装備は先の章にしか出ない。<br>
-      <b>最強</b>は最終章で待っている。
+      こうげきは じどう。きみが きめるのは<br>
+      <b>どこに たつか</b> と <b>なにに なるか</b> だけ。<br>
+      うごかす： <b>WASD</b> か <b>やじるし</b>。<br>
+      すまほは <b>がめんを ゆびで なぞる</b>。やすむ： <b>P</b>。<br>
+      つよい ぶきは あとの すてーじにしか でない。<br>
+      <b>さいきょう</b>は さいごの すてーじで まってる。
     </div>
     <button id="startBtn" class="btn">はじめる</button>
   </div>
 
   <div id="levelup" class="overlay hidden">
-    <div class="sub" id="luSub">レベルアップ</div>
-    <div class="big" id="luTitle" style="font-size:clamp(20px,5vw,34px)">ひとつ選べ</div>
+    <div class="sub" id="luSub">れべる あっぷ</div>
+    <div class="big" id="luTitle" style="font-size:clamp(20px,5vw,34px)">ひとつ えらぼう</div>
     <div id="cards">
       <div class="card" id="card0"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
       <div class="card" id="card1"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
       <div class="card" id="card2"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
     </div>
-    <div id="cardHint">カードをクリック／タップ &middot; キー 1 2 3</div>
+    <div id="cardHint">かーどを おそう &middot; 1 2 3 の きーでも えらべる</div>
   </div>
 
   <div id="clear" class="overlay hidden">
-    <div class="sub" id="clearSub">ステージクリア</div>
-    <div class="big" id="clearTitle">屍群の王 撃破</div>
+    <div class="sub" id="clearSub">すてーじ くりあ</div>
+    <div class="big" id="clearTitle">ぞんびの おうさま を たおした</div>
     <div class="body" id="clearBody"></div>
     <div class="statGrid" id="clearStats"></div>
-    <button id="nextBtn" class="btn">次の章へ</button>
+    <button id="nextBtn" class="btn">つぎへ すすむ</button>
   </div>
 
   <div id="over" class="overlay hidden">
-    <div class="sub" id="overSub">腐蝕の野で倒れた</div>
-    <div class="big" id="overTitle">力尽きた</div>
+    <div class="sub" id="overSub">くさった のはらで たおれた</div>
+    <div class="big" id="overTitle">やられた</div>
     <div class="statGrid" id="overStats"></div>
-    <button id="replayBtn" class="btn">もう一度</button>
+    <button id="replayBtn" class="btn">もういちど</button>
   </div>
 </div>
 <script>
@@ -247,48 +256,48 @@ function setAccent(c){
 // ============================================================
 var STAGES = [
   {
-    id: 'rot', label: '第一章', name: '腐蝕の野',
+    id: 'rot', label: 'すてーじ1', name: 'くさった のはら',
     accent: '#7fe3a0', fog: 'rgba(12,26,16,0.55)',
     ground: ['#0d1711', '#070c09'], grid: 'rgba(120,200,150,0.06)', deco: 'grave',
     end: 80, tier: 1, hpMul: 1.0, spawnBase: 1.45, burst: 2,
     enemies: [['walker', 44], ['runner', 20], ['rothound', 22], ['bloater', 8], ['beetle', 6]],
     events: ['rot', 'hounds', 'shrike'],
-    boss: 'horde', bossName: '屍群の王',
-    line: '死者は疲れない。ただ増えていくだけだ。',
-    clockLine: '五分後、あれが目を覚ます',
-    clearLine: '屍の山が動きを止めた。下から冷たい風が吹き上げる。'
+    boss: 'horde', bossName: 'ぞんびの おうさま',
+    line: 'しんだ ものは つかれない。ふえて いくだけ。',
+    clockLine: '5ふんごに あいつが おきる',
+    clearLine: 'ぞんびの やまが とまった。したから つめたい かぜが きた。'
   },
   {
-    id: 'ice', label: '第二章', name: '氷結の原',
+    id: 'ice', label: 'すてーじ2', name: 'こおりの せかい',
     accent: '#7fd3ff', fog: 'rgba(20,40,60,0.5)',
     ground: ['#0c1620', '#060b12'], grid: 'rgba(150,220,255,0.07)', deco: 'ice',
     end: 175, tier: 2, hpMul: 1.9, spawnBase: 1.02, burst: 2,
     enemies: [['shade', 32], ['shardling', 24], ['brute', 18], ['beetle', 14], ['onibi', 12]],
     events: ['rot', 'swarm', 'shrike', 'yokai'],
-    boss: 'frost', bossName: '氷獄の王',
-    line: '床は氷。止まりたい場所では止まれない。',
-    clearLine: '氷が割れた。はるか上で、すでに何かが鳴っている。'
+    boss: 'frost', bossName: 'こおりの まおう',
+    line: 'ゆかは こおり。とまりたい ところで とまれない。',
+    clearLine: 'こおりが われた。ずっと うえで なにかが なってる。'
   },
   {
-    id: 'thunder', label: '第三章', name: '雷鳴の峰',
+    id: 'thunder', label: 'すてーじ3', name: 'かみなりの やま',
     accent: '#ffe27f', fog: 'rgba(40,36,60,0.5)',
     ground: ['#161426', '#08070f'], grid: 'rgba(255,225,150,0.06)', deco: 'pylon',
     end: 270, tier: 3, hpMul: 3.4, spawnBase: 0.90, burst: 3,
     enemies: [['wisp', 28], ['hound', 24], ['sentinel', 18], ['tengu', 18], ['onibi', 12]],
     events: ['yokai', 'swarm', 'shrike', 'hounds'],
-    boss: 'storm', bossName: '雷帝',
-    line: '攻撃はすべて予告される。驚くのは、遅い者だけだ。',
-    clearLine: '嵐が内側へ崩れていく。巨大な何かが息を吸った。'
+    boss: 'storm', bossName: 'かみなりの まじん',
+    line: 'こうげきは ぜんぶ さきに わかる。おどろくのは おそい やつだけ。',
+    clearLine: 'あらしが くずれた。おおきな なにかが いきを すった。'
   },
   {
-    id: 'roost', label: '最終章', name: '竜の巣',
+    id: 'roost', label: 'さいごの すてーじ', name: 'どらごんの す',
     accent: '#ff9b5a', fog: 'rgba(50,20,14,0.5)',
     ground: ['#1a0e0a', '#0a0505'], grid: 'rgba(255,150,90,0.07)', deco: 'ember',
     end: 300, tier: 4, hpMul: 5.2, spawnBase: 1.55, burst: 2,
     enemies: [['oni', 18], ['onibi', 22], ['tengu', 20], ['beetle', 14], ['hound', 16], ['walker', 10]],
     events: ['yokai', 'shrike', 'rot'],
-    boss: 'dragon', bossName: '終焉の竜',
-    line: '奴は、最初から起きていた。',
+    boss: 'dragon', bossName: 'さいごの どらごん',
+    line: 'あいつは さいしょから おきていた。',
     clearLine: ''
   }
 ];
@@ -300,74 +309,74 @@ var STAGES = [
 // ============================================================
 var ITEMS = {
   // ---- the katana: never offered as a card. Scrolls sharpen it, nothing else. ----
-  katana: { kind: 'weapon', tier: 0, max: 6, name: '日本刀', scroll: true,
+  katana: { kind: 'weapon', tier: 0, max: 6, name: 'かたな', scroll: true,
     desc: function(l){
-      if (l >= KATANA_AWAKEN_LV) return '覚醒。全周を薙ぎ払って' + bd(340) +
-        'ダメージ。妖怪には二倍、斬るたびに衝撃波が走る。';
-      return (1 + Math.floor((l - 1) / 2)) + '本の斬撃で' + bd(26 + 26 * (l - 1)) +
-        'ダメージ。妖怪には二倍。巻物十六個で一段階研ぎ上がる。';
+      if (l >= KATANA_AWAKEN_LV) return 'めざめた。まわり ぜんぶを ' + bd(340) +
+        'の だめーじで なぎはらう。ようかいには 2ばい。きるたびに しょうげきはが でる。';
+      return (1 + Math.floor((l - 1) / 2)) + 'かいの きりつけで ' + bd(26 + 26 * (l - 1)) +
+        'の だめーじ。ようかいには 2ばい。まきもの 16こで 1だんかい つよくなる。';
     } },
 
   // ---- tier 1 weapons ----
-  blade: { kind: 'weapon', tier: 1, max: 8, name: '剣閃',
-    desc: function(l){ return '一番近い敵へ' + (l >= 7 ? '三連の' : l >= 4 ? '二連の' : '大きな') +
-      '弧を薙ぐ。' + bd(16 + 8 * l) + 'ダメージ、間合い' + Math.round(96 + 11 * l) + '。'; } },
-  shard: { kind: 'weapon', tier: 1, max: 8, name: '骨片',
-    desc: function(l){ return '追尾する骨片を' + (1 + Math.floor(l / 2)) + '本投げる。1本' +
-      bd(10 + 5 * l) + 'ダメージ' + (l >= 5 ? '、敵を1体多く貫通する' : '') + '。'; } },
-  orb: { kind: 'weapon', tier: 1, max: 8, name: '炎の珠',
-    desc: function(l){ return (2 + Math.floor((l - 1) / 2)) + '個の火の玉が周りを回り、触れた敵を' +
-      bd(9 + 5 * l) + '焼く。回転半径' + Math.round(74 + 7 * l) + '。'; } },
+  blade: { kind: 'weapon', tier: 1, max: 8, name: 'なぎはらい',
+    desc: function(l){ return 'いちばん ちかい てきを ' + (l >= 7 ? '3かい' : l >= 4 ? '2かい' : 'おおきく') +
+      ' なぎはらう。' + bd(16 + 8 * l) + 'の だめーじ、とどく ながさ ' + Math.round(96 + 11 * l) + '。'; } },
+  shard: { kind: 'weapon', tier: 1, max: 8, name: 'ほねの かけら',
+    desc: function(l){ return 'おいかける ほねを ' + (1 + Math.floor(l / 2)) + 'こ なげる。1こ ' +
+      bd(10 + 5 * l) + 'の だめーじ' + (l >= 5 ? '。てきを 1たい おおく つらぬく' : '') + '。'; } },
+  orb: { kind: 'weapon', tier: 1, max: 8, name: 'ひのたま',
+    desc: function(l){ return (2 + Math.floor((l - 1) / 2)) + 'この ひのたまが まわりを まわって、さわった てきを ' +
+      bd(9 + 5 * l) + ' やく。まわる おおきさ ' + Math.round(74 + 7 * l) + '。'; } },
 
   // ---- tier 2 weapons ----
-  nova: { kind: 'weapon', tier: 2, max: 8, name: '氷結波',
-    desc: function(l){ return '冷気の輪が外へ広がって' + bd(24 + 12 * l) +
-      'ダメージ。触れた敵すべてを' + Math.round(40 + 3 * l) + '%鈍らせる。'; } },
-  icicle: { kind: 'weapon', tier: 2, max: 8, name: '氷柱の雨',
-    desc: function(l){ return '貫通する氷柱を' + (3 + Math.floor(l / 2)) + '本撃つ。1本' +
-      bd(16 + 8 * l) + 'ダメージ、' + (2 + Math.floor(l / 3)) + '体まで貫く。'; } },
+  nova: { kind: 'weapon', tier: 2, max: 8, name: 'こおりの なみ',
+    desc: function(l){ return 'つめたい わが そとへ ひろがって ' + bd(24 + 12 * l) +
+      'の だめーじ。さわった てき ぜんぶを ' + Math.round(40 + 3 * l) + '% おそくする。'; } },
+  icicle: { kind: 'weapon', tier: 2, max: 8, name: 'つららの あめ',
+    desc: function(l){ return 'つらぬく つららを ' + (3 + Math.floor(l / 2)) + 'こ うつ。1こ ' +
+      bd(16 + 8 * l) + 'の だめーじ、' + (2 + Math.floor(l / 3)) + 'たいまで つらぬく。'; } },
 
   // ---- tier 3 weapons ----
-  chain: { kind: 'weapon', tier: 3, max: 8, name: '連鎖雷',
-    desc: function(l){ return '雷が最大' + (3 + l) + '体の敵へ飛び移り、跳ぶたびに' +
-      bd(30 + 16 * l) + 'ダメージ。'; } },
-  storm: { kind: 'weapon', tier: 3, max: 8, name: '雷の領域',
-    desc: function(l){ return '半径' + Math.round(88 + 13 * l) +
-      'の帯電領域が、中にいる敵を毎秒' + bd(26 + 13 * l) + '焼き続ける。'; } },
+  chain: { kind: 'weapon', tier: 3, max: 8, name: 'とびうつる かみなり',
+    desc: function(l){ return 'かみなりが さいだい ' + (3 + l) + 'たいの てきへ とびうつって、とぶたびに ' +
+      bd(30 + 16 * l) + 'の だめーじ。'; } },
+  storm: { kind: 'weapon', tier: 3, max: 8, name: 'かみなりの わっか',
+    desc: function(l){ return 'おおきさ ' + Math.round(88 + 13 * l) +
+      'の びりびりした わっかが、なかに いる てきを 1びょうに ' + bd(26 + 13 * l) + ' やきつづける。'; } },
 
   // ---- tier 4: THE ULTIMATE WEAPON (final stage only) ----
-  fang: { kind: 'weapon', tier: 4, max: 5, name: '竜牙', ult: true,
-    desc: function(l){ return '追尾する竜火の槍を' + (2 + l) + '本放つ。着弾で' + bd(95 + 55 * l) +
-      'ダメージ、さらに半径' + Math.round(76 + 10 * l) + 'の爆発' +
-      (l >= 3 ? '。二射に一度、炎の息を吐く。' : '。'); } },
+  fang: { kind: 'weapon', tier: 4, max: 5, name: 'どらごんの きば', ult: true,
+    desc: function(l){ return 'おいかける ほのおの やりを ' + (2 + l) + 'こ とばす。あたると ' + bd(95 + 55 * l) +
+      'の だめーじ、さらに おおきさ ' + Math.round(76 + 10 * l) + 'の ばくはつ' +
+      (l >= 3 ? '。2かいに 1かい ほのおの いきも はく。' : '。'); } },
 
   // ---- tier 1 passives ----
-  vitality: { kind: 'passive', tier: 1, max: 6, name: '生命力',
-    desc: function(){ return '最大体力+28。いますぐ28回復する。'; } },
-  boots: { kind: 'passive', tier: 1, max: 5, name: '疾風の靴',
-    desc: function(){ return '移動速度+9%。立ち位置だけが本当の防御だ。'; } },
-  lodestone: { kind: 'passive', tier: 1, max: 4, name: '引き寄せの石',
-    desc: function(){ return '拾える範囲+35%、得られる経験値+6%。'; } },
+  vitality: { kind: 'passive', tier: 1, max: 6, name: 'たいりょく',
+    desc: function(){ return 'さいだい たいりょく +28。いますぐ 28 かいふくする。'; } },
+  boots: { kind: 'passive', tier: 1, max: 5, name: 'はやい くつ',
+    desc: function(){ return 'うごく はやさ +9%。どこに たつかが いちばんの まもり。'; } },
+  lodestone: { kind: 'passive', tier: 1, max: 4, name: 'ひきよせる いし',
+    desc: function(){ return 'ひろえる はんい +35%、もらえる けいけんち +6%。'; } },
 
   // ---- tier 2 passives ----
-  heart: { kind: 'passive', tier: 2, max: 5, name: '氷の心臓',
-    desc: function(){ return '持っている武器すべての待ち時間-8%。'; } },
-  hide: { kind: 'passive', tier: 2, max: 5, name: '鉄の皮膚',
-    desc: function(){ return 'あらゆる攻撃から受けるダメージ-7%。'; } },
+  heart: { kind: 'passive', tier: 2, max: 5, name: 'こおりの しんぞう',
+    desc: function(){ return 'もっている ぶき ぜんぶの まちじかん -8%。'; } },
+  hide: { kind: 'passive', tier: 2, max: 5, name: 'かたい からだ',
+    desc: function(){ return 'うける だめーじ ぜんぶ -7%。'; } },
 
   // ---- tier 3 passives ----
-  overcharge: { kind: 'passive', tier: 3, max: 6, name: '力の増幅',
-    desc: function(){ return '全武器の与ダメージ+13%。'; } },
-  split: { kind: 'passive', tier: 3, max: 2, name: '分裂核',
-    desc: function(){ return '弾を撃つ武器すべてに、弾を1発追加する。'; } },
+  overcharge: { kind: 'passive', tier: 3, max: 6, name: 'ちからの もと',
+    desc: function(){ return 'ぶき ぜんぶの だめーじ +13%。'; } },
+  split: { kind: 'passive', tier: 3, max: 2, name: 'ふえる たま',
+    desc: function(){ return 'たまを うつ ぶき ぜんぶに、たまを 1つ ふやす。'; } },
 
   // ---- tier 4: THE ULTIMATE PASSIVE (final stage only) ----
-  ancient: { kind: 'passive', tier: 4, max: 1, name: '古代の核', ult: true,
-    desc: function(){ return 'ダメージ+45%、待ち時間-25%、弾+1、移動速度+12%、毎秒2.5回復。竜の宝の山そのものから抜き取った核。'; } }
+  ancient: { kind: 'passive', tier: 4, max: 1, name: 'むかしの ちから', ult: true,
+    desc: function(){ return 'だめーじ +45%、まちじかん -25%、たま +1、はやさ +12%、1びょうに 2.5 かいふく。どらごんの たからの やまから とりだした ちから。'; } }
 };
 function bd(n){ return String(Math.round(n)); }
 
-var TIER_LABEL = ['', '通常', '氷結', '雷鍛', '究極'];
+var TIER_LABEL = ['', 'ふつう', 'こおり', 'かみなり', 'さいきょう'];
 
 // ============================================================
 // RUNTIME STATE
@@ -497,7 +506,7 @@ window.addEventListener('keydown', function(e){
     if (state === 'levelup') chooseCard(parseInt(k, 10) - 1);
   }
   if (k === 'p' || k === 'escape'){
-    if (state === 'play') { state = 'paused'; showToast('一時停止', 'Pキーで再開', 9); }
+    if (state === 'play') { state = 'paused'; showToast('おやすみ ちゅう', 'Pを おすと つづき', 9); }
     else if (state === 'paused') { state = 'play'; toastTimer = 0; }
   }
   if (k === ' ' || k === 'enter'){
@@ -699,11 +708,11 @@ function updateSpawning(dt){
 }
 
 var EVENTS = {
-  rot:    { name: 'ゾンビ大量発生', sub: '地面が死者を吐き出している',        types: ['walker', 'runner', 'bloater'], n: 18, col: '#a8d07a' },
-  hounds: { name: '屍犬の群れ',     sub: 'こいつらは数で狩る',                types: ['rothound'],                    n: 16, col: '#c8e08a' },
-  swarm:  { name: '毒蟲の大発生',   sub: '触れたら毒。当たるな',              types: ['beetle'],                      n: 14, col: '#a8f06a' },
-  yokai:  { name: '百鬼夜行',       sub: '妖怪の行列 ― 刀で斬れ',             types: ['onibi', 'tengu', 'oni'],       n: 14, col: '#c08aff' },
-  shrike: { name: '鉄鵙の斉射',     sub: '着弾する ― 立ち止まるな',           types: ['shrike'],                      n: 4,  col: '#ffd0a0' }
+  rot:    { name: 'ぞんびが どっと でた', sub: 'じめんから しんだ ものが でてくる', types: ['walker', 'runner', 'bloater'], n: 18, col: '#a8d07a' },
+  hounds: { name: 'ぞんびいぬの むれ',    sub: 'かずで おそって くる',              types: ['rothound'],                    n: 16, col: '#c8e08a' },
+  swarm:  { name: 'どくむしが どっと でた', sub: 'さわると どく。あたるな',          types: ['beetle'],                      n: 14, col: '#a8f06a' },
+  yokai:  { name: 'ひゃっき やこう',      sub: 'ようかいの ぎょうれつ ― かたなで きれ', types: ['onibi', 'tengu', 'oni'],    n: 14, col: '#c08aff' },
+  shrike: { name: 'てつの とりが とんでくる', sub: 'あたるぞ ― とまるな',            types: ['shrike'],                      n: 4,  col: '#ffd0a0' }
 };
 
 function runEvent(id){
@@ -738,7 +747,7 @@ function collectScroll(){
   var w = katanaEntry();
   if (!w) return;
   if (w.lv >= ITEMS.katana.max){
-    floatText(player.x, player.y - 34, '巻物', '#ffd9a0');
+    floatText(player.x, player.y - 34, 'まきもの', '#ffd9a0');
     return;
   }
   var into = player.scrolls % SCROLLS_PER_LEVEL;
@@ -752,13 +761,13 @@ function levelKatana(){
   player.katanaLv = w.lv;
   sfx('level');
   if (w.lv >= KATANA_AWAKEN_LV){
-    showToast('刀が覚醒した', 'レベル五を超えた刀は、もう剣ではない', 3.0);
-    floatText(player.x, player.y - 46, '覚醒', '#ff8aa8', true);
+    showToast('かたなが めざめた', 'れべる5を こえた かたなは もう ただの けんじゃない', 3.0);
+    floatText(player.x, player.y - 46, 'めざめた', '#ff8aa8', true);
     flash('255,180,200', 0.6); shake(18);
     fx.push({ kind: 'ring', x: player.x, y: player.y, r0: 10, r1: 340, t: 0, life: 0.7, col: '#ff6a8a', w: 6 });
   } else {
-    showToast('日本刀 Lv' + w.lv, '巻物' + SCROLLS_PER_LEVEL + '個で研ぎ上がった', 1.8);
-    floatText(player.x, player.y - 46, '刀 Lv' + w.lv, '#ffd9a0', true);
+    showToast('かたな れべる' + w.lv, 'まきもの ' + SCROLLS_PER_LEVEL + 'こで つよく なった', 1.8);
+    floatText(player.x, player.y - 46, 'かたな れべる' + w.lv, '#ffd9a0', true);
   }
 }
 
@@ -941,7 +950,7 @@ function updateEnemies(dt){
 function poisonPlayer(){
   var fresh = player.poisonT <= 0;
   player.poisonT = 5.0;
-  if (fresh) floatText(player.x, player.y - 40, '毒', '#a8f06a', true);
+  if (fresh) floatText(player.x, player.y - 40, 'どく', '#a8f06a', true);
 }
 
 function fireEnemyShot(e){
@@ -1262,9 +1271,9 @@ function updatePickups(dt){
       drops.splice(k, 1);
       if (dr.kind === 'heal'){
         player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.25);
-        floatText(player.x, player.y - 30, '回復', '#7fe3a0', true);
+        floatText(player.x, player.y - 30, 'かいふく', '#7fe3a0', true);
       } else {
-        floatText(player.x, player.y - 30, '一掃', '#ffe07a', true);
+        floatText(player.x, player.y - 30, 'みんな けした', '#ffe07a', true);
         flash('255,255,255', 0.55); shake(16); sfx('blast');
         var dmgN = 260 + runTime * 4;
         eachTarget(function(e){ if (!e.isBoss) hurtEnemy(e, dmgN, 0, 0, '#ffffff'); });
@@ -1376,7 +1385,7 @@ var BOSSES = {
       // steep enough that ignoring the horde is wrong, shallow enough that
       // a crowded screen never makes the king mathematically immortal
       b.armorMul = Math.max(0.40, 1 - 0.028 * near);
-      bossNote('屍の護り ' + Math.round((1 - b.armorMul) * 100) + '%  ·  周囲 ' + near + ' 体');
+      bossNote('ぞんびの まもり ' + Math.round((1 - b.armorMul) * 100) + '%  ·  まわりに ' + near + ' たい');
 
       var enraged = b.hp < b.maxHp * 0.5;
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1401,7 +1410,7 @@ var BOSSES = {
             b.x + Math.cos(ang) * rr, b.y + Math.sin(ang) * rr, false, 0.75);
         }
         fx.push({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: b.r + 80, t: 0, life: 0.4, col: '#8fbf74', w: 3 });
-        floatText(b.x, b.y - b.r - 18, '蘇生', '#bfe3a0', true);
+        floatText(b.x, b.y - b.r - 18, 'よみがえる', '#bfe3a0', true);
         sfx('boss', 0.4);
       }
 
@@ -1415,7 +1424,7 @@ var BOSSES = {
       if (b.chargeCd <= 0 && b.charge <= 0){
         b.chargeCd = enraged ? 6.0 : 9.0;
         b.ca = a; b.charge = 1.0;
-        floatText(b.x, b.y - b.r - 30, '突進', '#ffd0a0', true);
+        floatText(b.x, b.y - b.r - 30, 'とっしん', '#ffd0a0', true);
         hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 380, w: 40, tw: 0.6, life: 0.62, dmg: 0, col: '#c8e0a0' });
       }
     },
@@ -1463,7 +1472,7 @@ var BOSSES = {
     init: function(b){ b.ringCd = 3.0; b.spikeCd = 5.2; b.tpCd = 7.0; b.spiral = 0; b.spiralA = 0; },
     update: function(b, dt){
       var enraged = b.hp < b.maxHp * 0.5;
-      bossNote(enraged ? '吹雪 · 空気そのものが足を止める' : '氷の輪の切れ目を抜けろ');
+      bossNote(enraged ? 'ふぶき · くうきが おもくて うごけない' : 'こおりの わの すきまを ぬけろ');
       b.armorMul = 1;
 
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1475,7 +1484,7 @@ var BOSSES = {
         var gap = angTo(b.x, b.y, player.x, player.y) + rnd(-2.4, 2.4);
         hz({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: 620, tw: 0.7, life: 2.4,
           dmg: 26, gap: gap, gapW: enraged ? 0.34 : 0.48, chill: true, col: '#9fe0ff' });
-        floatText(b.x, b.y - b.r - 20, '氷輪', '#c8f0ff', true);
+        floatText(b.x, b.y - b.r - 20, 'こおりの わ', '#c8f0ff', true);
         sfx('blast', 0.5);
       }
 
@@ -1554,7 +1563,7 @@ var BOSSES = {
     init: function(b){ b.strikeCd = 2.4; b.beamCd = 6.0; b.tpCd = 5.0; b.pylons = []; b.pylonCd = 0; b.beamA = 0; },
     update: function(b, dt){
       var enraged = b.hp < b.maxHp * 0.5;
-      bossNote(enraged ? '避雷塔が生きている · 塔の間の雷に触れるな' : '光った地面に雷が落ちる');
+      bossNote(enraged ? 'はしらが いきてる · はしらの あいだの かみなりに さわるな' : 'ひかった じめんに かみなりが おちる');
       b.armorMul = 1;
 
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1581,7 +1590,7 @@ var BOSSES = {
           hz({ kind: 'beam', x: b.x, y: b.y, a: a + (k - 1) * 0.9, len: 900, w: 26,
             tw: 1.0 + k * 0.18, life: 1.5 + k * 0.18, dmg: 30, col: '#fff2a8' });
         }
-        floatText(b.x, b.y - b.r - 22, '雷槍', '#fff2a8', true);
+        floatText(b.x, b.y - b.r - 22, 'かみなりの やり', '#fff2a8', true);
       }
 
       b.tpCd -= dt;
@@ -1606,7 +1615,7 @@ var BOSSES = {
             b.pylons.push({ x: clamp(b.x + Math.cos(pa) * 300, 60, world.w - 60),
               y: clamp(b.y + Math.sin(pa) * 300, 60, world.h - 60) });
           }
-          floatText(b.x, b.y - 70, '避雷塔', '#fff2a8', true);
+          floatText(b.x, b.y - 70, 'はしら', '#fff2a8', true);
         }
         b.pylonCd -= dt;
         if (b.pylonCd <= 0){
@@ -1675,16 +1684,16 @@ var BOSSES = {
         b.ph = wantPh;
         b.invuln = 1.3; b.at = 1.4;
         shake(24); flash('255,150,60', 0.65); sfx('boss');
-        floatText(b.x, b.y - b.r - 34, '第' + ['','一','二','三'][b.ph] + '形態', '#ffd08a', true);
-        showToast(b.ph === 2 ? '竜が冷気を思い出した' : '竜が空を取った',
-          b.ph === 2 ? '氷と雷' : '最終形態', 2.4);
+        floatText(b.x, b.y - b.r - 34, 'へんしん' + b.ph, '#ffd08a', true);
+        showToast(b.ph === 2 ? 'どらごんが こおりを つかいだした' : 'どらごんが そらへ とんだ',
+          b.ph === 2 ? 'こおりと かみなり' : 'さいごの へんしん', 2.4);
         if (b.ph === 2){
           // it stops fighting alone and starts calling yokai up out of the roost
           for (var i = 0; i < 5; i++){
             var a2 = i / 5 * TAU;
             spawnEnemy(i % 2 ? 'onibi' : 'oni', b.x + Math.cos(a2) * 160, b.y + Math.sin(a2) * 160, i === 0, 0.7);
           }
-          floatText(b.x, b.y - b.r - 52, '妖怪を呼んだ', '#c08aff', true);
+          floatText(b.x, b.y - b.r - 52, 'ようかいを よんだ', '#c08aff', true);
         }
         if (b.ph === 3){
           b.mask = true;   // it puts on an oni's face for the last third
@@ -1695,8 +1704,8 @@ var BOSSES = {
         }
       }
       b.armorMul = b.invuln > 0 ? 0 : 1;
-      if (b.invuln > 0){ b.invuln -= dt; bossNote('鱗が光っている · ダメージ無効'); }
-      else bossNote(b.ph === 1 ? '第一形態 · 炎' : b.ph === 2 ? '第二形態 · 氷と雷' : '第三形態 · 空が落ちてくる');
+      if (b.invuln > 0){ b.invuln -= dt; bossNote('うろこが ひかってる · だめーじ なし'); }
+      else bossNote(b.ph === 1 ? 'へんしん1 · ほのお' : b.ph === 2 ? 'へんしん2 · こおりと かみなり' : 'へんしん3 · そらが おちてくる');
 
       b.hover += dt;
       var a = angTo(b.x, b.y, player.x, player.y);
@@ -1721,7 +1730,7 @@ var BOSSES = {
           if (b.sub % 3 === 0){
             // sweeping breath
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 620, w: 46, tw: 1.0, life: 1.8, dmg: 34, col: '#ff8a3a' });
-            floatText(b.x, b.y - b.r - 30, '竜の息', '#ffb87a', true);
+            floatText(b.x, b.y - b.r - 30, 'どらごんの いき', '#ffb87a', true);
           } else {
             for (var k = -3; k <= 3; k++){
               var bb = { x: b.x, y: b.y, vx: Math.cos(a + k * 0.22) * 250, vy: Math.sin(a + k * 0.22) * 250,
@@ -1735,7 +1744,7 @@ var BOSSES = {
           if (b.sub % 2 === 0){
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 560, w: 60, tw: 0.9, life: 1.7,
               dmg: 30, chill: true, col: '#9fe0ff' });
-            floatText(b.x, b.y - b.r - 30, '氷の息', '#c8f0ff', true);
+            floatText(b.x, b.y - b.r - 30, 'こおりの いき', '#c8f0ff', true);
           } else {
             for (var s = 0; s < 6; s++){
               hz({ kind: 'circle', x: player.x + rnd(-230, 230), y: player.y + rnd(-230, 230),
@@ -1746,11 +1755,11 @@ var BOSSES = {
           b.at = 1.75;
           if (b.sub % 4 === 0){
             b.da = a; b.dive = 0.75;
-            floatText(b.x, b.y - b.r - 30, '急降下', '#ffd0a0', true);
+            floatText(b.x, b.y - b.r - 30, 'まっさかさま', '#ffd0a0', true);
             hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 520, w: 52, tw: 0.55, life: 0.6, dmg: 0, col: '#ffcf90' });
           } else if (b.sub % 7 === 0){
             // hyakki yagyo: a marching line of spirits crosses the arena
-            floatText(b.x, b.y - b.r - 30, '百鬼夜行', '#c08aff', true);
+            floatText(b.x, b.y - b.r - 30, 'ひゃっき やこう', '#c08aff', true);
             var ma = Math.random() * TAU, mx = player.x - Math.cos(ma) * 520, my = player.y - Math.sin(ma) * 520;
             for (var mi = 0; mi < 10; mi++){
               spawnEnemy(mi % 4 === 0 ? 'tengu' : 'onibi',
@@ -1975,7 +1984,7 @@ var pendingLevels = 0, clearDelay = 0, pendingUlt = false;
 function queueLevelUp(){
   pendingLevels++;
   sfx('level');
-  floatText(player.x, player.y - 40, 'Lv' + player.level, '#a98bff', true);
+  floatText(player.x, player.y - 40, 'れべる' + player.level, '#a98bff', true);
 }
 
 function itemLevel(id){
@@ -2026,12 +2035,12 @@ function openChoice(kind){
     if (!third){ for (var j = 0; j < pool.length; j++) if (!ITEMS[pool[j]].ult){ third = pool[j]; break; } }
     pendingChoices = ['fang', 'ancient'];
     if (third) pendingChoices.push(third);
-    $('luSub').textContent = '竜の宝の山が開く';
-    $('luTitle').textContent = '最強を選べ';
+    $('luSub').textContent = 'どらごんの たからが ひらいた';
+    $('luTitle').textContent = 'さいきょうを えらぼう';
   } else {
     pendingChoices = rollChoices();
-    $('luSub').textContent = 'レベル ' + player.level;
-    $('luTitle').textContent = 'ひとつ選べ';
+    $('luSub').textContent = 'れべる ' + player.level;
+    $('luTitle').textContent = 'ひとつ えらぼう';
   }
   if (!pendingChoices.length){                       // fully maxed: heal instead
     player.hp = Math.min(player.maxHp, player.hp + 40);
@@ -2044,9 +2053,9 @@ function openChoice(kind){
     show(el);
     var id = pendingChoices[c], it = ITEMS[id], lv = itemLevel(id);
     el.className = 'card' + (it.ult ? ' ult' : '');
-    el.children[0].textContent = TIER_LABEL[it.tier] + '  ' + (it.kind === 'weapon' ? '武器' : '装備');
+    el.children[0].textContent = TIER_LABEL[it.tier] + '  ' + (it.kind === 'weapon' ? 'ぶき' : 'そうび');
     el.children[1].textContent = it.name;
-    el.children[2].textContent = lv === 0 ? '新しく手に入れる' : ('Lv' + lv + '  →  Lv' + (lv + 1));
+    el.children[2].textContent = lv === 0 ? 'あたらしく てにいれる' : ('れべる' + lv + '  →  れべる' + (lv + 1));
     el.children[3].textContent = it.desc(lv + 1);
   }
   state = 'levelup';
@@ -2077,7 +2086,7 @@ function applyItem(id){
     if (id === 'split' || id === 'ancient') refreshOrbs();
     if (id === 'ancient'){ player.maxHp += 40; player.hp = Math.min(player.maxHp, player.hp + 40); }
   }
-  if (it.ult) showToast(it.name + ' を手にした', 'この場所が最後に隠していたもの', 2.4);
+  if (it.ult) showToast(it.name + ' を てにいれた', 'ここが さいごに かくして いたもの', 2.4);
 }
 
 // ============================================================
@@ -2109,11 +2118,11 @@ function beginStage(){
 function stageCleared(){
   if (stageIndex >= STAGES.length - 1){ winRun(); return; }
   state = 'clear';
-  $('clearTitle').textContent = stage.bossName + ' 撃破';
+  $('clearTitle').textContent = stage.bossName + ' を たおした';
   $('clearBody').textContent = stage.clearLine;
   var nx = STAGES[stageIndex + 1];
-  fillStats($('clearStats'), [['次の章', nx.label + '  ' + nx.name, false]]);
-  $('nextBtn').textContent = (stageIndex === STAGES.length - 2) ? '竜の巣へ' : '次の章へ';
+  fillStats($('clearStats'), [['つぎの すてーじ', nx.label + '  ' + nx.name, false]]);
+  $('nextBtn').textContent = (stageIndex === STAGES.length - 2) ? 'どらごんの すへ' : 'つぎへ すすむ';
   show(elClear);
   sfx('win', 0.7);
 }
@@ -2129,10 +2138,10 @@ function nextStage(){
 function gameOver(){
   state = 'over';
   sfx('die');
-  $('overSub').textContent = stage.name + 'で倒れた';
-  $('overTitle').textContent = '力尽きた';
+  $('overSub').textContent = stage.name + 'で たおれた';
+  $('overTitle').textContent = 'やられた';
   fillStats($('overStats'));
-  $('replayBtn').textContent = 'もう一度';
+  $('replayBtn').textContent = 'もういちど';
   hide(elBossWrap);
   show(elOver);
 }
@@ -2141,10 +2150,10 @@ function winRun(){
   state = 'win';
   sfx('win');
   flash('255,255,255', 0.8);
-  $('overSub').textContent = '竜の巣は静まりかえった';
-  $('overTitle').textContent = '竜を討ち取った';
+  $('overSub').textContent = 'どらごんの すは しずかに なった';
+  $('overTitle').textContent = 'どらごんを たおした';
   fillStats($('overStats'));
-  $('replayBtn').textContent = 'もう一度挑む';
+  $('replayBtn').textContent = 'もういちど あそぶ';
   hide(elBossWrap);
   show(elOver);
 }
@@ -2155,19 +2164,19 @@ function winRun(){
 // writes them in, and the layout does the aligning.
 function statRows(){
   var loadout = [];
-  for (var i = 0; i < player.weapons.length; i++) loadout.push(ITEMS[player.weapons[i].id].name + ' Lv' + player.weapons[i].lv);
-  for (var k in player.passives) if (player.passives[k] > 0) loadout.push(ITEMS[k].name + ' Lv' + player.passives[k]);
+  for (var i = 0; i < player.weapons.length; i++) loadout.push(ITEMS[player.weapons[i].id].name + ' れべる' + player.weapons[i].lv);
+  for (var k in player.passives) if (player.passives[k] > 0) loadout.push(ITEMS[k].name + ' れべる' + player.passives[k]);
   var kw = katanaEntry();
   return [
-    ['ステージ',   stage.label + '  ' + stage.name, false],
-    ['時計',       fmtTime(runClock) + ' / 5:00' + (phase === 'boss' ? '（停止中）' : ''), true],
-    ['日本刀',     (kw && kw.lv >= KATANA_AWAKEN_LV ? '覚醒' : 'Lv' + (kw ? kw.lv : 0)) +
-                     '　巻物 ' + player.scrolls + '個', false],
-    ['レベル',     String(player.level), true],
-    ['討伐数',     String(kills), true],
-    ['生存時間',   fmtTime(runTime), true],
-    ['与ダメージ', String(Math.round(dmgDealt)), true],
-    ['武器と装備', loadout.join('、') || '何も持たなかった', false]
+    ['すてーじ',       stage.label + '  ' + stage.name, false],
+    ['とけい',         fmtTime(runClock) + ' / 5:00' + (phase === 'boss' ? '（とまってる）' : ''), true],
+    ['かたな',         (kw && kw.lv >= KATANA_AWAKEN_LV ? 'めざめた' : 'れべる' + (kw ? kw.lv : 0)) +
+                         '　まきもの ' + player.scrolls + 'こ', false],
+    ['れべる',         String(player.level), true],
+    ['たおした かず',  String(kills), true],
+    ['いきてた じかん', fmtTime(runTime), true],
+    ['あたえた だめーじ', String(Math.round(dmgDealt)), true],
+    ['もってた もの',  loadout.join('、') || 'なにも もってなかった', false]
   ];
 }
 function esc(s){
@@ -2196,8 +2205,8 @@ function updateStageFlow(dt){
     if (runClock >= stage.end){
       phase = 'warning'; bossWarn = 3.0;
       var last = (stageIndex === STAGES.length - 1);
-      showToast(last ? '五分' : '警告',
-        last ? '時計が止まる ― ' + stage.bossName + ' が目を覚ます' : stage.bossName + ' が近づいている', 3.0);
+      showToast(last ? '5ふん' : 'きけん',
+        last ? 'とけいが とまる ― ' + stage.bossName + ' が おきる' : stage.bossName + ' が ちかづいて くる', 3.0);
       sfx('boss');
       flash('255,60,60', 0.4);
     }
@@ -2237,26 +2246,26 @@ function syncHud(){
   elHp.style.width = clamp(player.hp / player.maxHp * 100, 0, 100) + '%';
   elHpText.textContent = Math.max(0, Math.ceil(player.hp)) + ' / ' + Math.round(player.maxHp);
   elXp.style.width = clamp(player.xp / player.xpNext * 100, 0, 100) + '%';
-  elStat.textContent = 'Lv' + player.level + '  ·  討伐 ' + kills + '  ·  攻撃力 ' +
+  elStat.textContent = 'れべる' + player.level + '  ·  たおした ' + kills + '  ·  ちから ' +
     Math.round(statDmg() * 100) + '%';
   var parts2 = [];
   for (var i = 0; i < player.weapons.length; i++){
     var w = player.weapons[i];
     if (w.id === 'katana'){
       parts2.push(w.lv >= KATANA_AWAKEN_LV
-        ? '日本刀 覚醒'
-        : '日本刀 Lv' + w.lv + ' [' + (player.scrolls % SCROLLS_PER_LEVEL) + '/' + SCROLLS_PER_LEVEL + ']');
-    } else parts2.push(ITEMS[w.id].name + ' Lv' + w.lv);
+        ? 'かたな めざめた'
+        : 'かたな れべる' + w.lv + ' [' + (player.scrolls % SCROLLS_PER_LEVEL) + '/' + SCROLLS_PER_LEVEL + ']');
+    } else parts2.push(ITEMS[w.id].name + ' れべる' + w.lv);
   }
   var pas = [];
-  for (var k in player.passives) if (player.passives[k] > 0) pas.push(ITEMS[k].name + ' Lv' + player.passives[k]);
+  for (var k in player.passives) if (player.passives[k] > 0) pas.push(ITEMS[k].name + ' れべる' + player.passives[k]);
   elLoad.textContent = parts2.join('  ') + (pas.length ? '\n' + pas.join('  ') : '');
 
   elTimer.textContent = fmtTime(runClock) + ' / 5:00';
-  if (phase === 'survive') elPhase.textContent = '生存';
-  else if (phase === 'warning') elPhase.textContent = 'ボス出現まで ' + Math.max(0, Math.ceil(bossWarn));
-  else if (phase === 'boss') elPhase.textContent = 'ボス戦 · 時計停止中';
-  else elPhase.textContent = '撃破';
+  if (phase === 'survive') elPhase.textContent = 'いきのこれ';
+  else if (phase === 'warning') elPhase.textContent = 'ぼすが くるまで ' + Math.max(0, Math.ceil(bossWarn));
+  else if (phase === 'boss') elPhase.textContent = 'ぼすせん · とけいは とまってる';
+  else elPhase.textContent = 'たおした';
 }
 
 // ============================================================
