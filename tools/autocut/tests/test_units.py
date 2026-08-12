@@ -229,6 +229,68 @@ class HighlightTests(unittest.TestCase):
         self.assertEqual(select(Transcript("ja", []), count=3), [])
 
 
+class IconTests(unittest.TestCase):
+    def test_png_signature_and_size(self):
+        from autocut import icon
+        data = icon.render(180)
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        # IHDR の幅・高さを読み戻す
+        import struct
+        width, height = struct.unpack(">II", data[16:24])
+        self.assertEqual((width, height), (180, 180))
+
+    def test_sizes_differ_and_cache_is_stable(self):
+        from autocut import icon
+        self.assertNotEqual(icon.get(64), icon.get(180))
+        self.assertIs(icon.get(180), icon.get(180))
+
+    def test_renders_across_sizes_without_error(self):
+        from autocut import icon
+        for size in (16, 64, 180, 192, 512):
+            with self.subTest(size=size):
+                self.assertGreater(len(icon.render(size)), 60)
+
+
+class PinTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.dir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_pin_is_stable_across_restarts(self):
+        # 自動起動では再起動のたびに番号が変わると使えなくなる（実運用上の回帰）
+        from autocut.server import resolve_pin
+        first = resolve_pin(self.dir, None, False)
+        self.assertRegex(first, r"^\d{4}$")
+        self.assertEqual(first, resolve_pin(self.dir, None, False))
+
+    def test_explicit_pin_wins(self):
+        from autocut.server import resolve_pin
+        self.assertEqual(resolve_pin(self.dir, "4821", False), "4821")
+
+    def test_disabled_returns_empty(self):
+        from autocut.server import resolve_pin
+        self.assertEqual(resolve_pin(self.dir, "4821", True), "")
+
+    def test_stored_file_is_owner_only(self):
+        import os
+        from autocut.server import resolve_pin
+        resolve_pin(self.dir, None, False)
+        self.assertEqual(oct(os.stat(self.dir / ".pin").st_mode)[-3:], "600")
+
+
+class ManifestTests(unittest.TestCase):
+    def test_manifest_is_standalone_with_icons(self):
+        from autocut.server import MANIFEST
+        self.assertEqual(MANIFEST["display"], "standalone")
+        self.assertTrue(MANIFEST["icons"])
+        self.assertTrue(any(i.get("purpose") == "maskable" for i in MANIFEST["icons"]))
+        self.assertEqual(MANIFEST["start_url"], "/")
+
+
 class TranscriptIOTests(unittest.TestCase):
     def test_roundtrip(self):
         tr = make_transcript([(0.0, 1.0, "あ"), (1.0, 2.0, "い")])

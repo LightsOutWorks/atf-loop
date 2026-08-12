@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
             "\n"
             "スマホから使う:\n"
             "  autocut serve              母艦で待ち受け、iPhone のブラウザから渡す\n"
+            "  autocut autostart on       母艦の起動時に自動で待ち受ける\n"
         ),
     )
     parser.add_argument("input", type=Path, help="元の動画ファイル")
@@ -86,10 +87,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    # `autocut serve` はスマホから使うためのサーバー。位置引数と衝突するので先に分ける。
+    # スマホ向けの2つは位置引数と衝突するので先に分ける。
     if argv and argv[0] == "serve":
         from .server import main as serve_main
         return serve_main(argv[1:])
+    if argv and argv[0] == "autostart":
+        from .agent import main as agent_main
+        return agent_main(argv[1:])
 
     args = build_parser().parse_args(argv)
 

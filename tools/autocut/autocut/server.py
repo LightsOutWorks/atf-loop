@@ -18,6 +18,7 @@ import html
 import json
 import mimetypes
 import os
+import platform
 import queue
 import re
 import secrets
@@ -31,9 +32,28 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import presets
+from . import icon, presets
 from .pipeline import Options, run as run_pipeline
 from .webui import PAGE
+
+MANIFEST = {
+    "name": "autocut",
+    "short_name": "autocut",
+    "description": "撮った動画からロング・ショート・TikTok をテロップ付きで作る",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0e0e11",
+    "theme_color": "#0e0e11",
+    "lang": "ja",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png",
+         "purpose": "maskable"},
+    ],
+}
 
 CHUNK = 1024 * 1024
 STAGE_RE = re.compile(r"\[(\d)/(\d)\]")
@@ -376,9 +396,25 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/healthz":
             self._json({"ok": True})
             return
-        # ブラウザが勝手に取りに来るもの。PIN より前で返さないと 403 が並ぶ。
-        if route == "/favicon.ico" or route.startswith("/apple-touch-icon"):
-            self._send(204, b"", "image/png")
+        # ホーム画面に置くために要るもの。PIN より前で返す——Safari はこれらを
+        # 別扱いで取りに来るので、認証をかけるとアイコンが出ない。
+        m = re.fullmatch(r"/icon-(\d{2,4})\.png", route)
+        if m:
+            size = max(16, min(1024, int(m.group(1))))
+            self._send(200, icon.get(size), "image/png",
+                       {"Cache-Control": "public, max-age=86400"})
+            return
+        if route == "/manifest.webmanifest":
+            self._send(200, json.dumps(MANIFEST, ensure_ascii=False).encode("utf-8"),
+                       "application/manifest+json; charset=utf-8")
+            return
+        if route == "/favicon.ico":
+            self._send(200, icon.get(64), "image/png",
+                       {"Cache-Control": "public, max-age=86400"})
+            return
+        if route.startswith("/apple-touch-icon"):
+            self._send(200, icon.get(180), "image/png",
+                       {"Cache-Control": "public, max-age=86400"})
             return
 
         if route == "/api/pin":
@@ -551,6 +587,47 @@ def lan_ip() -> str:
         sock.close()
 
 
+def local_hostname() -> str | None:
+    """`<機械名>.local` を返す。
+
+    IPアドレスは DHCP で変わり、そのたびにスマホのブックマークが死ぬ。
+    macOS は Bonjour で `.local` 名を常時広告しており、iPhone はこれを解決できる。
+    ブックマークするならこちらのほうが壊れない。
+    """
+    if platform.system() != "Darwin":
+        return None
+    name = socket.gethostname().strip()
+    if not name or name in ("localhost", "localhost.local"):
+        return None
+    return name if name.endswith(".local") else f"{name}.local"
+
+
+def resolve_pin(root: Path, given: str | None, disabled: bool) -> str:
+    """PIN を決める。一度決めたら次の起動でも同じものを使う。
+
+    自動起動にすると再起動のたびに番号が変わってしまい、スマホ側が毎回弾かれる。
+    だから乱数は初回だけにして、以降はファイルから読む。
+    """
+    if disabled:
+        return ""
+    if given:
+        return given
+    store = root / ".pin"
+    try:
+        saved = store.read_text(encoding="utf-8").strip()
+        if saved.isdigit() and len(saved) == 4:
+            return saved
+    except OSError:
+        pass
+    pin = f"{secrets.randbelow(10000):04d}"
+    try:
+        store.write_text(pin, encoding="utf-8")
+        os.chmod(store, 0o600)
+    except OSError:
+        pass
+    return pin
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="autocut serve",
@@ -562,6 +639,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", type=Path, default=Path("./autocut-web"),
                         help="受け取った動画と出力の置き場所")
     parser.add_argument("--max-gb", type=float, default=8.0, help="1本の上限（既定: 8GB）")
+    parser.add_argument("--pin", default=None,
+                        help="PIN を指定する（既定: 初回に決めて以後は使い回す）")
     parser.add_argument("--no-pin", action="store_true",
                         help="PIN を求めない（信頼できる回線でのみ）")
     return parser
@@ -572,7 +651,7 @@ def main(argv: list[str] | None = None) -> int:
 
     root = args.out.resolve()
     root.mkdir(parents=True, exist_ok=True)
-    pin = "" if args.no_pin else f"{secrets.randbelow(10000):04d}"
+    pin = resolve_pin(root, args.pin, args.no_pin)
 
     Handler.runner = JobRunner(root)
     Handler.pin = pin
@@ -581,19 +660,29 @@ def main(argv: list[str] | None = None) -> int:
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     httpd.daemon_threads = True
 
-    url = f"http://{lan_ip()}:{args.port}/"
+    host = local_hostname()
+    ip_url = f"http://{lan_ip()}:{args.port}/"
     free_gb = shutil.disk_usage(root).free / 1e9
 
     print()
     print("  autocut — スマホから使う")
-    print("  " + "─" * 46)
-    print(f"  iPhone で開く:  {url}")
+    print("  " + "─" * 52)
+    if host:
+        print(f"  iPhone で開く:  http://{host}:{args.port}/")
+        print(f"  （繋がらなければ）{ip_url}")
+    else:
+        print(f"  iPhone で開く:  {ip_url}")
     if pin:
         print(f"  PIN:            {pin}   （最初の1回だけ）")
     print(f"  置き場所:        {root}")
     print(f"  空き:            {free_gb:.0f}GB / 1本の上限 {args.max_gb:.0f}GB")
-    print("  " + "─" * 46)
-    print("  同じWi-Fiに繋いでから開く。終了は Ctrl+C。")
+    print("  " + "─" * 52)
+    if host:
+        print("  開いたら「ホーム画面に追加」。次からはアイコンを押すだけです。")
+        print("  .local 名なので、Wi-Fi のアドレスが変わってもそのまま使えます。")
+    else:
+        print("  開いたら「ホーム画面に追加」。次からはアイコンを押すだけです。")
+    print("  終了は Ctrl+C。ずっと待たせるなら `autocut autostart on`。")
     print()
 
     try:

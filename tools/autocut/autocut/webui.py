@@ -11,6 +11,12 @@ PAGE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0e0e11">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="autocut">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
 <title>autocut</title>
 <style>
 :root{
@@ -33,6 +39,14 @@ header .sub{font-size:11.5px;color:var(--dim);letter-spacing:.14em;text-transfor
 .lead{color:var(--dim);font-size:13.5px;margin:0 0 22px}
 .card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px}
 .hide{display:none!important}
+
+/* ホーム画面へ追加する案内。standalone で開いている時は出さない */
+.a2hs{display:flex;gap:10px;align-items:flex-start;margin:0 0 18px;padding:12px 13px;
+  border-radius:12px;border:1px solid rgba(224,190,116,.35);background:rgba(224,190,116,.08);
+  font-size:12.5px;line-height:1.55;color:#e5dcc6}
+.a2hs b{color:var(--acc)}
+.a2hs .x{width:26px;min-height:26px;padding:0;flex:0 0 auto;border:0;background:transparent;
+  color:var(--dim);font-size:14px;line-height:1}
 
 button,.btn{
   -webkit-appearance:none;appearance:none;display:block;width:100%;
@@ -119,6 +133,12 @@ input[type=tel]{
 
   <header><h1>autocut</h1><span class="sub">video pipeline</span></header>
   <p class="lead">動画を1本選ぶと、YouTube ロング・ショート・TikTok の3種をテロップ付きで作ります。</p>
+
+  <!-- ホーム画面に置くまでが導入。置いたら出さない。 -->
+  <div class="a2hs hide" id="a2hs">
+    <div>下の <b>共有</b> から<b>「ホーム画面に追加」</b>を選ぶと、次からアイコン1つで開けます。</div>
+    <button class="x" id="a2hsX" aria-label="閉じる">✕</button>
+  </div>
 
   <!-- PIN -->
   <section id="secPin" class="card hide">
@@ -234,6 +254,19 @@ function secs(n){ return n == null ? "—" : (Math.round(n*10)/10) + "秒"; }
 function headers(){
   return pin ? { "X-Autocut-Pin": pin } : {};
 }
+
+/* ---------- ホーム画面への案内 ---------- */
+(function(){
+  var standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  var dismissed = localStorage.getItem("autocut.a2hs") === "off";
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if(!standalone && !dismissed && ios){ $("a2hs").classList.remove("hide"); }
+  $("a2hsX").onclick = function(){
+    localStorage.setItem("autocut.a2hs","off");
+    $("a2hs").classList.add("hide");
+  };
+})();
 
 /* ---------- 起動 ---------- */
 fetch("/api/pin").then(function(r){ return r.json(); }).then(function(d){
