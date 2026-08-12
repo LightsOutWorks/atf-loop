@@ -1,0 +1,2525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>DRAGONFALL</title>
+<style>
+  :root{
+    --accent:#7fe3a0;
+    --ink:#e9eef2;
+    --dim:#8d9aa6;
+    --panel:rgba(8,12,18,.88);
+    --line:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05070b;color:var(--ink);
+    font-family:sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
+  #stage{position:fixed;inset:0;overflow:hidden}
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+  .hidden{display:none !important}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;pointer-events:none;
+    padding:calc(10px + env(safe-area-inset-top)) 12px 12px 12px;font-size:13px;letter-spacing:.06em}
+  #topbar{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  #stageName{font-weight:700;color:var(--accent);font-size:13px;text-shadow:0 0 10px rgba(0,0,0,.9)}
+  #timer{font-family:monospace;font-size:15px;color:var(--ink);opacity:.9}
+  #phaseTag{font-size:11px;color:var(--dim);letter-spacing:.14em;margin-top:2px}
+
+  .bar{position:relative;height:12px;border:1px solid var(--line);background:rgba(0,0,0,.55);
+    border-radius:2px;overflow:hidden}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;display:block;width:0%;transition:width .12s linear}
+  .barTxt{position:absolute;right:5px;top:-1px;font-size:10px;font-family:monospace;
+    color:#fff;opacity:.85;letter-spacing:.05em}
+
+  #hpwrap{margin-top:8px;max-width:300px}
+  #hpfill{background:linear-gradient(90deg,#ff5a5a,#ff9d6b)}
+  #xpwrap{margin-top:5px;max-width:300px;height:7px}
+  #xpfill{background:linear-gradient(90deg,#5ad2ff,#a98bff)}
+  #statline{margin-top:6px;font-size:11px;color:var(--dim);font-family:monospace}
+  #loadout{margin-top:6px;font-size:11px;line-height:1.55;color:#cfd8e0;max-width:min(560px,72vw);
+    font-family:monospace;white-space:pre-wrap}
+
+  #bosswrap{position:absolute;left:50%;transform:translateX(-50%);
+    top:calc(10px + env(safe-area-inset-top));width:min(560px,86vw);text-align:center}
+  #bossname{font-size:12px;font-weight:700;letter-spacing:.22em;color:#ffd9d9;
+    text-shadow:0 0 12px rgba(0,0,0,.9)}
+  #bossbar{height:14px;margin-top:4px;border-color:rgba(255,120,120,.5)}
+  #bossfill{background:linear-gradient(90deg,#ff3b3b,#ff8a3b);transition:width .18s linear}
+  #bossnote{font-size:10px;letter-spacing:.14em;color:#ffb1b1;margin-top:3px;min-height:12px}
+
+  #toast{position:absolute;left:50%;top:38%;transform:translateX(-50%);text-align:center;
+    font-size:clamp(18px,5vw,32px);font-weight:700;letter-spacing:.24em;opacity:0;
+    text-shadow:0 0 24px rgba(0,0,0,.9);white-space:nowrap}
+  #toastSub{display:block;font-size:12px;letter-spacing:.2em;color:var(--dim);margin-top:6px;font-weight:400}
+
+  #joy{position:absolute;width:104px;height:104px;margin:-52px 0 0 -52px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:0}
+  #joyKnob{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;
+    border-radius:50%;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4)}
+
+  /* ---------- overlays ---------- */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:14px;padding:24px;text-align:center;
+    background:radial-gradient(ellipse at 50% 40%,rgba(10,14,20,.86),rgba(3,5,8,.97))}
+  .big{font-size:clamp(30px,9vw,64px);font-weight:800;letter-spacing:.16em;line-height:1.05}
+  .sub{font-size:clamp(11px,2.6vw,14px);letter-spacing:.24em;color:var(--dim)}
+  .body{font-size:13px;line-height:1.85;color:#c3ccd5;max-width:620px}
+  .body b{color:var(--accent);font-weight:700}
+  .btn{pointer-events:auto;cursor:pointer;border:1px solid var(--accent);color:#03110a;
+    background:var(--accent);font:inherit;font-weight:700;letter-spacing:.2em;font-size:14px;
+    padding:13px 34px;border-radius:3px}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:transparent;color:var(--accent)}
+
+  #stageList{display:grid;gap:5px;font-family:monospace;font-size:12px;text-align:left}
+  #stageList > div{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:baseline}
+  #stageList i{font-style:normal;color:#6f7c88;letter-spacing:.14em}
+  #stageList b{color:#e9eef2;font-weight:700}
+  #stageList em{font-style:normal;color:#93a1ad}
+
+  #cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%}
+  .card{pointer-events:auto;cursor:pointer;width:min(230px,84vw);min-height:168px;
+    border:1px solid var(--line);background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(10,14,20,.96));
+    border-radius:5px;padding:14px;display:flex;flex-direction:column;gap:7px;text-align:left}
+  .card:active{transform:translateY(1px)}
+  .card.ult{border-color:#ffcf5a;box-shadow:0 0 0 1px rgba(255,207,90,.35),0 0 26px rgba(255,180,60,.25)}
+  .cTier{font-size:9px;letter-spacing:.24em;color:var(--dim)}
+  .card.ult .cTier{color:#ffcf5a}
+  .cName{font-size:15px;font-weight:800;letter-spacing:.08em}
+  .cLv{font-size:10px;letter-spacing:.16em;color:var(--accent);font-family:monospace}
+  .cDesc{font-size:12px;line-height:1.65;color:#b7c1cb;flex:1}
+
+  #cardHint{font-size:11px;letter-spacing:.16em;color:var(--dim)}
+  /* stacked on a phone, three cards must still fit without scrolling */
+  @media (max-width:560px){
+    .overlay{gap:10px;padding:16px}
+    .card{width:100%;max-width:420px;min-height:0;padding:11px;gap:4px}
+    .cDesc{font-size:11.5px;line-height:1.5}
+    #cards{gap:8px}
+  }
+  .statGrid{font-family:monospace;font-size:12px;color:#a9b5c0;line-height:1.9}
+  .statGrid b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="topbar">
+      <div>
+        <div id="stageName">STAGE 1 &mdash; ROTTING FIELDS</div>
+        <div id="phaseTag">SURVIVE</div>
+      </div>
+      <div id="timer">0:00</div>
+    </div>
+    <div id="hpwrap" class="bar"><i id="hpfill"></i><span id="hptext" class="barTxt">100 / 100</span></div>
+    <div id="xpwrap" class="bar"><i id="xpfill"></i></div>
+    <div id="statline">LV 1 &middot; KILLS 0</div>
+    <div id="loadout"></div>
+
+    <div id="bosswrap" class="hidden">
+      <div id="bossname">BOSS</div>
+      <div id="bossbar" class="bar"><i id="bossfill"></i></div>
+      <div id="bossnote"></div>
+    </div>
+
+    <div id="toast"><span id="toastMain">READY</span><span id="toastSub"></span></div>
+    <div id="joy"><div id="joyKnob"></div></div>
+  </div>
+
+  <div id="title" class="overlay">
+    <div class="sub">SURVIVE THREE REALMS &middot; SLAY WHAT WAITS BENEATH</div>
+    <div class="big">DRAGONFALL</div>
+    <div id="stageList">
+      <div><i>STAGE 1</i><b>ROTTING FIELDS</b><em>THE HORDE KING</em></div>
+      <div><i>STAGE 2</i><b>FROZEN EXPANSE</b><em>THE FROST MONARCH</em></div>
+      <div><i>STAGE 3</i><b>THUNDER PEAK</b><em>THE STORM LORD</em></div>
+      <div><i>FINAL</i><b>DRAGON'S ROOST</b><em>THE DRAGON</em></div>
+    </div>
+    <div class="body">
+      You attack on your own. You only choose <b>where to stand</b> and <b>what to become</b>.<br>
+      Move: <b>WASD / arrows</b>, or <b>drag anywhere</b> on touch. Pause: <b>P</b>.<br>
+      Stronger gear appears only in later realms. The <b>ultimate</b> waits in the final one.
+    </div>
+    <button id="startBtn" class="btn">START</button>
+  </div>
+
+  <div id="levelup" class="overlay hidden">
+    <div class="sub" id="luSub">LEVEL UP</div>
+    <div class="big" id="luTitle" style="font-size:clamp(20px,5vw,34px)">CHOOSE ONE</div>
+    <div id="cards">
+      <div class="card" id="card0"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
+      <div class="card" id="card1"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
+      <div class="card" id="card2"><div class="cTier"></div><div class="cName"></div><div class="cLv"></div><div class="cDesc"></div></div>
+    </div>
+    <div id="cardHint">CLICK OR TAP A CARD &middot; KEYS 1 2 3</div>
+  </div>
+
+  <div id="clear" class="overlay hidden">
+    <div class="sub" id="clearSub">STAGE CLEAR</div>
+    <div class="big" id="clearTitle">THE HORDE KING FALLS</div>
+    <div class="body" id="clearBody"></div>
+    <div class="statGrid" id="clearStats"></div>
+    <button id="nextBtn" class="btn">DESCEND</button>
+  </div>
+
+  <div id="over" class="overlay hidden">
+    <div class="sub" id="overSub">YOU FELL IN THE ROTTING FIELDS</div>
+    <div class="big" id="overTitle">YOU DIED</div>
+    <div class="statGrid" id="overStats"></div>
+    <button id="replayBtn" class="btn">REPLAY</button>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   DRAGONFALL — single-file survivor-style auto-battler.
+   No external requests, no assets: every visual is drawn from
+   primitives and every sound is generated by an oscillator.
+   ============================================================ */
+
+// ---------- small math helpers ----------
+var TAU = Math.PI * 2;
+function clamp(v, a, b){ return v < a ? a : v > b ? b : v; }
+function lerp(a, b, t){ return a + (b - a) * t; }
+function rnd(a, b){ return a + Math.random() * (b - a); }
+function rndi(a, b){ return Math.floor(a + Math.random() * (b - a + 1)); }
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+function len(x, y){ return Math.sqrt(x * x + y * y); }
+function angTo(ax, ay, bx, by){ return Math.atan2(by - ay, bx - ax); }
+function angDiff(a, b){ var d = (b - a + Math.PI) % TAU; if (d < 0) d += TAU; return d - Math.PI; }
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function now(){
+  return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+}
+
+// ---------- dom ----------
+function $(id){ return document.getElementById(id); }
+var cv = $('cv'), ctx = cv.getContext('2d');
+var elHud = $('hud'), elTitle = $('title'), elLevel = $('levelup'), elClear = $('clear'), elOver = $('over');
+var elStageName = $('stageName'), elPhase = $('phaseTag'), elTimer = $('timer');
+var elHp = $('hpfill'), elHpText = $('hptext'), elXp = $('xpfill'), elStat = $('statline'), elLoad = $('loadout');
+var elBossWrap = $('bosswrap'), elBossName = $('bossname'), elBossFill = $('bossfill'), elBossNote = $('bossnote');
+var elToast = $('toast'), elToastMain = $('toastMain'), elToastSub = $('toastSub');
+var elJoy = $('joy'), elKnob = $('joyKnob');
+var cards = [$('card0'), $('card1'), $('card2')];
+
+function show(el){ el.classList.remove('hidden'); }
+function hide(el){ el.classList.add('hidden'); }
+function setAccent(c){
+  try { document.documentElement.style.setProperty('--accent', c); } catch (e){ /* headless */ }
+}
+
+// ============================================================
+// STAGES — three realms, then the roost.
+// Item tiers unlock stage by stage, so the strongest gear can
+// only ever be picked up in the final one.
+// ============================================================
+var STAGES = [
+  {
+    id: 'rot', label: 'STAGE 1', name: 'ROTTING FIELDS',
+    accent: '#7fe3a0', fog: 'rgba(12,26,16,0.55)',
+    ground: ['#0d1711', '#070c09'], grid: 'rgba(120,200,150,0.06)', deco: 'grave',
+    dur: 60, tier: 1, hpMul: 1.0, spawnBase: 1.45, burst: 2,
+    enemies: [['walker', 62], ['runner', 28], ['bloater', 10]],
+    boss: 'horde', bossName: 'THE HORDE KING',
+    line: 'The dead do not tire. They only accumulate.',
+    clearLine: 'The mound stops moving. Cold air pours in from below.'
+  },
+  {
+    id: 'ice', label: 'STAGE 2', name: 'FROZEN EXPANSE',
+    accent: '#7fd3ff', fog: 'rgba(20,40,60,0.5)',
+    ground: ['#0c1620', '#060b12'], grid: 'rgba(150,220,255,0.07)', deco: 'ice',
+    dur: 75, tier: 2, hpMul: 1.9, spawnBase: 1.02, burst: 2,
+    enemies: [['shade', 42], ['shardling', 33], ['brute', 25]],
+    boss: 'frost', bossName: 'THE FROST MONARCH',
+    line: 'The floor is glass. You will not stop where you mean to.',
+    clearLine: 'The ice splits. Far above, something is already thundering.'
+  },
+  {
+    id: 'thunder', label: 'STAGE 3', name: 'THUNDER PEAK',
+    accent: '#ffe27f', fog: 'rgba(40,36,60,0.5)',
+    ground: ['#161426', '#08070f'], grid: 'rgba(255,225,150,0.06)', deco: 'pylon',
+    dur: 80, tier: 3, hpMul: 3.4, spawnBase: 0.90, burst: 3,
+    enemies: [['wisp', 40], ['hound', 34], ['sentinel', 26]],
+    boss: 'storm', bossName: 'THE STORM LORD',
+    line: 'Every strike is announced. Only the slow are surprised.',
+    clearLine: 'The storm collapses inward. Something enormous inhales.'
+  },
+  {
+    id: 'roost', label: 'FINAL', name: "DRAGON'S ROOST",
+    accent: '#ff9b5a', fog: 'rgba(50,20,14,0.5)',
+    ground: ['#1a0e0a', '#0a0505'], grid: 'rgba(255,150,90,0.07)', deco: 'ember',
+    dur: 16, tier: 4, hpMul: 5.2, spawnBase: 1.55, burst: 2,
+    enemies: [['walker', 20], ['shardling', 22], ['wisp', 24], ['hound', 34]],
+    boss: 'dragon', bossName: 'THE DRAGON',
+    line: 'It has been awake the whole time.',
+    clearLine: ''
+  }
+];
+
+// ============================================================
+// ITEMS — weapons and passives, gated by tier.
+// tier 4 exists only inside the final stage: the ultimate is
+// literally the last thing the game can offer you.
+// ============================================================
+var ITEMS = {
+  // ---- tier 1 weapons ----
+  blade: { kind: 'weapon', tier: 1, max: 8, name: 'BLADE ARC',
+    desc: function(l){ return 'Sweeps a ' + (l >= 7 ? 'triple' : l >= 4 ? 'double' : 'wide') +
+      ' arc at the nearest threat. ' + bd(16 + 8 * l) + ' damage, ' + Math.round(96 + 11 * l) + ' reach.'; } },
+  shard: { kind: 'weapon', tier: 1, max: 8, name: 'BONE SHARD',
+    desc: function(l){ return 'Throws ' + (1 + Math.floor(l / 2)) + ' seeking shard' +
+      (1 + Math.floor(l / 2) > 1 ? 's' : '') + ' for ' + bd(10 + 5 * l) + ' damage' +
+      (l >= 5 ? ', piercing one extra body' : '') + '.'; } },
+  orb: { kind: 'weapon', tier: 1, max: 8, name: 'CINDER ORB',
+    desc: function(l){ return (2 + Math.floor((l - 1) / 2)) + ' embers circle you, burning for ' +
+      bd(9 + 5 * l) + ' on contact. Orbit ' + Math.round(74 + 7 * l) + '.'; } },
+
+  // ---- tier 2 weapons ----
+  nova: { kind: 'weapon', tier: 2, max: 8, name: 'FROST NOVA',
+    desc: function(l){ return 'A ring of cold bursts outward for ' + bd(24 + 12 * l) +
+      ' and slows everything it touches by ' + Math.round(40 + 3 * l) + '%.'; } },
+  icicle: { kind: 'weapon', tier: 2, max: 8, name: 'ICICLE VOLLEY',
+    desc: function(l){ return 'Fires ' + (3 + Math.floor(l / 2)) + ' piercing icicles for ' +
+      bd(16 + 8 * l) + ' each. Pierces ' + (2 + Math.floor(l / 3)) + ' bodies.'; } },
+
+  // ---- tier 3 weapons ----
+  chain: { kind: 'weapon', tier: 3, max: 8, name: 'CHAIN BOLT',
+    desc: function(l){ return 'A bolt leaps between up to ' + (3 + l) + ' enemies, dealing ' +
+      bd(30 + 16 * l) + ' with each jump.'; } },
+  storm: { kind: 'weapon', tier: 3, max: 8, name: 'STORM FIELD',
+    desc: function(l){ return 'A charged field of radius ' + Math.round(88 + 13 * l) +
+      ' burns everything inside for ' + bd(26 + 13 * l) + ' per second.'; } },
+
+  // ---- tier 4: THE ULTIMATE WEAPON (final stage only) ----
+  fang: { kind: 'weapon', tier: 4, max: 5, name: 'DRAGONFANG', ult: true,
+    desc: function(l){ return 'Hurls ' + (2 + l) + ' homing dragonfire lances. ' + bd(95 + 55 * l) +
+      ' on impact plus a blast of radius ' + Math.round(76 + 10 * l) +
+      (l >= 3 ? '. Every other volley exhales a breath of fire.' : '.'); } },
+
+  // ---- tier 1 passives ----
+  vitality: { kind: 'passive', tier: 1, max: 6, name: 'VITALITY',
+    desc: function(){ return '+28 maximum life, and heal 28 right now.'; } },
+  boots: { kind: 'passive', tier: 1, max: 5, name: 'SWIFT BOOTS',
+    desc: function(){ return '+9% movement speed. Positioning is the only real defence.'; } },
+  lodestone: { kind: 'passive', tier: 1, max: 4, name: 'LODESTONE',
+    desc: function(){ return '+35% pickup radius and +6% experience gained.'; } },
+
+  // ---- tier 2 passives ----
+  heart: { kind: 'passive', tier: 2, max: 5, name: 'FROZEN HEART',
+    desc: function(){ return '-8% cooldown on every weapon you carry.'; } },
+  hide: { kind: 'passive', tier: 2, max: 5, name: 'THICK HIDE',
+    desc: function(){ return '-7% damage taken from every source.'; } },
+
+  // ---- tier 3 passives ----
+  overcharge: { kind: 'passive', tier: 3, max: 6, name: 'OVERCHARGE',
+    desc: function(){ return '+13% damage dealt by all weapons.'; } },
+  split: { kind: 'passive', tier: 3, max: 2, name: 'SPLIT CORE',
+    desc: function(){ return '+1 projectile for every weapon that fires them.'; } },
+
+  // ---- tier 4: THE ULTIMATE PASSIVE (final stage only) ----
+  ancient: { kind: 'passive', tier: 4, max: 1, name: 'ANCIENT CORE', ult: true,
+    desc: function(){ return '+45% damage, -25% cooldown, +1 projectile, +12% speed, and 2.5 life per second. Taken from the hoard itself.'; } }
+};
+function bd(n){ return String(Math.round(n)); }
+
+var TIER_LABEL = ['', 'COMMON', 'FROSTBOUND', 'STORMFORGED', 'ULTIMATE'];
+
+// ============================================================
+// RUNTIME STATE
+// ============================================================
+var state = 'title';          // title | play | levelup | clear | over | win | paused
+var stageIndex = 0, stage = STAGES[0];
+var stageTime = 0, phase = 'survive';   // survive | warning | boss | done
+var runTime = 0, kills = 0, dmgDealt = 0;
+var world = { w: 2600, h: 2000 };
+var cam = { x: 0, y: 0, shake: 0, flash: 0, flashCol: '255,255,255' };
+var view = { w: 800, h: 600, dpr: 1 };
+
+var player = null;
+var enemies = [], pbullets = [], ebullets = [], orbs = [], gems = [], drops = [];
+var hazards = [], fx = [], parts = [], texts = [], decos = [];
+var boss = null, bossWarn = 0;
+var spawnTimer = 0, eventTimer = 18, pendingChoices = null, pendingKind = 'level';
+var toastTimer = 0;
+var freeChoices = 0;
+
+var MAX_ENEMIES = 190, MAX_PARTS = 340, MAX_TEXTS = 40;
+
+function makePlayer(){
+  return {
+    x: world.w / 2, y: world.h / 2, r: 13,
+    vx: 0, vy: 0, spd: 210,
+    hp: 140, maxHp: 140,
+    level: 1, xp: 0, xpNext: 6,
+    inv: 0, slowT: 0, freezeT: 0, regenAcc: 0,
+    face: { x: 1, y: 0 }, aim: 0,
+    weapons: [], passives: {},
+    hitFlash: 0
+  };
+}
+
+// ---------- derived stats ----------
+function pv(id){ return player.passives[id] || 0; }
+function hasUlt(){ return pv('ancient') > 0; }
+function statDmg(){ return 1 + 0.13 * pv('overcharge') + (hasUlt() ? 0.45 : 0); }
+function statCd(){ return Math.max(0.34, (1 - 0.08 * pv('heart')) * (hasUlt() ? 0.75 : 1)); }
+function statSpd(){ return 1 + 0.09 * pv('boots') + (hasUlt() ? 0.12 : 0); }
+function statDr(){ return Math.max(0.42, 1 - 0.07 * pv('hide')); }
+function statPick(){ return 80 * (1 + 0.35 * pv('lodestone')); }
+function statProj(){ return pv('split') + (hasUlt() ? 1 : 0); }
+function statXp(){ return 1 + 0.06 * pv('lodestone'); }
+function weaponLv(id){
+  for (var i = 0; i < player.weapons.length; i++) if (player.weapons[i].id === id) return player.weapons[i].lv;
+  return 0;
+}
+
+// ============================================================
+// CANVAS / VIEW
+// ============================================================
+function resize(){
+  var w = cv.clientWidth || window.innerWidth || 800;
+  var h = cv.clientHeight || window.innerHeight || 600;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  view.w = w; view.h = h; view.dpr = dpr;
+  cv.width = Math.max(2, Math.round(w * dpr));
+  cv.height = Math.max(2, Math.round(h * dpr));
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
+
+// ============================================================
+// AUDIO — oscillator only, created on first gesture.
+// ============================================================
+var actx = null, audioOk = true, lastSfx = {};
+function initAudio(){
+  if (actx || !audioOk) return;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { audioOk = false; return; }
+    actx = new AC();
+  } catch (e){ audioOk = false; }
+}
+function sfx(kind, vol){
+  if (!actx) return;
+  var t = now();
+  if (lastSfx[kind] && t - lastSfx[kind] < 45) return;
+  lastSfx[kind] = t;
+  try {
+    var o = actx.createOscillator(), g = actx.createGain();
+    var T = actx.currentTime, v = (vol == null ? 1 : vol) * 0.16;
+    var cfg = {
+      shoot:   ['square',   680, 260, 0.07, 0.45],
+      hit:     ['triangle', 320, 180, 0.06, 0.35],
+      crit:    ['sawtooth', 540, 210, 0.10, 0.55],
+      pick:    ['sine',     880, 1320, 0.06, 0.30],
+      level:   ['sine',     440, 1180, 0.30, 0.90],
+      boss:    ['sawtooth', 150, 60,  0.70, 1.00],
+      hurt:    ['sawtooth', 260, 90,  0.18, 0.80],
+      die:     ['sawtooth', 200, 40,  0.90, 1.00],
+      blast:   ['triangle', 180, 50,  0.28, 0.85],
+      thunder: ['square',   900, 120, 0.16, 0.60],
+      win:     ['sine',     520, 1560, 0.80, 1.00]
+    }[kind] || ['sine', 440, 440, 0.08, 0.4];
+    o.type = cfg[0];
+    o.frequency.setValueAtTime(cfg[1], T);
+    o.frequency.exponentialRampToValueAtTime(Math.max(20, cfg[2]), T + cfg[3]);
+    g.gain.setValueAtTime(v * cfg[4], T);
+    g.gain.exponentialRampToValueAtTime(0.0001, T + cfg[3]);
+    o.connect(g); g.connect(actx.destination);
+    o.start(T); o.stop(T + cfg[3] + 0.02);
+  } catch (e){ /* audio is decoration; never let it break the run */ }
+}
+
+// ============================================================
+// INPUT — keyboard, plus a relative drag stick for touch.
+// ============================================================
+var keys = {};
+var stick = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
+
+window.addEventListener('keydown', function(e){
+  var k = (e.key || '').toLowerCase();
+  keys[k] = true;
+  if (k === '1' || k === '2' || k === '3'){
+    if (state === 'levelup') chooseCard(parseInt(k, 10) - 1);
+  }
+  if (k === 'p' || k === 'escape'){
+    if (state === 'play') { state = 'paused'; showToast('PAUSED', 'PRESS P TO RESUME', 9); }
+    else if (state === 'paused') { state = 'play'; toastTimer = 0; }
+  }
+  if (k === ' ' || k === 'enter'){
+    if (state === 'title') startRun();
+    else if (state === 'clear') nextStage();
+    else if (state === 'over' || state === 'win') startRun();
+  }
+  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].indexOf(k) >= 0 && e.preventDefault) e.preventDefault();
+});
+window.addEventListener('keyup', function(e){ keys[(e.key || '').toLowerCase()] = false; });
+window.addEventListener('blur', function(){ keys = {}; stick.active = false; elJoy.style.opacity = '0'; });
+
+function stickStart(e){
+  initAudio();
+  if (state !== 'play' && state !== 'paused') return;
+  if (stick.active) return;
+  stick.active = true; stick.id = e.pointerId;
+  stick.ox = e.clientX; stick.oy = e.clientY; stick.x = 0; stick.y = 0;
+  elJoy.style.left = e.clientX + 'px';
+  elJoy.style.top = e.clientY + 'px';
+  elJoy.style.opacity = '0.85';
+  elKnob.style.left = '50%'; elKnob.style.top = '50%';
+}
+function stickMove(e){
+  if (!stick.active || e.pointerId !== stick.id) return;
+  var dx = e.clientX - stick.ox, dy = e.clientY - stick.oy;
+  var d = len(dx, dy), max = 52;
+  if (d > max){ dx = dx / d * max; dy = dy / d * max; d = max; }
+  stick.x = dx / max; stick.y = dy / max;
+  elKnob.style.left = (50 + dx / max * 46) + '%';
+  elKnob.style.top = (50 + dy / max * 46) + '%';
+}
+function stickEnd(e){
+  if (!stick.active || (e.pointerId != null && e.pointerId !== stick.id)) return;
+  stick.active = false; stick.x = 0; stick.y = 0;
+  elJoy.style.opacity = '0';
+}
+cv.addEventListener('pointerdown', stickStart);
+window.addEventListener('pointermove', stickMove);
+window.addEventListener('pointerup', stickEnd);
+window.addEventListener('pointercancel', stickEnd);
+
+function inputVector(){
+  var dx = 0, dy = 0;
+  if (keys['a'] || keys['arrowleft']) dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  if (keys['w'] || keys['arrowup']) dy -= 1;
+  if (keys['s'] || keys['arrowdown']) dy += 1;
+  if (dx === 0 && dy === 0 && stick.active){ dx = stick.x; dy = stick.y; }
+  var d = len(dx, dy);
+  if (d > 1){ dx /= d; dy /= d; }
+  return { x: dx, y: dy, m: Math.min(1, d) };
+}
+
+// ============================================================
+// WORLD DRESSING — deterministic scatter per stage.
+// ============================================================
+function buildDecos(){
+  decos = [];
+  var rng = mulberry32(1337 + stageIndex * 977);
+  var n = 150;
+  for (var i = 0; i < n; i++){
+    decos.push({
+      x: rng() * world.w, y: rng() * world.h,
+      s: 0.6 + rng() * 1.5, a: rng() * TAU, k: rng()
+    });
+  }
+}
+
+function shake(amount){ cam.shake = Math.max(cam.shake, amount); }
+function flash(col, amount){ cam.flashCol = col; cam.flash = Math.max(cam.flash, amount); }
+
+// ============================================================
+// PARTICLES / FLOATING TEXT
+// ============================================================
+function burst(x, y, n, col, spd, life, size){
+  for (var i = 0; i < n && parts.length < MAX_PARTS; i++){
+    var a = Math.random() * TAU, s = rnd(spd * 0.35, spd);
+    parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+      t: 0, life: life * rnd(0.6, 1.2), col: col, size: size || 3 });
+  }
+}
+function floatText(x, y, str, col, big){
+  if (texts.length >= MAX_TEXTS) texts.shift();
+  texts.push({ x: x, y: y, s: str, col: col, t: 0, life: big ? 1.1 : 0.62, big: !!big });
+}
+function showToast(main, sub, dur){
+  elToastMain.textContent = main;
+  elToastSub.textContent = sub || '';
+  toastTimer = dur || 2.2;
+}
+
+// ============================================================
+// ENEMIES
+// ============================================================
+var ETYPES = {
+  // Speeds sit close under the player's 196 on purpose: you can pull away
+  // from the horde, but never for free, and never for long.
+  // --- stage 1: the horde ---
+  walker:    { hp: 22,  spd: 82,  r: 12, dmg: 7,  xp: 1, col: '#7ea86a', dark: '#2a3f27', beh: 'chase' },
+  runner:    { hp: 17,  spd: 142, r: 10, dmg: 7,  xp: 1, col: '#a8d06f', dark: '#3c4b26', beh: 'chase' },
+  bloater:   { hp: 78,  spd: 62,  r: 19, dmg: 15, xp: 3, col: '#c2c06a', dark: '#4a4622', beh: 'chase', burst: true },
+  // --- stage 2: the cold ---
+  shade:     { hp: 46,  spd: 100, r: 12, dmg: 10, xp: 2, col: '#9fd8ff', dark: '#2a4a63', beh: 'chill' },
+  shardling: { hp: 38,  spd: 78,  r: 11, dmg: 9,  xp: 2, col: '#cfe9ff', dark: '#3a5a75', beh: 'ranged', shot: 'ice' },
+  brute:     { hp: 165, spd: 72,  r: 20, dmg: 18, xp: 5, col: '#6fa8c8', dark: '#24455a', beh: 'chase' },
+  // --- stage 3: the storm ---
+  wisp:      { hp: 30,  spd: 172, r: 9,  dmg: 9,  xp: 2, col: '#fff0a0', dark: '#5c5220', beh: 'weave' },
+  hound:     { hp: 66,  spd: 130, r: 13, dmg: 13, xp: 3, col: '#ffc75a', dark: '#5c4318', beh: 'lunge' },
+  sentinel:  { hp: 135, spd: 76,  r: 16, dmg: 12, xp: 5, col: '#e0c0ff', dark: '#453058', beh: 'ranged', shot: 'bolt' }
+};
+
+function spawnEnemy(type, x, y, elite, hpScale){
+  if (enemies.length >= MAX_ENEMIES) return null;
+  var T = ETYPES[type];
+  var mul = (hpScale == null ? 1 : hpScale) * stage.hpMul * Math.min(2.2, 1 + runTime / 300);
+  var hp = T.hp * mul * (elite ? 4.2 : 1);
+  var e = {
+    type: type, x: x, y: y, r: T.r * (elite ? 1.45 : 1),
+    hp: hp, maxHp: hp, spd: T.spd * (elite ? 0.86 : 1) * (1 + stageIndex * 0.05),
+    dmg: T.dmg * (elite ? 1.6 : 1) * (1 + stageIndex * 0.22),
+    xp: T.xp * (elite ? 6 : 1), elite: !!elite,
+    col: T.col, dark: T.dark, beh: T.beh, shot: T.shot, burst: T.burst,
+    t: rnd(0, 6), cd: rnd(0.6, 2.4), kx: 0, ky: 0,
+    slow: 0, slowT: 0, freeze: 0, hitT: 0, lung: 0, wob: rnd(0, TAU)
+  };
+  enemies.push(e);
+  return e;
+}
+
+function spawnPointOffscreen(){
+  // just past the edge of what you can see, not so far that they never arrive
+  var m = Math.max(view.w, view.h) * 0.55 + 80;
+  var a = Math.random() * TAU;
+  return {
+    x: clamp(player.x + Math.cos(a) * m, 30, world.w - 30),
+    y: clamp(player.y + Math.sin(a) * m, 30, world.h - 30)
+  };
+}
+
+function weightedType(){
+  var list = stage.enemies, total = 0, i;
+  for (i = 0; i < list.length; i++) total += list[i][1];
+  var r = Math.random() * total;
+  for (i = 0; i < list.length; i++){ r -= list[i][1]; if (r <= 0) return list[i][0]; }
+  return list[0][0];
+}
+
+function updateSpawning(dt){
+  if (phase === 'done') return;
+  var prog = clamp(stageTime / stage.dur, 0, 1);
+  var bossOn = (phase === 'boss');
+  var interval = stage.spawnBase * (1 - 0.35 * prog) * (bossOn ? 2.1 : 1);
+  spawnTimer -= dt;
+  if (spawnTimer <= 0){
+    spawnTimer = Math.max(0.22, interval);
+    var count = stage.burst + Math.floor(prog * 2);
+    var eliteChance = 0.02 + prog * 0.09 + stageIndex * 0.02;
+    for (var i = 0; i < count; i++){
+      var p = spawnPointOffscreen();
+      spawnEnemy(weightedType(), p.x, p.y, Math.random() < eliteChance);
+    }
+  }
+  // periodic encirclement so standing still is never safe
+  eventTimer -= dt;
+  if (eventTimer <= 0 && !bossOn){
+    eventTimer = 26 - stageIndex * 3;
+    var n = 9 + stageIndex * 4, rad = Math.max(view.w, view.h) * 0.55;
+    for (var k = 0; k < n; k++){
+      var a = k / n * TAU + rnd(-0.1, 0.1);
+      spawnEnemy(weightedType(),
+        clamp(player.x + Math.cos(a) * rad, 30, world.w - 30),
+        clamp(player.y + Math.sin(a) * rad, 30, world.h - 30), false, 0.9);
+    }
+    floatText(player.x, player.y - 60, 'THEY CIRCLE', '#ffd0d0', true);
+  }
+}
+
+// ---------- damage resolution ----------
+function hurtEnemy(e, amount, kx, ky, col){
+  if (e.dead) return 0;
+  var dealt = amount;
+  if (e.isBoss && e.armorMul) dealt *= e.armorMul;
+  e.hp -= dealt;
+  dmgDealt += dealt;
+  e.hitT = 0.09;
+  if (kx || ky){ e.kx += kx; e.ky += ky; }
+  floatText(e.x + rnd(-6, 6), e.y - e.r - 4, String(Math.round(dealt)), col || (dealt >= 120 ? '#ffe07a' : '#ffffff'), dealt >= 120);
+  if (e.hp <= 0) killEnemy(e);
+  return dealt;
+}
+
+function killEnemy(e){
+  if (e.dead) return;
+  e.dead = true;
+  kills++;
+  burst(e.x, e.y, e.elite ? 16 : 8, e.col, 150, 0.5, e.elite ? 4 : 3);
+  sfx('hit', 0.5);
+  if (e.burst){
+    // a bloater bursts into three walkers and a cloud of caustic damage
+    explodeAt(e.x, e.y, 84, 26, '#c2c06a');
+    for (var i = 0; i < 3; i++){
+      var a = Math.random() * TAU;
+      spawnEnemy('walker', e.x + Math.cos(a) * 26, e.y + Math.sin(a) * 26, false, 0.55);
+    }
+  }
+  var n = e.elite ? 6 : 1;
+  for (var g = 0; g < n; g++){
+    gems.push({ x: e.x + rnd(-10, 10), y: e.y + rnd(-10, 10), vx: rnd(-40, 40), vy: rnd(-40, 40),
+      v: Math.max(1, Math.round(e.xp / n)), t: 0 });
+  }
+  if (Math.random() < (e.elite ? 0.45 : 0.035)) drops.push({ x: e.x, y: e.y, kind: 'heal', t: 0 });
+  else if (Math.random() < (e.elite ? 0.30 : 0.012)) drops.push({ x: e.x, y: e.y, kind: 'nuke', t: 0 });
+}
+
+function explodeAt(x, y, radius, dmg, col, source){
+  burst(x, y, 16, col || '#ffb060', 240, 0.5, 4);
+  fx.push({ kind: 'ring', x: x, y: y, r0: 6, r1: radius, t: 0, life: 0.3, col: col || '#ffb060', w: 3 });
+  shake(radius * 0.05);
+  for (var i = 0; i < enemies.length; i++){
+    var e = enemies[i];
+    if (e.dead) continue;
+    if (len(e.x - x, e.y - y) < radius + e.r) hurtEnemy(e, dmg, 0, 0, col);
+  }
+  if (boss && !boss.dead && len(boss.x - x, boss.y - y) < radius + boss.r) hurtEnemy(boss, dmg, 0, 0, col);
+  if (source === 'enemy' && len(player.x - x, player.y - y) < radius + player.r) hurtPlayer(dmg * 0.5);
+}
+
+function hurtPlayer(amount){
+  if (player.inv > 0 || state !== 'play') return;
+  var dealt = amount * statDr();
+  player.hp -= dealt;
+  player.inv = 0.78;
+  player.hitFlash = 0.35;
+  shake(9); flash('255,70,70', 0.34);
+  sfx('hurt');
+  floatText(player.x, player.y - 24, '-' + Math.round(dealt), '#ff7b7b');
+  if (player.hp <= 0){ player.hp = 0; gameOver(); }
+}
+
+// ---------- enemy movement ----------
+var grid = {};
+function rebuildGrid(){
+  grid = {};
+  for (var i = 0; i < enemies.length; i++){
+    var e = enemies[i];
+    var key = (e.x / 56 | 0) + ',' + (e.y / 56 | 0);
+    (grid[key] || (grid[key] = [])).push(e);
+  }
+}
+function separate(e){
+  var cx = e.x / 56 | 0, cy = e.y / 56 | 0;
+  for (var ox = -1; ox <= 1; ox++) for (var oy = -1; oy <= 1; oy++){
+    var cell = grid[(cx + ox) + ',' + (cy + oy)];
+    if (!cell) continue;
+    for (var i = 0; i < cell.length; i++){
+      var o = cell[i];
+      if (o === e || o.dead) continue;
+      var dx = e.x - o.x, dy = e.y - o.y, d = len(dx, dy), min = e.r + o.r;
+      if (d > 0.001 && d < min){
+        var push = (min - d) / d * 0.42;
+        e.x += dx * push; e.y += dy * push;
+      }
+    }
+  }
+}
+
+function updateEnemies(dt){
+  rebuildGrid();
+  for (var i = enemies.length - 1; i >= 0; i--){
+    var e = enemies[i];
+    if (e.dead){ enemies.splice(i, 1); continue; }
+    e.t += dt;
+    if (e.hitT > 0) e.hitT -= dt;
+    if (e.slowT > 0){ e.slowT -= dt; if (e.slowT <= 0) e.slow = 0; }
+    if (e.freeze > 0){ e.freeze -= dt; }
+
+    var mul = (1 - e.slow) * (e.freeze > 0 ? 0 : 1);
+    var a = angTo(e.x, e.y, player.x, player.y);
+    var sp = e.spd * mul;
+
+    if (e.beh === 'weave'){
+      a += Math.sin(e.t * 5 + e.wob) * 0.85;
+    } else if (e.beh === 'chill'){
+      if (e.t % 0.5 < dt) hazards.push({ kind: 'slick', x: e.x, y: e.y, r: 30, t: 0, life: 2.6 });
+    } else if (e.beh === 'lunge'){
+      e.cd -= dt;
+      if (e.lung > 0){ e.lung -= dt; sp = e.spd * 3.2 * mul; }
+      else if (e.cd <= 0 && len(player.x - e.x, player.y - e.y) < 300){ e.cd = rnd(2.2, 3.6); e.lung = 0.42; }
+    } else if (e.beh === 'ranged'){
+      e.cd -= dt;
+      var d = len(player.x - e.x, player.y - e.y);
+      if (d < 300) sp = -e.spd * 0.35;           // kite
+      else if (d < 430) sp = 0;
+      if (e.cd <= 0 && d < 470 && e.freeze <= 0){
+        e.cd = rnd(1.9, 3.2);
+        fireEnemyShot(e);
+      }
+    }
+
+    e.x += (Math.cos(a) * sp + e.kx) * dt;
+    e.y += (Math.sin(a) * sp + e.ky) * dt;
+    e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
+    e.x = clamp(e.x, 12, world.w - 12); e.y = clamp(e.y, 12, world.h - 12);
+    separate(e);
+
+    var dd = len(e.x - player.x, e.y - player.y);
+    if (dd < e.r + player.r) hurtPlayer(e.dmg);
+  }
+}
+
+function fireEnemyShot(e){
+  var a = angTo(e.x, e.y, player.x, player.y);
+  if (e.shot === 'ice'){
+    ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 250, vy: Math.sin(a) * 250,
+      r: 6, dmg: e.dmg * 0.9, life: 3.2, t: 0, col: '#bfe6ff', kind: 'ice' });
+  } else {
+    for (var k = -1; k <= 1; k++){
+      ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a + k * 0.24) * 210, vy: Math.sin(a + k * 0.24) * 210,
+        r: 7, dmg: e.dmg * 0.8, life: 3.4, t: 0, col: '#e0c0ff', kind: 'bolt' });
+    }
+  }
+  sfx('shoot', 0.35);
+}
+
+function updateEnemyBullets(dt){
+  for (var i = ebullets.length - 1; i >= 0; i--){
+    var b = ebullets[i];
+    b.t += dt;
+    if (b.homing){
+      var a = angTo(b.x, b.y, player.x, player.y), ca = Math.atan2(b.vy, b.vx);
+      var na = ca + clamp(angDiff(ca, a), -b.homing * dt, b.homing * dt);
+      var s = len(b.vx, b.vy);
+      b.vx = Math.cos(na) * s; b.vy = Math.sin(na) * s;
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.t > b.life){ ebullets.splice(i, 1); continue; }
+    if (len(b.x - player.x, b.y - player.y) < b.r + player.r){
+      hurtPlayer(b.dmg);
+      if (b.kind === 'ice') { player.slowT = Math.max(player.slowT, 1.3); }
+      burst(b.x, b.y, 6, b.col, 120, 0.3, 2);
+      ebullets.splice(i, 1);
+    }
+  }
+}
+
+// ============================================================
+// TARGETING
+// ============================================================
+var idc = 0;
+function nearestTarget(x, y, maxD, skipMap){
+  var best = null, bd = (maxD == null ? Infinity : maxD), i, e, d;
+  for (i = 0; i < enemies.length; i++){
+    e = enemies[i];
+    if (e.dead || (skipMap && skipMap[e.id])) continue;
+    d = len(e.x - x, e.y - y);
+    if (d < bd){ bd = d; best = e; }
+  }
+  if (boss && !boss.dead && !(skipMap && skipMap[boss.id])){
+    // Auto-aim treats the boss as nearer than it is. Without this bias a
+    // boss that fights beside a horde is never the closest thing on screen
+    // and simply never gets shot.
+    d = Math.max(0, len(boss.x - x, boss.y - y) - 260);
+    if (d < bd){ bd = d; best = boss; }
+  }
+  return best;
+}
+function eachTarget(fn){
+  for (var i = 0; i < enemies.length; i++) if (!enemies[i].dead) fn(enemies[i]);
+  if (boss && !boss.dead) fn(boss);
+}
+function ensureId(e){ if (!e.id) e.id = ++idc; return e.id; }
+
+// ============================================================
+// WEAPONS
+// ============================================================
+function weaponCooldown(id, l){
+  var base = {
+    blade: 1.15 - 0.055 * l, shard: 0.95 - 0.055 * l, orb: 999,
+    nova: 3.6 - 0.20 * l, icicle: 1.65 - 0.09 * l,
+    chain: 2.05 - 0.11 * l, storm: 0.35, fang: 2.4 - 0.14 * l
+  }[id];
+  if (id === 'orb') return 999;
+  if (id === 'storm') return 0.35;
+  return Math.max(0.16, base) * statCd();
+}
+
+function fireWeapon(w){
+  var l = w.lv, D = statDmg(), extra = statProj();
+  var t;
+  switch (w.id){
+    case 'blade': {
+      var dmg = (16 + 8 * l) * D, range = 96 + 11 * l, arc = 1.35 + 0.06 * l;
+      var sweeps = l >= 7 ? 3 : l >= 4 ? 2 : 1;
+      var base = player.aim;
+      for (var s = 0; s < sweeps; s++){
+        var a = base + s * (TAU / sweeps);
+        fx.push({ kind: 'slash', x: player.x, y: player.y, a: a, arc: arc, r: range, t: 0, life: 0.19, col: '#ffffff' });
+        coneDamage(player.x, player.y, a, arc, range, dmg, 210, '#fff2c8');
+      }
+      sfx('shoot', 0.3);
+      break;
+    }
+    case 'shard': {
+      var n = 1 + Math.floor(l / 2) + extra, dm = (10 + 5 * l) * D, skip = {};
+      for (var i = 0; i < n; i++){
+        t = nearestTarget(player.x, player.y, 620, skip);
+        var ang = t ? angTo(player.x, player.y, t.x, t.y) : player.aim + rnd(-0.3, 0.3);
+        if (t) skip[ensureId(t)] = 1;
+        pbullets.push(mkBullet(player.x, player.y, ang, 500, 5, dm, l >= 5 ? 1 : 0, 2.0, '#e8e0c8', 'shard'));
+      }
+      sfx('shoot', 0.25);
+      break;
+    }
+    case 'icicle': {
+      var cnt = 3 + Math.floor(l / 2) + extra, dmi = (16 + 8 * l) * D, pierce = 2 + Math.floor(l / 3);
+      var a0 = player.aim, spread = 0.16;
+      for (var k = 0; k < cnt; k++){
+        var off = (k - (cnt - 1) / 2) * spread;
+        var b = mkBullet(player.x, player.y, a0 + off, 430, 6, dmi, pierce, 2.2, '#c8ecff', 'ice');
+        b.chill = 0.45 + 0.02 * l;
+        pbullets.push(b);
+      }
+      sfx('shoot', 0.3);
+      break;
+    }
+    case 'nova': {
+      fx.push({ kind: 'nova', x: player.x, y: player.y, r0: 14, r1: 140 + 24 * l, t: 0, life: 0.46,
+        dmg: (24 + 12 * l) * D, slow: Math.min(0.72, 0.40 + 0.03 * l), hit: {}, col: '#9fe4ff' });
+      sfx('blast', 0.4);
+      break;
+    }
+    case 'chain': {
+      var jumps = 3 + l, dmc = (30 + 16 * l) * D, skipC = {};
+      var src = { x: player.x, y: player.y }, pts = [{ x: player.x, y: player.y }];
+      for (var j = 0; j < jumps; j++){
+        var tg = nearestTarget(src.x, src.y, j === 0 ? 420 : 260, skipC);
+        if (!tg) break;
+        skipC[ensureId(tg)] = 1;
+        pts.push({ x: tg.x, y: tg.y });
+        hurtEnemy(tg, dmc, 0, 0, '#fff6a0');
+        src = tg;
+      }
+      if (pts.length > 1){
+        fx.push({ kind: 'chain', pts: pts, t: 0, life: 0.24, col: '#fff6a0' });
+        sfx('thunder', 0.35);
+      }
+      break;
+    }
+    case 'storm': {
+      var R = 88 + 13 * l, dps = (26 + 13 * l) * D * 0.35;
+      eachTarget(function(e){
+        if (len(e.x - player.x, e.y - player.y) < R + e.r) hurtEnemy(e, dps, 0, 0, '#fff0a0');
+      });
+      break;
+    }
+    case 'fang': {
+      var lances = 2 + l + extra, dmf = (95 + 55 * l) * D, br = 76 + 10 * l, skipF = {};
+      for (var f = 0; f < lances; f++){
+        var tf = nearestTarget(player.x, player.y, 900, skipF);
+        if (tf) skipF[ensureId(tf)] = 1;
+        var af = tf ? angTo(player.x, player.y, tf.x, tf.y) : player.aim + f * 0.5;
+        var bl = mkBullet(player.x, player.y, af, 360, 9, dmf, 0, 3.4, '#ff9a45', 'fang');
+        bl.homing = 4.4; bl.explode = { r: br, dmg: dmf * 0.65 }; bl.trail = true;
+        pbullets.push(bl);
+      }
+      w.alt = !w.alt;
+      if (l >= 3 && w.alt){
+        var ab = player.aim;
+        fx.push({ kind: 'breath', x: player.x, y: player.y, a: ab, arc: 0.62, r: 330, t: 0, life: 0.5, col: '#ffb060' });
+        coneDamage(player.x, player.y, ab, 0.62, 330, dmf * 0.9, 260, '#ffcf90');
+        shake(7);
+      }
+      sfx('blast', 0.6);
+      break;
+    }
+  }
+}
+
+function mkBullet(x, y, ang, spd, r, dmg, pierce, life, col, kind){
+  return { x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+    r: r, dmg: dmg, pierce: pierce, life: life, t: 0, col: col, kind: kind, hit: {} };
+}
+
+function coneDamage(x, y, a, arc, range, dmg, kb, col){
+  eachTarget(function(e){
+    var dx = e.x - x, dy = e.y - y, d = len(dx, dy);
+    if (d > range + e.r) return;
+    if (d > 0.01 && Math.abs(angDiff(a, Math.atan2(dy, dx))) > arc) return;
+    var ka = d > 0.01 ? Math.atan2(dy, dx) : a;
+    hurtEnemy(e, dmg, Math.cos(ka) * kb, Math.sin(ka) * kb, col);
+  });
+}
+
+function updatePlayerBullets(dt){
+  for (var i = pbullets.length - 1; i >= 0; i--){
+    var b = pbullets[i];
+    b.t += dt;
+    if (b.homing){
+      var tg = nearestTarget(b.x, b.y, 620, b.hit);
+      if (tg){
+        var ca = Math.atan2(b.vy, b.vx), ta = angTo(b.x, b.y, tg.x, tg.y);
+        var na = ca + clamp(angDiff(ca, ta), -b.homing * dt, b.homing * dt);
+        var s = len(b.vx, b.vy);
+        b.vx = Math.cos(na) * s; b.vy = Math.sin(na) * s;
+      }
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.trail && parts.length < MAX_PARTS){
+      parts.push({ x: b.x, y: b.y, vx: rnd(-14, 14), vy: rnd(-14, 14), t: 0, life: 0.3, col: b.col, size: 3 });
+    }
+    if (b.t > b.life || b.x < -60 || b.y < -60 || b.x > world.w + 60 || b.y > world.h + 60){
+      pbullets.splice(i, 1); continue;
+    }
+    var gone = false;
+    for (var j = 0; j < enemies.length && !gone; j++){
+      var e = enemies[j];
+      if (e.dead || b.hit[ensureId(e)]) continue;
+      if (len(e.x - b.x, e.y - b.y) < e.r + b.r) gone = resolveHit(b, e, i);
+    }
+    if (!gone && boss && !boss.dead && !b.hit[ensureId(boss)] &&
+        len(boss.x - b.x, boss.y - b.y) < boss.r + b.r) resolveHit(b, boss, i);
+  }
+}
+
+function resolveHit(b, e, index){
+  b.hit[ensureId(e)] = 1;
+  hurtEnemy(e, b.dmg, b.vx * 0.22, b.vy * 0.22, b.col);
+  if (b.chill){ e.slow = Math.max(e.slow, b.chill); e.slowT = Math.max(e.slowT, 1.6); }
+  burst(b.x, b.y, 4, b.col, 110, 0.26, 2);
+  if (b.explode){ explodeAt(b.x, b.y, b.explode.r, b.explode.dmg, b.col); }
+  if (b.pierce > 0 && !b.explode){ b.pierce--; return false; }
+  pbullets.splice(index, 1);
+  return true;
+}
+
+// ---------- orbiting embers ----------
+function refreshOrbs(){
+  var l = weaponLv('orb');
+  orbs = [];
+  if (!l) return;
+  var n = 2 + Math.floor((l - 1) / 2) + statProj();
+  for (var i = 0; i < n; i++) orbs.push({ a: i / n * TAU });
+}
+function updateOrbs(dt){
+  var l = weaponLv('orb');
+  if (!l || !orbs.length) return;
+  var R = 74 + 7 * l, dmg = (9 + 5 * l) * statDmg(), spin = 1.9 + 0.05 * l;
+  for (var i = 0; i < orbs.length; i++){
+    var o = orbs[i];
+    o.a += spin * dt;
+    o.x = player.x + Math.cos(o.a) * R;
+    o.y = player.y + Math.sin(o.a) * R;
+  }
+  eachTarget(function(e){
+    if (e.orbCd > 0){ e.orbCd -= dt; return; }
+    for (var i = 0; i < orbs.length; i++){
+      if (len(e.x - orbs[i].x, e.y - orbs[i].y) < e.r + 11){
+        hurtEnemy(e, dmg, 0, 0, '#ffb060');
+        e.orbCd = 0.42;
+        return;
+      }
+    }
+  });
+}
+
+// ============================================================
+// PICKUPS
+// ============================================================
+function updatePickups(dt){
+  var pr = statPick();
+  for (var i = gems.length - 1; i >= 0; i--){
+    var g = gems[i];
+    g.t += dt;
+    var d = len(g.x - player.x, g.y - player.y);
+    if (d < pr){
+      var a = angTo(g.x, g.y, player.x, player.y), s = 240 + (pr - d) * 3.4;
+      g.x += Math.cos(a) * s * dt; g.y += Math.sin(a) * s * dt;
+    } else {
+      g.x += g.vx * dt; g.y += g.vy * dt;
+      g.vx *= Math.pow(0.02, dt); g.vy *= Math.pow(0.02, dt);
+    }
+    if (d < player.r + 8){
+      gems.splice(i, 1);
+      gainXp(g.v);
+    }
+  }
+  for (var k = drops.length - 1; k >= 0; k--){
+    var dr = drops[k];
+    dr.t += dt;
+    if (len(dr.x - player.x, dr.y - player.y) < player.r + 16){
+      drops.splice(k, 1);
+      if (dr.kind === 'heal'){
+        player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.25);
+        floatText(player.x, player.y - 30, '+LIFE', '#7fe3a0', true);
+      } else {
+        floatText(player.x, player.y - 30, 'PURGE', '#ffe07a', true);
+        flash('255,255,255', 0.55); shake(16); sfx('blast');
+        var dmgN = 260 + runTime * 4;
+        eachTarget(function(e){ if (!e.isBoss) hurtEnemy(e, dmgN, 0, 0, '#ffffff'); });
+        if (boss && !boss.dead) hurtEnemy(boss, dmgN * 0.35, 0, 0, '#ffffff');
+      }
+      sfx('pick');
+    }
+  }
+}
+
+function gainXp(v){
+  player.xp += v * statXp();
+  sfx('pick', 0.22);
+  while (player.xp >= player.xpNext){
+    player.xp -= player.xpNext;
+    player.level++;
+    player.xpNext = Math.floor(6 + player.level * 5 + Math.pow(player.level, 1.55));
+    player.maxHp += 4;
+    player.hp = Math.min(player.maxHp, player.hp + 12);   // a small breath every level
+    queueLevelUp();
+  }
+}
+
+// ============================================================
+// HAZARDS — everything dangerous the bosses put on the ground.
+// Every lethal shape is telegraphed before it becomes lethal.
+// ============================================================
+function hz(o){
+  o.t = 0; o.tw = o.tw == null ? 0.85 : o.tw;
+  o.life = o.life == null ? o.tw + 0.35 : o.life;
+  o.col = o.col || '#ff6a4a';
+  o.hitOnce = o.hitOnce !== false;
+  hazards.push(o);
+  return o;
+}
+function hazardActive(h){ return h.t >= h.tw; }
+
+function updateHazards(dt){
+  for (var i = hazards.length - 1; i >= 0; i--){
+    var h = hazards[i];
+    h.t += dt;
+    if (h.t > h.life){ hazards.splice(i, 1); continue; }
+    if (h.kind === 'slick'){
+      if (len(player.x - h.x, player.y - h.y) < h.r) player.slowT = Math.max(player.slowT, 0.4);
+      continue;
+    }
+    if (!hazardActive(h)) continue;
+    if (h.spawned !== true && h.kind === 'circle'){
+      h.spawned = true;
+      burst(h.x, h.y, 12, h.col, 200, 0.4, 3);
+      shake(5); sfx(h.sfx || 'blast', 0.4);
+    }
+    var hit = false, hdmg = (h.dmg == null ? 18 : h.dmg);
+    var px = player.x, py = player.y, pr = player.r;
+    if (h.kind === 'circle'){
+      hit = len(px - h.x, py - h.y) < h.r + pr;
+    } else if (h.kind === 'ring'){
+      var f = (h.t - h.tw) / Math.max(0.001, h.life - h.tw);
+      h.cur = lerp(h.r0, h.r1, f);
+      var d = len(px - h.x, py - h.y);
+      if (Math.abs(d - h.cur) < 22 + pr){
+        hit = true;
+        if (h.gapW != null){
+          var pa = angTo(h.x, h.y, px, py);
+          if (Math.abs(angDiff(h.gap, pa)) < h.gapW) hit = false;
+        }
+      }
+    } else if (h.kind === 'beam'){
+      var dx = px - h.x, dy = py - h.y;
+      var along = dx * Math.cos(h.a) + dy * Math.sin(h.a);
+      var perp = -dx * Math.sin(h.a) + dy * Math.cos(h.a);
+      hit = along > -10 && along < h.len && Math.abs(perp) < h.w + pr;
+    } else if (h.kind === 'fire'){
+      if (len(px - h.x, py - h.y) < h.r + pr){
+        player.burnAcc = (player.burnAcc || 0) + h.dps * dt;
+        if (player.burnAcc >= 6){ player.burnAcc = 0; player.inv = 0; hurtPlayer(6); }
+      }
+    }
+    if (hit && !h.consumed && hdmg > 0){
+      hurtPlayer(hdmg);
+      if (h.chill) player.slowT = Math.max(player.slowT, 1.6);
+      if (h.hitOnce) h.consumed = true;
+    }
+  }
+}
+
+// ============================================================
+// BOSSES
+// ============================================================
+function bossNote(s){ elBossNote.textContent = s || ''; }
+
+var BOSSES = {
+
+  // ---------------------------------------------------------
+  // STAGE 1 — THE HORDE KING.
+  // A boss made of the horde: while its dead still stand near
+  // it, almost nothing you do lands. Thin the crowd, then hit.
+  // ---------------------------------------------------------
+  horde: {
+    hp: 1600, r: 46, touch: 22, col: '#8fbf74',
+    init: function(b){ b.summonCd = 2.0; b.slamCd = 4.6; b.chargeCd = 8.0; b.charge = 0; },
+    update: function(b, dt){
+      // horde armour: damage reduction scales with living minions nearby
+      var near = 0;
+      for (var i = 0; i < enemies.length; i++){
+        if (!enemies[i].dead && len(enemies[i].x - b.x, enemies[i].y - b.y) < 320) near++;
+      }
+      b.near = near;
+      // steep enough that ignoring the horde is wrong, shallow enough that
+      // a crowded screen never makes the king mathematically immortal
+      b.armorMul = Math.max(0.40, 1 - 0.028 * near);
+      bossNote('HORDE ARMOUR ' + Math.round((1 - b.armorMul) * 100) + '%  ·  ' + near + ' STANDING');
+
+      var enraged = b.hp < b.maxHp * 0.5;
+      var a = angTo(b.x, b.y, player.x, player.y);
+
+      if (b.charge > 0){
+        b.charge -= dt;
+        b.x += Math.cos(b.ca) * 330 * dt;
+        b.y += Math.sin(b.ca) * 330 * dt;
+        if (Math.random() < 0.5) hz({ kind: 'fire', x: b.x, y: b.y, r: 34, tw: 0, life: 3.2, dps: 14, col: '#9ac37a' });
+      } else {
+        b.x += Math.cos(a) * (enraged ? 122 : 96) * dt;
+        b.y += Math.sin(a) * (enraged ? 122 : 96) * dt;
+      }
+
+      b.summonCd -= dt;
+      if (b.summonCd <= 0){
+        b.summonCd = enraged ? 3.2 : 5.0;
+        var n = enraged ? 8 : 5;
+        for (var k = 0; k < n; k++){
+          var ang = k / n * TAU + rnd(-0.2, 0.2), rr = b.r + 40;
+          spawnEnemy(enraged && k % 4 === 0 ? 'bloater' : (k % 3 === 0 ? 'runner' : 'walker'),
+            b.x + Math.cos(ang) * rr, b.y + Math.sin(ang) * rr, false, 0.75);
+        }
+        fx.push({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: b.r + 80, t: 0, life: 0.4, col: '#8fbf74', w: 3 });
+        floatText(b.x, b.y - b.r - 18, 'RISE', '#bfe3a0', true);
+        sfx('boss', 0.4);
+      }
+
+      b.slamCd -= dt;
+      if (b.slamCd <= 0){
+        b.slamCd = enraged ? 3.4 : 5.2;
+        hz({ kind: 'circle', x: player.x, y: player.y, r: 96, tw: 0.9, life: 1.3, dmg: 20, col: '#a8d07a' });
+      }
+
+      b.chargeCd -= dt;
+      if (b.chargeCd <= 0 && b.charge <= 0){
+        b.chargeCd = enraged ? 6.0 : 9.0;
+        b.ca = a; b.charge = 1.0;
+        floatText(b.x, b.y - b.r - 30, 'CHARGE', '#ffd0a0', true);
+        hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 380, w: 40, tw: 0.6, life: 0.62, dmg: 0, col: '#c8e0a0' });
+      }
+    },
+    draw: function(b, g){
+      var t = b.t;
+      g.save(); g.translate(b.x, b.y);
+      // a churning mound of bodies
+      g.fillStyle = '#22301c';
+      g.beginPath(); g.arc(0, 8, b.r * 1.1, 0, TAU); g.fill();
+      for (var i = 0; i < 12; i++){
+        var a = i / 12 * TAU + Math.sin(t * 1.4 + i) * 0.2;
+        var rr = b.r * (0.62 + 0.28 * Math.sin(t * 2 + i * 1.7));
+        g.fillStyle = i % 2 ? '#547a45' : '#3e5c33';
+        g.beginPath(); g.arc(Math.cos(a) * rr, Math.sin(a) * rr * 0.8 + 6, 13, 0, TAU); g.fill();
+      }
+      g.fillStyle = b.hitT > 0 ? '#ffffff' : '#8fbf74';
+      g.beginPath(); g.arc(0, -6, b.r * 0.72, 0, TAU); g.fill();
+      g.fillStyle = '#1a2415';
+      g.beginPath(); g.arc(-13, -16, 6, 0, TAU); g.arc(13, -16, 6, 0, TAU); g.fill();
+      g.fillStyle = '#d8ff9a';
+      g.beginPath(); g.arc(-13, -16, 2.6, 0, TAU); g.arc(13, -16, 2.6, 0, TAU); g.fill();
+      // crown of arms
+      g.strokeStyle = '#6f9a58'; g.lineWidth = 5; g.lineCap = 'round';
+      for (var k = 0; k < 6; k++){
+        var aa = -Math.PI + k / 5 * Math.PI, sw = Math.sin(t * 3 + k) * 0.3;
+        g.beginPath(); g.moveTo(Math.cos(aa) * b.r * 0.7, Math.sin(aa) * b.r * 0.7 - 6);
+        g.lineTo(Math.cos(aa + sw) * b.r * 1.25, Math.sin(aa + sw) * b.r * 1.25 - 14); g.stroke();
+      }
+      if (b.armorMul < 0.98){
+        g.strokeStyle = 'rgba(180,255,150,' + (0.25 + (1 - b.armorMul) * 0.6) + ')';
+        g.lineWidth = 3;
+        g.beginPath(); g.arc(0, 0, b.r + 12 + Math.sin(t * 4) * 3, 0, TAU); g.stroke();
+      }
+      g.restore();
+    }
+  },
+
+  // ---------------------------------------------------------
+  // STAGE 2 — THE FROST MONARCH.
+  // Expanding rings with one safe gap; the floor already
+  // fights your ability to stop where you meant to.
+  // ---------------------------------------------------------
+  frost: {
+    hp: 3600, r: 42, touch: 24, col: '#8fd8ff',
+    init: function(b){ b.ringCd = 3.0; b.spikeCd = 5.2; b.tpCd = 7.0; b.spiral = 0; b.spiralA = 0; },
+    update: function(b, dt){
+      var enraged = b.hp < b.maxHp * 0.5;
+      bossNote(enraged ? 'BLIZZARD · THE AIR ITSELF SLOWS YOU' : 'FIND THE GAP IN THE RING');
+      b.armorMul = 1;
+
+      var a = angTo(b.x, b.y, player.x, player.y);
+      b.x += Math.cos(a) * 86 * dt; b.y += Math.sin(a) * 86 * dt;
+
+      b.ringCd -= dt;
+      if (b.ringCd <= 0){
+        b.ringCd = enraged ? 3.2 : 4.6;
+        var gap = angTo(b.x, b.y, player.x, player.y) + rnd(-2.4, 2.4);
+        hz({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: 620, tw: 0.7, life: 2.4,
+          dmg: 26, gap: gap, gapW: enraged ? 0.34 : 0.48, chill: true, col: '#9fe0ff' });
+        floatText(b.x, b.y - b.r - 20, 'FROST RING', '#c8f0ff', true);
+        sfx('blast', 0.5);
+      }
+
+      b.spikeCd -= dt;
+      if (b.spikeCd <= 0){
+        b.spikeCd = enraged ? 3.0 : 4.4;
+        var n = enraged ? 7 : 5;
+        for (var i = 0; i < n; i++){
+          hz({ kind: 'circle', x: player.x + rnd(-150, 150), y: player.y + rnd(-150, 150),
+            r: 62, tw: 0.85 + i * 0.09, life: 1.5 + i * 0.09, dmg: 20, chill: true, col: '#bfeaff' });
+        }
+        for (var s = 0; s < 2; s++){
+          var sa = Math.random() * TAU;
+          spawnEnemy('shardling', b.x + Math.cos(sa) * 90, b.y + Math.sin(sa) * 90, false, 0.8);
+        }
+      }
+
+      b.tpCd -= dt;
+      if (b.tpCd <= 0){
+        b.tpCd = 8.5;
+        burst(b.x, b.y, 22, '#bfeaff', 220, 0.6, 4);
+        var ta = Math.random() * TAU, td = 260;
+        b.x = clamp(player.x + Math.cos(ta) * td, 60, world.w - 60);
+        b.y = clamp(player.y + Math.sin(ta) * td, 60, world.h - 60);
+        burst(b.x, b.y, 22, '#bfeaff', 220, 0.6, 4);
+        sfx('thunder', 0.4);
+      }
+
+      if (enraged){
+        player.slowT = Math.max(player.slowT, 0.3);
+        b.spiral -= dt;
+        if (b.spiral <= 0){
+          b.spiral = 0.16;
+          b.spiralA += 0.44;
+          for (var k = 0; k < 3; k++){
+            var ang = b.spiralA + k / 3 * TAU;
+            ebullets.push({ x: b.x, y: b.y, vx: Math.cos(ang) * 190, vy: Math.sin(ang) * 190,
+              r: 7, dmg: 14, life: 4.2, t: 0, col: '#cfefff', kind: 'ice' });
+          }
+        }
+      }
+    },
+    draw: function(b, g){
+      var t = b.t;
+      g.save(); g.translate(b.x, b.y); g.rotate(Math.sin(t * 0.8) * 0.12);
+      g.fillStyle = 'rgba(120,200,255,0.15)';
+      g.beginPath(); g.arc(0, 0, b.r * 1.5 + Math.sin(t * 2) * 5, 0, TAU); g.fill();
+      // crystal body
+      g.fillStyle = b.hitT > 0 ? '#ffffff' : '#8fd8ff';
+      g.beginPath();
+      g.moveTo(0, -b.r * 1.35); g.lineTo(b.r * 0.72, -b.r * 0.15);
+      g.lineTo(b.r * 0.44, b.r); g.lineTo(-b.r * 0.44, b.r);
+      g.lineTo(-b.r * 0.72, -b.r * 0.15); g.closePath(); g.fill();
+      g.strokeStyle = '#e8faff'; g.lineWidth = 2; g.stroke();
+      g.fillStyle = '#0a2436';
+      g.beginPath(); g.moveTo(-14, -18); g.lineTo(-4, -12); g.lineTo(-14, -8); g.closePath();
+      g.moveTo(14, -18); g.lineTo(4, -12); g.lineTo(14, -8); g.closePath(); g.fill();
+      // orbiting shards
+      for (var i = 0; i < 6; i++){
+        var a = t * 1.1 + i / 6 * TAU, rr = b.r * 1.8;
+        g.save(); g.translate(Math.cos(a) * rr, Math.sin(a) * rr * 0.62); g.rotate(a * 2);
+        g.fillStyle = '#cfefff';
+        g.beginPath(); g.moveTo(0, -9); g.lineTo(5, 0); g.lineTo(0, 9); g.lineTo(-5, 0); g.closePath(); g.fill();
+        g.restore();
+      }
+      g.restore();
+    }
+  },
+
+  // ---------------------------------------------------------
+  // STAGE 3 — THE STORM LORD.
+  // Nothing here is random: read the telegraphs or be deleted.
+  // ---------------------------------------------------------
+  storm: {
+    hp: 5600, r: 40, touch: 26, col: '#ffe27f',
+    init: function(b){ b.strikeCd = 2.4; b.beamCd = 6.0; b.tpCd = 5.0; b.pylons = []; b.pylonCd = 0; b.beamA = 0; },
+    update: function(b, dt){
+      var enraged = b.hp < b.maxHp * 0.5;
+      bossNote(enraged ? 'PYLONS LIVE · ARCS BETWEEN THEM KILL' : 'MARKED GROUND BECOMES LIGHTNING');
+      b.armorMul = 1;
+
+      var a = angTo(b.x, b.y, player.x, player.y);
+      var d = len(player.x - b.x, player.y - b.y);
+      var want = d < 220 ? -60 : 104;
+      b.x += Math.cos(a) * want * dt; b.y += Math.sin(a) * want * dt;
+      b.x = clamp(b.x, 60, world.w - 60); b.y = clamp(b.y, 60, world.h - 60);
+
+      b.strikeCd -= dt;
+      if (b.strikeCd <= 0){
+        b.strikeCd = enraged ? 1.5 : 2.3;
+        var n = enraged ? 5 : 3;
+        for (var i = 0; i < n; i++){
+          hz({ kind: 'circle', x: player.x + rnd(-200, 200), y: player.y + rnd(-200, 200),
+            r: 56, tw: 0.8, life: 1.15, dmg: 22, col: '#ffe27f', sfx: 'thunder' });
+        }
+      }
+
+      b.beamCd -= dt;
+      if (b.beamCd <= 0){
+        b.beamCd = enraged ? 5.0 : 7.2;
+        b.beamA = a;
+        for (var k = 0; k < 3; k++){
+          hz({ kind: 'beam', x: b.x, y: b.y, a: a + (k - 1) * 0.9, len: 900, w: 26,
+            tw: 1.0 + k * 0.18, life: 1.5 + k * 0.18, dmg: 30, col: '#fff2a8' });
+        }
+        floatText(b.x, b.y - b.r - 22, 'ARC LANCE', '#fff2a8', true);
+      }
+
+      b.tpCd -= dt;
+      if (b.tpCd <= 0){
+        b.tpCd = 7.0;
+        burst(b.x, b.y, 20, '#fff2a8', 240, 0.5, 4);
+        var ta = Math.random() * TAU;
+        b.x = clamp(player.x + Math.cos(ta) * 240, 60, world.w - 60);
+        b.y = clamp(player.y + Math.sin(ta) * 240, 60, world.h - 60);
+        for (var m = 0; m < 10; m++){
+          var ang = m / 10 * TAU;
+          ebullets.push({ x: b.x, y: b.y, vx: Math.cos(ang) * 200, vy: Math.sin(ang) * 200,
+            r: 8, dmg: 16, life: 3.4, t: 0, col: '#ffe27f', kind: 'bolt' });
+        }
+        sfx('thunder', 0.5);
+      }
+
+      if (enraged){
+        if (!b.pylons.length){
+          for (var p = 0; p < 4; p++){
+            var pa = p / 4 * TAU + 0.4;
+            b.pylons.push({ x: clamp(b.x + Math.cos(pa) * 300, 60, world.w - 60),
+              y: clamp(b.y + Math.sin(pa) * 300, 60, world.h - 60) });
+          }
+          floatText(b.x, b.y - 70, 'PYLONS', '#fff2a8', true);
+        }
+        b.pylonCd -= dt;
+        if (b.pylonCd <= 0){
+          b.pylonCd = 3.6;
+          for (var q = 0; q < b.pylons.length; q++){
+            var p1 = b.pylons[q], p2 = b.pylons[(q + 1) % b.pylons.length];
+            hz({ kind: 'beam', x: p1.x, y: p1.y, a: angTo(p1.x, p1.y, p2.x, p2.y),
+              len: len(p2.x - p1.x, p2.y - p1.y), w: 16, tw: 1.1, life: 1.7, dmg: 26, col: '#fff2a8' });
+          }
+        }
+      }
+    },
+    draw: function(b, g){
+      var t = b.t, i;
+      if (b.pylons){
+        for (i = 0; i < b.pylons.length; i++){
+          var p = b.pylons[i];
+          g.save(); g.translate(p.x, p.y);
+          g.fillStyle = '#4a4020';
+          g.beginPath(); g.moveTo(-10, 16); g.lineTo(10, 16); g.lineTo(5, -34); g.lineTo(-5, -34); g.closePath(); g.fill();
+          g.fillStyle = '#ffe27f';
+          g.beginPath(); g.arc(0, -40, 6 + Math.sin(t * 6 + i) * 2, 0, TAU); g.fill();
+          g.restore();
+        }
+      }
+      g.save(); g.translate(b.x, b.y);
+      g.fillStyle = 'rgba(255,226,127,0.13)';
+      g.beginPath(); g.arc(0, 0, b.r * 1.7 + Math.sin(t * 3) * 6, 0, TAU); g.fill();
+      // hovering figure
+      g.fillStyle = b.hitT > 0 ? '#ffffff' : '#2a2440';
+      g.beginPath(); g.ellipse(0, 6 + Math.sin(t * 1.6) * 5, b.r * 0.66, b.r, 0, 0, TAU); g.fill();
+      g.strokeStyle = '#ffe27f'; g.lineWidth = 2.4; g.stroke();
+      g.fillStyle = '#fff6c0';
+      g.beginPath(); g.arc(0, -b.r * 0.62 + Math.sin(t * 1.6) * 5, 11, 0, TAU); g.fill();
+      // crackle
+      g.strokeStyle = 'rgba(255,246,168,0.85)'; g.lineWidth = 2;
+      for (i = 0; i < 5; i++){
+        var a0 = t * 2.2 + i * 1.25;
+        g.beginPath(); g.moveTo(0, 0);
+        var px = 0, py = 0;
+        for (var s = 1; s <= 3; s++){
+          px += Math.cos(a0 + s * 0.6) * 18; py += Math.sin(a0 + s * 0.6) * 18;
+          g.lineTo(px, py);
+        }
+        g.stroke();
+      }
+      g.restore();
+    }
+  },
+
+  // ---------------------------------------------------------
+  // FINAL — THE DRAGON.
+  // Three phases that quote the three realms back at you:
+  // fire, then ice and thunder together, then the sky itself.
+  // ---------------------------------------------------------
+  dragon: {
+    hp: 7500, r: 64, touch: 30, col: '#ff9b5a',
+    init: function(b){
+      b.ph = 1; b.at = 2.0; b.sub = 0; b.fly = 0; b.diveCd = 6; b.wing = 5.0;
+      b.invuln = 0; b.hover = 0;
+    },
+    update: function(b, dt){
+      var frac = b.hp / b.maxHp;
+      var wantPh = frac > 0.66 ? 1 : frac > 0.33 ? 2 : 3;
+      if (wantPh !== b.ph){
+        b.ph = wantPh;
+        b.invuln = 1.3; b.at = 1.4;
+        shake(24); flash('255,150,60', 0.65); sfx('boss');
+        floatText(b.x, b.y - b.r - 34, 'PHASE ' + b.ph, '#ffd08a', true);
+        showToast(b.ph === 2 ? 'IT REMEMBERS THE COLD' : 'IT TAKES THE SKY',
+          b.ph === 2 ? 'FROST AND LIGHTNING' : 'FINAL PHASE', 2.4);
+        if (b.ph === 2){
+          for (var i = 0; i < 4; i++){
+            var a2 = i / 4 * TAU;
+            spawnEnemy(i % 2 ? 'shardling' : 'hound', b.x + Math.cos(a2) * 150, b.y + Math.sin(a2) * 150, true, 0.7);
+          }
+        }
+      }
+      b.armorMul = b.invuln > 0 ? 0 : 1;
+      if (b.invuln > 0){ b.invuln -= dt; bossNote('SCALES GLOW · DAMAGE ABSORBED'); }
+      else bossNote(b.ph === 1 ? 'PHASE I · FIRE' : b.ph === 2 ? 'PHASE II · FROST AND LIGHTNING' : 'PHASE III · THE SKY FALLS');
+
+      b.hover += dt;
+      var a = angTo(b.x, b.y, player.x, player.y);
+      var d = len(player.x - b.x, player.y - b.y);
+
+      if (b.dive > 0){
+        b.dive -= dt;
+        b.x += Math.cos(b.da) * 520 * dt; b.y += Math.sin(b.da) * 520 * dt;
+        hz({ kind: 'fire', x: b.x, y: b.y, r: 46, tw: 0, life: 3.4, dps: 20, col: '#ff8a3a' });
+      } else {
+        var sp = b.ph === 3 ? 96 : b.ph === 2 ? 66 : 52;
+        var want = d < 170 ? -sp : sp;
+        b.x += Math.cos(a) * want * dt; b.y += Math.sin(a) * want * dt;
+      }
+      b.x = clamp(b.x, 70, world.w - 70); b.y = clamp(b.y, 70, world.h - 70);
+
+      b.at -= dt;
+      if (b.at <= 0){
+        b.sub++;
+        if (b.ph === 1){
+          b.at = 2.5;
+          if (b.sub % 3 === 0){
+            // sweeping breath
+            hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 620, w: 46, tw: 1.0, life: 1.8, dmg: 34, col: '#ff8a3a' });
+            floatText(b.x, b.y - b.r - 30, 'BREATH', '#ffb87a', true);
+          } else {
+            for (var k = -3; k <= 3; k++){
+              var bb = { x: b.x, y: b.y, vx: Math.cos(a + k * 0.22) * 250, vy: Math.sin(a + k * 0.22) * 250,
+                r: 9, dmg: 20, life: 3.4, t: 0, col: '#ff9b5a', kind: 'fire' };
+              ebullets.push(bb);
+            }
+            sfx('shoot', 0.5);
+          }
+        } else if (b.ph === 2){
+          b.at = 2.2;
+          if (b.sub % 2 === 0){
+            hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 560, w: 60, tw: 0.9, life: 1.7,
+              dmg: 30, chill: true, col: '#9fe0ff' });
+            floatText(b.x, b.y - b.r - 30, 'FROST BREATH', '#c8f0ff', true);
+          } else {
+            for (var s = 0; s < 6; s++){
+              hz({ kind: 'circle', x: player.x + rnd(-230, 230), y: player.y + rnd(-230, 230),
+                r: 58, tw: 0.75, life: 1.1, dmg: 24, col: '#ffe27f', sfx: 'thunder' });
+            }
+          }
+        } else {
+          b.at = 1.75;
+          if (b.sub % 4 === 0){
+            b.da = a; b.dive = 0.75;
+            floatText(b.x, b.y - b.r - 30, 'DIVE', '#ffd0a0', true);
+            hz({ kind: 'beam', x: b.x, y: b.y, a: a, len: 520, w: 52, tw: 0.55, life: 0.6, dmg: 0, col: '#ffcf90' });
+          } else {
+            // meteor rain around the player, with survivable gaps
+            for (var m = 0; m < 9; m++){
+              hz({ kind: 'circle', x: player.x + rnd(-300, 300), y: player.y + rnd(-300, 300),
+                r: 64, tw: 0.9 + m * 0.05, life: 1.35 + m * 0.05, dmg: 26, col: '#ff8a3a' });
+            }
+            hz({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: 560, tw: 0.8, life: 2.0, dmg: 26,
+              gap: rnd(0, TAU), gapW: 0.5, col: '#ffb060' });
+          }
+        }
+      }
+
+      b.wing -= dt;
+      if (b.wing <= 0){
+        b.wing = 7.5;
+        // wing gust: knocks you outward, then leaves fire where you were
+        var ka = angTo(b.x, b.y, player.x, player.y);
+        player.vx += Math.cos(ka) * 460; player.vy += Math.sin(ka) * 460;
+        fx.push({ kind: 'ring', x: b.x, y: b.y, r0: b.r, r1: 340, t: 0, life: 0.45, col: '#ffd0a0', w: 4 });
+        hz({ kind: 'fire', x: player.x, y: player.y, r: 60, tw: 0.5, life: 3.0, dps: 16, col: '#ff8a3a' });
+        shake(10); sfx('blast', 0.6);
+      }
+    },
+    draw: function(b, g){
+      var t = b.t, flap = Math.sin(t * (b.ph === 3 ? 6 : 3.2));
+      var lift = b.ph === 3 ? 18 + flap * 8 : 6 + flap * 3;
+      var col = b.ph === 1 ? '#ff9b5a' : b.ph === 2 ? '#9fd8e8' : '#ff6a4a';
+      g.save(); g.translate(b.x, b.y);
+      // shadow
+      g.fillStyle = 'rgba(0,0,0,0.42)';
+      g.beginPath(); g.ellipse(0, 26, b.r * 0.9, b.r * 0.3, 0, 0, TAU); g.fill();
+      g.translate(0, -lift);
+      var ang = angTo(0, 0, player.x - b.x, player.y - b.y);
+      g.rotate(ang + Math.PI / 2);
+      // wings
+      for (var s = -1; s <= 1; s += 2){
+        g.save(); g.scale(s, 1);
+        g.fillStyle = b.hitT > 0 ? 'rgba(255,255,255,0.9)' : 'rgba(60,26,18,0.95)';
+        g.beginPath();
+        g.moveTo(b.r * 0.35, -6);
+        g.quadraticCurveTo(b.r * 1.9, -b.r * (0.9 + flap * 0.32), b.r * 2.1, b.r * 0.25);
+        g.quadraticCurveTo(b.r * 1.2, b.r * 0.16, b.r * 0.35, b.r * 0.4);
+        g.closePath(); g.fill();
+        g.strokeStyle = col; g.lineWidth = 2; g.stroke();
+        g.restore();
+      }
+      // tail
+      g.strokeStyle = col; g.lineWidth = 9; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(0, b.r * 0.4);
+      g.quadraticCurveTo(Math.sin(t * 2) * 26, b.r * 1.25, Math.sin(t * 2) * 44, b.r * 1.8);
+      g.stroke();
+      // body
+      g.fillStyle = b.hitT > 0 ? '#ffffff' : '#3a1a12';
+      g.beginPath(); g.ellipse(0, 0, b.r * 0.56, b.r * 0.92, 0, 0, TAU); g.fill();
+      g.strokeStyle = col; g.lineWidth = 3; g.stroke();
+      // head
+      g.fillStyle = b.hitT > 0 ? '#ffffff' : '#4a2016';
+      g.beginPath();
+      g.moveTo(0, -b.r * 1.5); g.lineTo(b.r * 0.42, -b.r * 0.72);
+      g.lineTo(-b.r * 0.42, -b.r * 0.72); g.closePath(); g.fill();
+      g.strokeStyle = col; g.lineWidth = 2.4; g.stroke();
+      // horns
+      g.strokeStyle = '#e8d6c0'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(-b.r * 0.3, -b.r * 1.0); g.lineTo(-b.r * 0.62, -b.r * 1.42);
+      g.moveTo(b.r * 0.3, -b.r * 1.0); g.lineTo(b.r * 0.62, -b.r * 1.42); g.stroke();
+      // eyes
+      g.fillStyle = b.invuln > 0 ? '#ffffff' : '#ffe27f';
+      g.beginPath(); g.arc(-9, -b.r * 1.06, 4.2, 0, TAU); g.arc(9, -b.r * 1.06, 4.2, 0, TAU); g.fill();
+      g.restore();
+    }
+  }
+};
+
+function spawnBoss(id){
+  var def = BOSSES[id];
+  var mult = Math.min(1.55, 1 + (player.level - 1) * 0.022);
+  boss = {
+    isBoss: true, id: id, name: stage.bossName,
+    x: player.x + rnd(-1, 1) * 300, y: player.y - 320,
+    r: def.r, hp: def.hp * mult, maxHp: def.hp * mult,
+    touch: def.touch, col: def.col, t: 0, hitT: 0, armorMul: 1,
+    kx: 0, ky: 0, slow: 0, slowT: 0, freeze: 0, xp: 40
+  };
+  boss.x = clamp(boss.x, 90, world.w - 90);
+  boss.y = clamp(boss.y, 90, world.h - 90);
+  ensureId(boss);
+  def.init(boss);
+  elBossName.textContent = stage.bossName;
+  show(elBossWrap);
+  shake(20); flash('255,80,60', 0.5); sfx('boss');
+}
+
+function updateBoss(dt){
+  if (!boss || boss.dead) return;
+  boss.t += dt;
+  if (boss.hitT > 0) boss.hitT -= dt;
+  BOSSES[boss.id].update(boss, dt);
+  boss.x += boss.kx * dt; boss.y += boss.ky * dt;
+  boss.kx *= Math.pow(0.02, dt); boss.ky *= Math.pow(0.02, dt);
+  if (len(boss.x - player.x, boss.y - player.y) < boss.r + player.r) hurtPlayer(boss.touch);
+  elBossFill.style.width = clamp(boss.hp / boss.maxHp * 100, 0, 100) + '%';
+  if (boss.hp <= 0 && !boss.dead) defeatBoss();
+}
+
+function defeatBoss(){
+  boss.dead = true;
+  phase = 'done';
+  burst(boss.x, boss.y, 60, boss.col, 320, 1.1, 6);
+  for (var i = 0; i < 6; i++){
+    fx.push({ kind: 'ring', x: boss.x, y: boss.y, r0: 10, r1: 120 + i * 90, t: -i * 0.09, life: 0.75, col: boss.col, w: 4 });
+  }
+  shake(30); flash('255,255,255', 0.7); sfx('die');
+  for (var g = 0; g < 26; g++){
+    gems.push({ x: boss.x + rnd(-70, 70), y: boss.y + rnd(-70, 70), vx: rnd(-70, 70), vy: rnd(-70, 70), v: 4, t: 0 });
+  }
+  hide(elBossWrap);
+  clearDelay = 1.1;
+}
+
+// ============================================================
+// PLAYER
+// ============================================================
+function updatePlayer(dt){
+  var iv = inputVector();
+  if (player.slowT > 0) player.slowT -= dt;
+  var slowMul = player.slowT > 0 ? 0.56 : 1;
+  var target = player.spd * statSpd() * slowMul;
+
+  // the frozen expanse is slippery on purpose: you commit to a direction
+  var accel = (stage.id === 'ice') ? 4.4 : 15.0;
+  var k = 1 - Math.exp(-accel * dt);
+  player.vx = lerp(player.vx, iv.x * target, k);
+  player.vy = lerp(player.vy, iv.y * target, k);
+  player.x = clamp(player.x + player.vx * dt, player.r, world.w - player.r);
+  player.y = clamp(player.y + player.vy * dt, player.r, world.h - player.r);
+
+  if (iv.m > 0.1){ player.face.x = iv.x; player.face.y = iv.y; }
+  var t = nearestTarget(player.x, player.y, 900);
+  player.aim = t ? angTo(player.x, player.y, t.x, t.y) : Math.atan2(player.face.y, player.face.x);
+
+  if (player.inv > 0) player.inv -= dt;
+  if (player.hitFlash > 0) player.hitFlash -= dt;
+
+  if (hasUlt()){
+    player.regenAcc += 2.5 * dt;
+    if (player.regenAcc >= 1){
+      var heal = Math.floor(player.regenAcc);
+      player.regenAcc -= heal;
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+    }
+  }
+
+  for (var i = 0; i < player.weapons.length; i++){
+    var w = player.weapons[i];
+    if (w.id === 'orb') continue;
+    w.t += dt;
+    var cd = weaponCooldown(w.id, w.lv);
+    if (w.t >= cd){ w.t = 0; fireWeapon(w); }
+  }
+  updateOrbs(dt);
+}
+
+// ============================================================
+// PROGRESSION — level ups, item pools, tier gating.
+// ============================================================
+var pendingLevels = 0, clearDelay = 0, pendingUlt = false;
+
+function queueLevelUp(){
+  pendingLevels++;
+  sfx('level');
+  floatText(player.x, player.y - 40, 'LEVEL ' + player.level, '#a98bff', true);
+}
+
+function itemLevel(id){
+  return ITEMS[id].kind === 'weapon' ? weaponLv(id) : (player.passives[id] || 0);
+}
+function weaponCount(){ return player.weapons.length; }
+function passiveCount(){ var n = 0; for (var k in player.passives) if (player.passives[k] > 0) n++; return n; }
+
+function candidatePool(){
+  var out = [];
+  for (var id in ITEMS){
+    var it = ITEMS[id];
+    if (it.tier > stage.tier) continue;                 // later realms only
+    var cur = itemLevel(id);
+    if (cur >= it.max) continue;
+    if (cur === 0){
+      // an ultimate always fits: it never competes for a normal slot
+      if (!it.ult && it.kind === 'weapon' && weaponCount() >= 4) continue;
+      if (!it.ult && it.kind === 'passive' && passiveCount() >= 4) continue;
+    }
+    out.push(id);
+  }
+  return out;
+}
+
+function rollChoices(){
+  var pool = candidatePool(), out = [];
+  // bias slightly toward what you already carry, so builds actually form
+  var owned = [], fresh = [];
+  for (var i = 0; i < pool.length; i++) (itemLevel(pool[i]) > 0 ? owned : fresh).push(pool[i]);
+  while (out.length < 3 && (owned.length || fresh.length)){
+    var useOwned = owned.length && (!fresh.length || Math.random() < 0.6);
+    var src = useOwned ? owned : fresh;
+    out.push(src.splice(Math.floor(Math.random() * src.length), 1)[0]);
+  }
+  return out;
+}
+
+function openChoice(kind){
+  pendingKind = kind;
+  if (kind === 'ultimate'){
+    // the last realm hands over the strongest gear in the game
+    var third = null, pool = candidatePool();
+    for (var i = 0; i < pool.length; i++){
+      if (ITEMS[pool[i]].tier === 3 && itemLevel(pool[i]) > 0){ third = pool[i]; break; }
+    }
+    if (!third){ for (var j = 0; j < pool.length; j++) if (!ITEMS[pool[j]].ult){ third = pool[j]; break; } }
+    pendingChoices = ['fang', 'ancient'];
+    if (third) pendingChoices.push(third);
+    $('luSub').textContent = "THE HOARD OPENS";
+    $('luTitle').textContent = 'TAKE THE ULTIMATE';
+  } else {
+    pendingChoices = rollChoices();
+    $('luSub').textContent = 'LEVEL ' + player.level;
+    $('luTitle').textContent = 'CHOOSE ONE';
+  }
+  if (!pendingChoices.length){                       // fully maxed: heal instead
+    player.hp = Math.min(player.maxHp, player.hp + 40);
+    pendingChoices = null;
+    return;
+  }
+  for (var c = 0; c < cards.length; c++){
+    var el = cards[c];
+    if (c >= pendingChoices.length){ hide(el); continue; }
+    show(el);
+    var id = pendingChoices[c], it = ITEMS[id], lv = itemLevel(id);
+    el.className = 'card' + (it.ult ? ' ult' : '');
+    el.children[0].textContent = TIER_LABEL[it.tier] + ' ' + (it.kind === 'weapon' ? 'WEAPON' : 'RELIC');
+    el.children[1].textContent = it.name;
+    el.children[2].textContent = lv === 0 ? 'NEW' : ('LV ' + lv + '  →  LV ' + (lv + 1));
+    el.children[3].textContent = it.desc(lv + 1);
+  }
+  state = 'levelup';
+  show(elLevel);
+  sfx('level', 0.6);
+}
+
+function chooseCard(i){
+  if (state !== 'levelup' || !pendingChoices || i >= pendingChoices.length) return;
+  applyItem(pendingChoices[i]);
+  pendingChoices = null;
+  hide(elLevel);
+  state = 'play';
+  syncHud();
+}
+
+function applyItem(id){
+  var it = ITEMS[id];
+  if (it.kind === 'weapon'){
+    var found = null;
+    for (var i = 0; i < player.weapons.length; i++) if (player.weapons[i].id === id) found = player.weapons[i];
+    if (!found){ found = { id: id, lv: 0, t: 0, alt: false }; player.weapons.push(found); }
+    found.lv++;
+    if (id === 'orb') refreshOrbs();
+  } else {
+    player.passives[id] = (player.passives[id] || 0) + 1;
+    if (id === 'vitality'){ player.maxHp += 28; player.hp = Math.min(player.maxHp, player.hp + 28); }
+    if (id === 'split' || id === 'ancient') refreshOrbs();
+    if (id === 'ancient'){ player.maxHp += 40; player.hp = Math.min(player.maxHp, player.hp + 40); }
+  }
+  if (it.ult) showToast(it.name + ' TAKEN', 'THE LAST THING THIS PLACE HAD', 2.4);
+}
+
+// ============================================================
+// STAGE FLOW
+// ============================================================
+function beginStage(){
+  stage = STAGES[stageIndex];
+  world.w = 2400 + stageIndex * 220;
+  world.h = 1900 + stageIndex * 160;
+  enemies = []; pbullets = []; ebullets = []; gems = []; drops = [];
+  hazards = []; fx = []; parts = []; texts = [];
+  boss = null; bossWarn = 0; clearDelay = 0;
+  stageTime = 0; phase = 'survive';
+  spawnTimer = 0.6; eventTimer = 20;
+  player.x = world.w / 2; player.y = world.h / 2;
+  player.vx = player.vy = 0; player.inv = 1.2; player.slowT = 0;
+  buildDecos();
+  hide(elBossWrap);
+  setAccent(stage.accent);
+  elStageName.textContent = stage.label + ' — ' + stage.name;
+  elStageName.style.color = stage.accent;
+  showToast(stage.name, stage.line, 3.2);
+  pendingUlt = (stageIndex === STAGES.length - 1);
+  syncHud();
+}
+
+function stageCleared(){
+  if (stageIndex >= STAGES.length - 1){ winRun(); return; }
+  state = 'clear';
+  $('clearTitle').textContent = stage.bossName + ' FALLS';
+  $('clearBody').textContent = stage.clearLine;
+  $('clearStats').textContent =
+    'LEVEL ' + player.level + '   KILLS ' + kills + '   TIME ' + fmtTime(runTime) + '\n' +
+    'NEXT: ' + STAGES[stageIndex + 1].label + ' — ' + STAGES[stageIndex + 1].name;
+  $('nextBtn').textContent = (stageIndex === STAGES.length - 2) ? 'ENTER THE ROOST' : 'DESCEND';
+  show(elClear);
+  sfx('win', 0.7);
+}
+
+function nextStage(){
+  hide(elClear);
+  stageIndex++;
+  player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.35);
+  beginStage();
+  state = 'play';
+}
+
+function gameOver(){
+  state = 'over';
+  sfx('die');
+  $('overSub').textContent = 'YOU FELL IN ' + stage.name;
+  $('overTitle').textContent = 'YOU DIED';
+  $('overStats').textContent = statsBlock();
+  $('replayBtn').textContent = 'REPLAY';
+  hide(elBossWrap);
+  show(elOver);
+}
+
+function winRun(){
+  state = 'win';
+  sfx('win');
+  flash('255,255,255', 0.8);
+  $('overSub').textContent = 'THE ROOST IS QUIET';
+  $('overTitle').textContent = 'DRAGON SLAIN';
+  $('overStats').textContent = statsBlock();
+  $('replayBtn').textContent = 'RUN AGAIN';
+  hide(elBossWrap);
+  show(elOver);
+}
+
+function statsBlock(){
+  var loadout = [];
+  for (var i = 0; i < player.weapons.length; i++) loadout.push(ITEMS[player.weapons[i].id].name + ' ' + player.weapons[i].lv);
+  for (var k in player.passives) if (player.passives[k] > 0) loadout.push(ITEMS[k].name + ' ' + player.passives[k]);
+  return 'STAGE   ' + stage.label + '  ' + stage.name + '\n' +
+         'LEVEL   ' + player.level + '\n' +
+         'KILLS   ' + kills + '\n' +
+         'TIME    ' + fmtTime(runTime) + '\n' +
+         'DAMAGE  ' + Math.round(dmgDealt) + '\n' +
+         'BUILD   ' + (loadout.join(', ') || 'nothing at all');
+}
+
+function fmtTime(s){
+  var m = Math.floor(s / 60), r = Math.floor(s % 60);
+  return m + ':' + (r < 10 ? '0' : '') + r;
+}
+
+function updateStageFlow(dt){
+  stageTime += dt;
+  if (phase === 'survive'){
+    if (stageTime >= stage.dur){
+      phase = 'warning'; bossWarn = 3.0;
+      showToast('WARNING', stage.bossName + ' APPROACHES', 3.0);
+      sfx('boss');
+      flash('255,60,60', 0.4);
+    }
+  } else if (phase === 'warning'){
+    bossWarn -= dt;
+    if (Math.random() < dt * 6) flash('255,60,60', 0.16);
+    if (bossWarn <= 0){ phase = 'boss'; spawnBoss(stage.boss); }
+  }
+  if (clearDelay > 0){
+    clearDelay -= dt;
+    if (clearDelay <= 0) stageCleared();
+  }
+}
+
+// ============================================================
+// RUN CONTROL
+// ============================================================
+function startRun(){
+  initAudio();
+  player = makePlayer();
+  applyItem('blade');
+  runTime = 0; kills = 0; dmgDealt = 0;
+  pendingLevels = 0; pendingChoices = null; pendingUlt = false;
+  stageIndex = 0;
+  cam.shake = 0; cam.flash = 0;
+  refreshOrbs();
+  hide(elTitle); hide(elOver); hide(elClear); hide(elLevel);
+  show(elHud);
+  beginStage();
+  state = 'play';
+}
+
+// ============================================================
+// HUD
+// ============================================================
+function syncHud(){
+  elHp.style.width = clamp(player.hp / player.maxHp * 100, 0, 100) + '%';
+  elHpText.textContent = Math.max(0, Math.ceil(player.hp)) + ' / ' + Math.round(player.maxHp);
+  elXp.style.width = clamp(player.xp / player.xpNext * 100, 0, 100) + '%';
+  elStat.textContent = 'LV ' + player.level + '  ·  KILLS ' + kills + '  ·  DPS+ ' +
+    Math.round(statDmg() * 100) + '%';
+  var parts2 = [];
+  for (var i = 0; i < player.weapons.length; i++){
+    var w = player.weapons[i];
+    parts2.push(ITEMS[w.id].name + '·' + w.lv);
+  }
+  var pas = [];
+  for (var k in player.passives) if (player.passives[k] > 0) pas.push(ITEMS[k].name + '·' + player.passives[k]);
+  elLoad.textContent = parts2.join('  ') + (pas.length ? '\n' + pas.join('  ') : '');
+
+  if (phase === 'survive'){
+    elPhase.textContent = 'SURVIVE';
+    elTimer.textContent = fmtTime(Math.max(0, stage.dur - stageTime));
+  } else if (phase === 'warning'){
+    elPhase.textContent = 'INCOMING';
+    elTimer.textContent = String(Math.max(0, Math.ceil(bossWarn)));
+  } else {
+    elPhase.textContent = phase === 'boss' ? 'BOSS' : 'CLEAR';
+    elTimer.textContent = fmtTime(runTime);
+  }
+}
+
+// ============================================================
+// EFFECTS / PARTICLES UPDATE
+// ============================================================
+function updateFx(dt){
+  var i, f;
+  for (i = fx.length - 1; i >= 0; i--){
+    f = fx[i];
+    f.t += dt;
+    if (f.kind === 'nova'){
+      var cur = lerp(f.r0, f.r1, clamp(f.t / f.life, 0, 1));
+      f.cur = cur;
+      eachTarget(function(e){
+        if (f.hit[ensureId(e)]) return;
+        if (len(e.x - f.x, e.y - f.y) < cur + e.r){
+          f.hit[e.id] = 1;
+          hurtEnemy(e, f.dmg, 0, 0, '#bfeaff');
+          e.slow = Math.max(e.slow, f.slow); e.slowT = Math.max(e.slowT, 2.0);
+        }
+      });
+    }
+    if (f.t > f.life) fx.splice(i, 1);
+  }
+  for (i = parts.length - 1; i >= 0; i--){
+    var p = parts[i];
+    p.t += dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= Math.pow(0.12, dt); p.vy *= Math.pow(0.12, dt);
+    if (p.t > p.life) parts.splice(i, 1);
+  }
+  for (i = texts.length - 1; i >= 0; i--){
+    var tx = texts[i];
+    tx.t += dt; tx.y -= (tx.big ? 34 : 24) * dt;
+    if (tx.t > tx.life) texts.splice(i, 1);
+  }
+}
+
+function updateCamera(dt){
+  cam.x = world.w <= view.w ? (world.w - view.w) / 2 : clamp(player.x - view.w / 2, 0, world.w - view.w);
+  cam.y = world.h <= view.h ? (world.h - view.h) / 2 : clamp(player.y - view.h / 2, 0, world.h - view.h);
+  if (cam.shake > 0) cam.shake = Math.max(0, cam.shake - 46 * dt);
+  if (cam.flash > 0) cam.flash = Math.max(0, cam.flash - 2.4 * dt);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render(){
+  var g = ctx, dpr = view.dpr;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var sky = g.createLinearGradient(0, 0, 0, view.h);
+  sky.addColorStop(0, stage.ground[0]);
+  sky.addColorStop(1, stage.ground[1]);
+  g.fillStyle = sky;
+  g.fillRect(0, 0, view.w, view.h);
+
+  if (state === 'title'){ g.setTransform(1, 0, 0, 1, 0, 0); return; }
+
+  var sx = cam.shake ? rnd(-cam.shake, cam.shake) : 0;
+  var sy = cam.shake ? rnd(-cam.shake, cam.shake) : 0;
+  g.save();
+  g.translate(-cam.x + sx, -cam.y + sy);
+
+  drawGrid(g);
+  drawDecos(g);
+  drawHazards(g);
+  drawGems(g);
+  for (var i = 0; i < enemies.length; i++) drawEnemy(g, enemies[i]);
+  if (boss && !boss.dead) BOSSES[boss.id].draw(boss, g);
+  drawEnemyBullets(g);
+  drawPlayer(g);
+  drawOrbs(g);
+  drawPlayerBullets(g);
+  drawFx(g);
+  drawParticles(g);
+  drawTexts(g);
+  drawEdges(g);
+
+  g.restore();
+
+  if (cam.flash > 0){
+    g.fillStyle = 'rgba(' + cam.flashCol + ',' + (cam.flash * 0.55) + ')';
+    g.fillRect(0, 0, view.w, view.h);
+  }
+  // vignette + low-life pulse
+  var vg = g.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.34,
+    view.w / 2, view.h / 2, Math.max(view.w, view.h) * 0.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, stage.fog);
+  g.fillStyle = vg;
+  g.fillRect(0, 0, view.w, view.h);
+  if (player && player.hp / player.maxHp < 0.3){
+    var pulse = 0.16 + 0.1 * Math.sin(runTime * 7);
+    g.fillStyle = 'rgba(255,40,40,' + pulse.toFixed(3) + ')';
+    g.fillRect(0, 0, view.w, view.h);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function drawGrid(g){
+  var step = 110;
+  var x0 = Math.floor(cam.x / step) * step, x1 = cam.x + view.w;
+  var y0 = Math.floor(cam.y / step) * step, y1 = cam.y + view.h;
+  g.strokeStyle = stage.grid; g.lineWidth = 1;
+  g.beginPath();
+  for (var x = x0; x <= x1; x += step){ g.moveTo(x, cam.y); g.lineTo(x, y1); }
+  for (var y = y0; y <= y1; y += step){ g.moveTo(cam.x, y); g.lineTo(x1, y); }
+  g.stroke();
+}
+
+function drawDecos(g){
+  var kind = stage.deco;
+  for (var i = 0; i < decos.length; i++){
+    var d = decos[i];
+    if (d.x < cam.x - 60 || d.x > cam.x + view.w + 60 || d.y < cam.y - 60 || d.y > cam.y + view.h + 60) continue;
+    g.save(); g.translate(d.x, d.y); g.scale(d.s, d.s);
+    if (kind === 'grave'){
+      g.fillStyle = 'rgba(90,110,90,0.28)';
+      g.fillRect(-7, -20, 14, 22);
+      g.beginPath(); g.arc(0, -20, 7, Math.PI, 0); g.fill();
+      g.fillStyle = 'rgba(20,30,20,0.5)'; g.fillRect(-3, -14, 6, 2);
+    } else if (kind === 'ice'){
+      g.fillStyle = 'rgba(160,220,255,0.20)';
+      g.beginPath(); g.moveTo(0, -22); g.lineTo(9, 4); g.lineTo(-9, 4); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(200,240,255,0.16)';
+      g.beginPath(); g.moveTo(8, -12); g.lineTo(14, 4); g.lineTo(3, 4); g.closePath(); g.fill();
+    } else if (kind === 'pylon'){
+      g.fillStyle = 'rgba(120,110,160,0.22)';
+      g.beginPath(); g.moveTo(-8, 6); g.lineTo(8, 6); g.lineTo(3, -24); g.lineTo(-3, -24); g.closePath(); g.fill();
+      if (d.k > 0.72){
+        g.fillStyle = 'rgba(255,226,127,' + (0.18 + 0.14 * Math.sin(runTime * 3 + d.a)) + ')';
+        g.beginPath(); g.arc(0, -28, 4, 0, TAU); g.fill();
+      }
+    } else {
+      g.fillStyle = 'rgba(255,140,70,' + (0.10 + 0.12 * Math.sin(runTime * 2.2 + d.a * 6)) + ')';
+      g.beginPath(); g.arc(0, 0, 4 + d.k * 6, 0, TAU); g.fill();
+      g.fillStyle = 'rgba(60,26,18,0.4)';
+      g.beginPath(); g.arc(6, 6, 8 + d.k * 5, 0, TAU); g.fill();
+    }
+    g.restore();
+  }
+}
+
+function drawEdges(g){
+  g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 4;
+  g.strokeRect(0, 0, world.w, world.h);
+}
+
+function drawHazards(g){
+  for (var i = 0; i < hazards.length; i++){
+    var h = hazards[i];
+    var active = hazardActive(h);
+    var warn = clamp(h.t / Math.max(0.001, h.tw), 0, 1);
+    if (h.kind === 'slick'){
+      g.fillStyle = 'rgba(160,220,255,0.10)';
+      g.beginPath(); g.arc(h.x, h.y, h.r, 0, TAU); g.fill();
+      continue;
+    }
+    if (h.kind === 'fire'){
+      var fa = active ? 0.30 : 0.12 * warn;
+      g.fillStyle = 'rgba(255,120,50,' + fa.toFixed(3) + ')';
+      g.beginPath(); g.arc(h.x, h.y, h.r, 0, TAU); g.fill();
+      if (active){
+        g.strokeStyle = 'rgba(255,190,110,0.45)'; g.lineWidth = 2;
+        g.beginPath(); g.arc(h.x, h.y, h.r * (0.8 + 0.16 * Math.sin(h.t * 8)), 0, TAU); g.stroke();
+      }
+      continue;
+    }
+    if (h.kind === 'circle'){
+      if (!active){
+        g.fillStyle = 'rgba(255,70,50,' + (0.10 + 0.14 * warn).toFixed(3) + ')';
+        g.beginPath(); g.arc(h.x, h.y, h.r, 0, TAU); g.fill();
+        g.strokeStyle = h.col; g.lineWidth = 2;
+        g.beginPath(); g.arc(h.x, h.y, h.r, 0, TAU); g.stroke();
+        g.beginPath(); g.arc(h.x, h.y, h.r * warn, 0, TAU); g.stroke();
+      } else {
+        var fade = 1 - clamp((h.t - h.tw) / Math.max(0.001, h.life - h.tw), 0, 1);
+        g.fillStyle = 'rgba(255,220,160,' + (fade * 0.55).toFixed(3) + ')';
+        g.beginPath(); g.arc(h.x, h.y, h.r, 0, TAU); g.fill();
+      }
+      continue;
+    }
+    if (h.kind === 'ring'){
+      if (!active){
+        g.strokeStyle = 'rgba(255,255,255,' + (0.15 + 0.3 * warn).toFixed(3) + ')';
+        g.lineWidth = 2;
+        g.beginPath(); g.arc(h.x, h.y, h.r0 + 30, 0, TAU); g.stroke();
+      } else {
+        var r = h.cur || h.r0;
+        g.strokeStyle = h.col; g.lineWidth = 16; g.globalAlpha = 0.75;
+        g.beginPath();
+        if (h.gapW != null) g.arc(h.x, h.y, r, h.gap + h.gapW, h.gap - h.gapW + TAU);
+        else g.arc(h.x, h.y, r, 0, TAU);
+        g.stroke();
+        g.globalAlpha = 1;
+      }
+      continue;
+    }
+    if (h.kind === 'beam'){
+      g.save(); g.translate(h.x, h.y); g.rotate(h.a);
+      if (!active){
+        g.fillStyle = 'rgba(255,90,60,' + (0.08 + 0.16 * warn).toFixed(3) + ')';
+        g.fillRect(0, -h.w, h.len, h.w * 2);
+        g.strokeStyle = h.col; g.lineWidth = 1.5;
+        g.strokeRect(0, -h.w, h.len, h.w * 2);
+      } else {
+        var f2 = 1 - clamp((h.t - h.tw) / Math.max(0.001, h.life - h.tw), 0, 1);
+        g.fillStyle = 'rgba(255,240,190,' + (f2 * 0.8).toFixed(3) + ')';
+        g.fillRect(0, -h.w * f2, h.len, h.w * 2 * f2);
+      }
+      g.restore();
+      continue;
+    }
+  }
+}
+
+function drawGems(g){
+  for (var i = 0; i < gems.length; i++){
+    var m = gems[i];
+    var pulse = 3.6 + Math.sin(runTime * 6 + i) * 0.8;
+    g.fillStyle = '#7fd0ff';
+    g.beginPath();
+    g.moveTo(m.x, m.y - pulse * 1.6); g.lineTo(m.x + pulse, m.y);
+    g.lineTo(m.x, m.y + pulse * 1.6); g.lineTo(m.x - pulse, m.y);
+    g.closePath(); g.fill();
+  }
+  for (var k = 0; k < drops.length; k++){
+    var d = drops[k];
+    var bob = Math.sin(runTime * 4 + k) * 3;
+    if (d.kind === 'heal'){
+      g.fillStyle = '#7fe3a0';
+      g.fillRect(d.x - 3, d.y - 10 + bob, 6, 20);
+      g.fillRect(d.x - 10, d.y - 3 + bob, 20, 6);
+    } else {
+      g.fillStyle = '#ffe07a';
+      g.beginPath(); g.arc(d.x, d.y + bob, 9, 0, TAU); g.fill();
+      g.strokeStyle = '#fff8d0'; g.lineWidth = 2;
+      g.beginPath(); g.arc(d.x, d.y + bob, 13 + Math.sin(runTime * 5) * 2, 0, TAU); g.stroke();
+    }
+  }
+}
+
+function drawEnemy(g, e){
+  var wob = Math.sin(e.t * 6 + e.wob) * 2;
+  g.save(); g.translate(e.x, e.y);
+  g.fillStyle = 'rgba(0,0,0,0.32)';
+  g.beginPath(); g.ellipse(0, e.r * 0.75, e.r * 0.85, e.r * 0.3, 0, 0, TAU); g.fill();
+
+  var body = e.hitT > 0 ? '#ffffff' : e.col;
+  var fam = (e.type === 'walker' || e.type === 'runner' || e.type === 'bloater') ? 'z'
+          : (e.type === 'shade' || e.type === 'shardling' || e.type === 'brute') ? 'i' : 's';
+
+  if (fam === 'z'){
+    g.fillStyle = e.dark;
+    g.beginPath(); g.ellipse(0, e.r * 0.3, e.r * 0.9, e.r * 0.75, 0, 0, TAU); g.fill();
+    g.fillStyle = body;
+    g.beginPath(); g.arc(0, -e.r * 0.25 + wob * 0.2, e.r * 0.72, 0, TAU); g.fill();
+    g.fillStyle = '#111';
+    g.beginPath(); g.arc(-e.r * 0.26, -e.r * 0.34, e.r * 0.14, 0, TAU);
+    g.arc(e.r * 0.26, -e.r * 0.34, e.r * 0.14, 0, TAU); g.fill();
+    g.strokeStyle = e.dark; g.lineWidth = Math.max(2, e.r * 0.22); g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(-e.r * 0.7, e.r * 0.1); g.lineTo(-e.r * 1.25, e.r * 0.1 + wob);
+    g.moveTo(e.r * 0.7, e.r * 0.1); g.lineTo(e.r * 1.25, e.r * 0.1 - wob);
+    g.stroke();
+    if (e.type === 'bloater'){
+      g.fillStyle = 'rgba(220,230,120,0.35)';
+      g.beginPath(); g.arc(0, 0, e.r * (1.15 + 0.06 * Math.sin(e.t * 5)), 0, TAU); g.fill();
+    }
+  } else if (fam === 'i'){
+    g.fillStyle = body;
+    g.beginPath();
+    g.moveTo(0, -e.r * 1.25); g.lineTo(e.r * 0.85, 0);
+    g.lineTo(0, e.r * 1.05); g.lineTo(-e.r * 0.85, 0);
+    g.closePath(); g.fill();
+    g.strokeStyle = '#e8faff'; g.lineWidth = 1.6; g.stroke();
+    g.fillStyle = '#0b2434';
+    g.beginPath(); g.arc(-e.r * 0.24, -e.r * 0.18, e.r * 0.12, 0, TAU);
+    g.arc(e.r * 0.24, -e.r * 0.18, e.r * 0.12, 0, TAU); g.fill();
+  } else {
+    g.rotate(Math.atan2(player.y - e.y, player.x - e.x) + Math.PI / 2);
+    g.fillStyle = body;
+    g.beginPath();
+    g.moveTo(0, -e.r * 1.3); g.lineTo(e.r * 0.95, e.r * 0.85);
+    g.lineTo(0, e.r * 0.45); g.lineTo(-e.r * 0.95, e.r * 0.85);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1.4; g.stroke();
+    if (e.type === 'sentinel'){
+      g.strokeStyle = 'rgba(224,192,255,0.6)'; g.lineWidth = 2;
+      g.beginPath(); g.arc(0, 0, e.r * 1.5 + Math.sin(e.t * 4) * 2, 0, TAU); g.stroke();
+    }
+  }
+
+  if (e.freeze > 0){
+    g.fillStyle = 'rgba(180,235,255,0.45)';
+    g.beginPath(); g.arc(0, 0, e.r * 1.25, 0, TAU); g.fill();
+  } else if (e.slow > 0){
+    g.strokeStyle = 'rgba(150,220,255,0.55)'; g.lineWidth = 2;
+    g.beginPath(); g.arc(0, 0, e.r * 1.2, 0, TAU); g.stroke();
+  }
+  if (e.elite){
+    g.strokeStyle = '#ffd35a'; g.lineWidth = 2.4;
+    g.beginPath(); g.arc(0, 0, e.r * 1.42, 0, TAU); g.stroke();
+  }
+  g.restore();
+
+  if (e.maxHp > 90 && e.hp < e.maxHp){
+    var w = e.r * 2.2;
+    g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(e.x - w / 2, e.y - e.r - 12, w, 3.5);
+    g.fillStyle = '#ff7b6b'; g.fillRect(e.x - w / 2, e.y - e.r - 12, w * clamp(e.hp / e.maxHp, 0, 1), 3.5);
+  }
+}
+
+function drawPlayer(g){
+  var p = player;
+  g.save(); g.translate(p.x, p.y);
+  g.fillStyle = 'rgba(0,0,0,0.36)';
+  g.beginPath(); g.ellipse(0, 11, 12, 4.5, 0, 0, TAU); g.fill();
+  if (p.inv > 0 && Math.floor(p.inv * 18) % 2 === 0) g.globalAlpha = 0.45;
+  var col = p.hitFlash > 0 ? '#ff9b9b' : '#f2f6fa';
+  g.fillStyle = col;
+  g.beginPath(); g.arc(0, 0, p.r, 0, TAU); g.fill();
+  g.strokeStyle = stage.accent; g.lineWidth = 2.4;
+  g.beginPath(); g.arc(0, 0, p.r + 3, 0, TAU); g.stroke();
+  g.rotate(p.aim);
+  g.fillStyle = stage.accent;
+  g.beginPath(); g.moveTo(p.r + 2, 0); g.lineTo(p.r - 5, -5); g.lineTo(p.r - 5, 5); g.closePath(); g.fill();
+  g.globalAlpha = 1;
+  g.restore();
+  if (weaponLv('storm')){
+    var R = 88 + 13 * weaponLv('storm');
+    g.strokeStyle = 'rgba(255,240,160,' + (0.16 + 0.07 * Math.sin(runTime * 6)) + ')';
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(p.x, p.y, R, 0, TAU); g.stroke();
+    g.fillStyle = 'rgba(255,240,160,0.05)';
+    g.beginPath(); g.arc(p.x, p.y, R, 0, TAU); g.fill();
+  }
+}
+
+function drawOrbs(g){
+  for (var i = 0; i < orbs.length; i++){
+    var o = orbs[i];
+    if (o.x == null) continue;
+    g.fillStyle = 'rgba(255,150,70,0.35)';
+    g.beginPath(); g.arc(o.x, o.y, 14, 0, TAU); g.fill();
+    g.fillStyle = '#ffcf90';
+    g.beginPath(); g.arc(o.x, o.y, 7, 0, TAU); g.fill();
+  }
+}
+
+function drawPlayerBullets(g){
+  for (var i = 0; i < pbullets.length; i++){
+    var b = pbullets[i];
+    var a = Math.atan2(b.vy, b.vx);
+    g.save(); g.translate(b.x, b.y); g.rotate(a);
+    if (b.kind === 'fang'){
+      g.fillStyle = 'rgba(255,150,70,0.35)';
+      g.beginPath(); g.arc(0, 0, b.r * 2.1, 0, TAU); g.fill();
+      g.fillStyle = '#ffd7a0';
+      g.beginPath(); g.moveTo(b.r * 2.2, 0); g.lineTo(-b.r, -b.r * 0.9); g.lineTo(-b.r * 0.4, 0);
+      g.lineTo(-b.r, b.r * 0.9); g.closePath(); g.fill();
+    } else if (b.kind === 'ice'){
+      g.fillStyle = b.col;
+      g.beginPath(); g.moveTo(b.r * 2, 0); g.lineTo(-b.r, -b.r * 0.75); g.lineTo(-b.r, b.r * 0.75);
+      g.closePath(); g.fill();
+    } else {
+      g.fillStyle = b.col;
+      g.beginPath(); g.ellipse(0, 0, b.r * 1.5, b.r * 0.7, 0, 0, TAU); g.fill();
+    }
+    g.restore();
+  }
+}
+
+function drawEnemyBullets(g){
+  for (var i = 0; i < ebullets.length; i++){
+    var b = ebullets[i];
+    g.fillStyle = 'rgba(255,255,255,0.18)';
+    g.beginPath(); g.arc(b.x, b.y, b.r * 1.9, 0, TAU); g.fill();
+    g.fillStyle = b.col;
+    g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill();
+  }
+}
+
+function drawFx(g){
+  for (var i = 0; i < fx.length; i++){
+    var f = fx[i];
+    var k = clamp(f.t / f.life, 0, 1);
+    if (f.kind === 'slash'){
+      g.save(); g.translate(f.x, f.y);
+      g.strokeStyle = 'rgba(255,255,255,' + (1 - k).toFixed(3) + ')';
+      g.lineWidth = 7 * (1 - k) + 2;
+      g.beginPath(); g.arc(0, 0, f.r * (0.7 + 0.3 * k), f.a - f.arc, f.a + f.arc); g.stroke();
+      g.restore();
+    } else if (f.kind === 'ring'){
+      if (f.t < 0) continue;
+      var r = lerp(f.r0, f.r1, k);
+      g.strokeStyle = f.col; g.globalAlpha = 1 - k; g.lineWidth = f.w || 3;
+      g.beginPath(); g.arc(f.x, f.y, r, 0, TAU); g.stroke();
+      g.globalAlpha = 1;
+    } else if (f.kind === 'nova'){
+      g.strokeStyle = f.col; g.globalAlpha = 0.85 * (1 - k); g.lineWidth = 12;
+      g.beginPath(); g.arc(f.x, f.y, f.cur || f.r0, 0, TAU); g.stroke();
+      g.globalAlpha = 0.16 * (1 - k); g.fillStyle = f.col;
+      g.beginPath(); g.arc(f.x, f.y, f.cur || f.r0, 0, TAU); g.fill();
+      g.globalAlpha = 1;
+    } else if (f.kind === 'chain'){
+      g.strokeStyle = f.col; g.globalAlpha = 1 - k; g.lineWidth = 3.4; g.lineJoin = 'round';
+      g.beginPath();
+      for (var j = 0; j < f.pts.length; j++){
+        var pt = f.pts[j];
+        var jx = j === 0 ? 0 : rnd(-7, 7), jy = j === 0 ? 0 : rnd(-7, 7);
+        if (j === 0) g.moveTo(pt.x, pt.y); else g.lineTo(pt.x + jx, pt.y + jy);
+      }
+      g.stroke(); g.globalAlpha = 1;
+    } else if (f.kind === 'breath'){
+      g.save(); g.translate(f.x, f.y); g.rotate(f.a);
+      var grad = g.createLinearGradient(0, 0, f.r, 0);
+      grad.addColorStop(0, 'rgba(255,240,180,' + (0.85 * (1 - k)) + ')');
+      grad.addColorStop(1, 'rgba(255,90,40,0)');
+      g.fillStyle = grad;
+      g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, f.r, -f.arc, f.arc); g.closePath(); g.fill();
+      g.restore();
+    }
+  }
+}
+
+function drawParticles(g){
+  for (var i = 0; i < parts.length; i++){
+    var p = parts[i];
+    var a = 1 - p.t / p.life;
+    g.globalAlpha = clamp(a, 0, 1);
+    g.fillStyle = p.col;
+    var s = p.size * a;
+    g.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+  }
+  g.globalAlpha = 1;
+}
+
+function drawTexts(g){
+  g.textAlign = 'center';
+  for (var i = 0; i < texts.length; i++){
+    var t = texts[i];
+    var a = clamp(1 - t.t / t.life, 0, 1);
+    g.globalAlpha = a;
+    g.font = (t.big ? '700 17px ' : '600 13px ') + 'sans-serif';
+    g.fillStyle = 'rgba(0,0,0,0.6)';
+    g.fillText(t.s, t.x + 1, t.y + 1);
+    g.fillStyle = t.col;
+    g.fillText(t.s, t.x, t.y);
+  }
+  g.globalAlpha = 1;
+  g.textAlign = 'left';
+}
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+function update(dt){
+  runTime += dt;
+  updateStageFlow(dt);
+  updatePlayer(dt);
+  updateSpawning(dt);
+  updateEnemies(dt);
+  updateBoss(dt);
+  updatePlayerBullets(dt);
+  updateEnemyBullets(dt);
+  updateHazards(dt);
+  updatePickups(dt);
+  updateFx(dt);
+  updateCamera(dt);
+  syncHud();
+
+  if (state === 'play'){
+    if (pendingUlt && stageTime > 1.4){ pendingUlt = false; openChoice('ultimate'); }
+    else if (pendingLevels > 0){ pendingLevels--; openChoice('level'); }
+  }
+}
+
+var lastT = 0;
+function tick(ts){
+  requestAnimationFrame(tick);
+  if (!lastT) lastT = ts || now();
+  var t = ts || now();
+  var dt = Math.min(0.05, (t - lastT) / 1000);
+  lastT = t;
+  if (dt <= 0) dt = 1 / 60;
+
+  if (state === 'play') update(dt);   // every other state freezes the world on purpose
+
+  // the toast belongs to the world, so it never bleeds through a menu
+  if (toastTimer > 0 && state === 'play'){
+    toastTimer -= dt;
+    var a = clamp(toastTimer > 0.6 ? 1 : toastTimer / 0.6, 0, 1);
+    elToast.style.opacity = String(a);
+  } else {
+    elToast.style.opacity = '0';
+  }
+
+  if (player) render();
+  else {
+    ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+    ctx.fillStyle = '#05070b';
+    ctx.fillRect(0, 0, view.w, view.h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+}
+
+// ============================================================
+// WIRING
+// ============================================================
+$('startBtn').addEventListener('click', function(){ if (state === 'title') startRun(); });
+$('nextBtn').addEventListener('click', function(){ if (state === 'clear') nextStage(); });
+$('replayBtn').addEventListener('click', function(){ if (state === 'over' || state === 'win') startRun(); });
+for (var ci = 0; ci < cards.length; ci++){
+  (function(idx){
+    cards[idx].addEventListener('click', function(){ chooseCard(idx); });
+  })(ci);
+}
+
+resize();
+requestAnimationFrame(tick);
+
+// ---------- verification hook (see verify.mjs) ----------
+window.__GAME__ = {
+  start: startRun,
+  get state(){ return state; },
+  get stageIndex(){ return stageIndex; },
+  get stageName(){ return stage.name; },
+  get phase(){ return phase; },
+  get level(){ return player ? player.level : 0; },
+  get kills(){ return kills; },
+  get hp(){ return player ? player.hp : 0; },
+  get enemyCount(){ return enemies.length; },
+  get bossAlive(){ return !!(boss && !boss.dead); },
+  get bossId(){ return boss ? boss.id : null; },
+  get bossHpFrac(){ return boss ? boss.hp / boss.maxHp : 0; },
+  get bossPhase(){ return boss && boss.ph ? boss.ph : 0; },
+  get bossArmorMul(){ return boss ? boss.armorMul : 1; },
+  get bossMinions(){ return boss && boss.near != null ? boss.near : 0; },
+  hurtBoss: function(a){ if (boss && !boss.dead) hurtEnemy(boss, a); },
+  get choices(){ return pendingChoices ? pendingChoices.slice() : null; },
+  get build(){
+    var o = { weapons: {}, passives: {} };
+    for (var i = 0; i < player.weapons.length; i++) o.weapons[player.weapons[i].id] = player.weapons[i].lv;
+    for (var k in player.passives) o.passives[k] = player.passives[k];
+    return o;
+  },
+  offeredTiers: function(){
+    var t = [];
+    if (!pendingChoices) return t;
+    for (var i = 0; i < pendingChoices.length; i++) t.push(ITEMS[pendingChoices[i]].tier);
+    return t;
+  },
+  choose: function(i){ chooseCard(i); },
+  next: function(){ if (state === 'clear') nextStage(); },
+  skipToBoss: function(){ if (state === 'play' && phase === 'survive') stageTime = stage.dur; },
+  killBoss: function(){ if (boss && !boss.dead){ boss.hp = 0; defeatBoss(); } },
+  grantLevels: function(n){ for (var i = 0; i < n; i++){ player.level++; queueLevelUp(); } },
+  itemTier: function(id){ return ITEMS[id] ? ITEMS[id].tier : 0; },
+  stageCount: STAGES.length
+};
+
+})();
+</script>
+</body>
+</html>
