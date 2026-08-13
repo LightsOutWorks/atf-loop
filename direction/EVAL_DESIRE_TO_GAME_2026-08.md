@@ -66,6 +66,7 @@
 - **Human時間上限**: 1件あたり目安15分（聞く・渡す・観測メモ1枚）・合計90分。業務外時間のみ。**家族の生活を実験のために変えない**（`OS.md` HI-8）。観測は日常の遊びをそのまま見るだけとし、プレイの強制・催促をしない
 - **world_signal（台帳の列。1件目の納品前に確定）**: participant_id（匿名・続柄カテゴリのみ）/ expressed_desire（本人の言葉。PII除去）/ 解釈と実装内容 / **REUSE検査**（そのDesireは既存ゲームで満たせたか — `research/INDEX.md` §J「BUILDを既定に置かない」への実測返し）/ delivered_at / 初回反応 / 再挑戦 / **促しなし再プレイ（別日）** / 他人に見せた / **次のDesire発話（本人の言葉）** / 後日また遊びたいと言った
 - **Expressed / Observedの分離**（提案§8）: 発言と行動が矛盾した場合はObserved（実際の遊び方）を優先して記録する（`OS.md` HI-4 F5と同じ規律）
+- **Repair / Continuationの分離**（2026-08-13 Human裁定）: **Repair Request（バグ修正・操作不能・明白な難易度破綻）は「次のDesire」としてカウントしない。体験を続ける方向の自発的要求だけを Continuation Desire として扱う。** 本契約のhypothesis・PASS・world_signal列の「次のDesire（自発）発話」はすべてContinuation Desireを指す。Repair Requestは修理対象として扱う（カウントしないだけで、直さないのではない）
 - **PASS**: 納品3人以上、かつ過半数で「促しなし再プレイ」または「次のDesire自発発話」
 - **FAIL**: 納品3人以上、かつ判定点までに両シグナルとも0人
 - **VOID**: 納品3人未満・遊ぶ機会が発生しなかった・観測記録欠損。**VOIDをFAILとして学習しない**（`CONSTRAINTS.md` Part I §6）
