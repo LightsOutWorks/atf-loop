@@ -361,24 +361,32 @@ function kasaFit(pts) {
   return { cx, cy, r, rms: Math.sqrt(rms / n) };
 }
 
-/* 輪郭のスライディングウィンドウに円を当て、弧として成立する区間だけ残す */
+/* 輪郭のスライディングウィンドウに円を当て、弧として成立する区間だけ残す。
+   細部用（窓小・厳しめ）と大弧用（窓大・緩め）の2スケールで走らせ、
+   お手本のシートに近い「大小の円が重なる」密度を得る */
 function fitConstructionCircles(motif) {
   const fits = [];
+  const SCALES = [
+    { win: 0.08, step: 0.035, rmsK: 0.02, rmsMin: 0.9, arcMin: 0.5 },
+    { win: 0.22, step: 0.08, rmsK: 0.035, rmsMin: 1.6, arcMin: 0.45 },
+  ];
   for (const p of motif.paths || []) {
     for (const pts of parsePathPoints(p.d)) {
       const N = pts.length;
-      const win = Math.max(12, Math.round(N * 0.13));
-      const step = Math.max(4, Math.round(N * 0.05));
-      for (let s0 = 0; s0 < N; s0 += step) {
-        const w = [];
-        for (let k = 0; k < win; k++) w.push(pts[(s0 + k) % N]);
-        const f = kasaFit(w);
-        if (!f || f.r < 12 || f.r > 380) continue;
-        if (f.rms > Math.max(0.9, f.r * 0.02)) continue;
-        let arc = 0;
-        for (let k = 1; k < w.length; k++) arc += Math.hypot(w[k][0] - w[k - 1][0], w[k][1] - w[k - 1][1]);
-        if (arc / f.r < 0.55) continue;   // ほぼ直線は捨てる
-        fits.push(f);
+      for (const sc of SCALES) {
+        const win = Math.max(12, Math.round(N * sc.win));
+        const step = Math.max(4, Math.round(N * sc.step));
+        for (let s0 = 0; s0 < N; s0 += step) {
+          const w = [];
+          for (let k = 0; k < win; k++) w.push(pts[(s0 + k) % N]);
+          const f = kasaFit(w);
+          if (!f || f.r < 10 || f.r > 460) continue;
+          if (f.rms > Math.max(sc.rmsMin, f.r * sc.rmsK)) continue;
+          let arc = 0;
+          for (let k = 1; k < w.length; k++) arc += Math.hypot(w[k][0] - w[k - 1][0], w[k][1] - w[k - 1][1]);
+          if (arc / f.r < sc.arcMin) continue;   // ほぼ直線は捨てる
+          fits.push(f);
+        }
       }
     }
   }
@@ -388,7 +396,7 @@ function fitConstructionCircles(motif) {
     const dup = kept.some(k => {
       const m = Math.max(k.r, f.r);
       // 中心も半径も近い場合のみ重複扱い（同心の別半径円は残す）
-      return Math.hypot(k.cx - f.cx, k.cy - f.cy) < m * 0.22 && Math.abs(k.r - f.r) < m * 0.08;
+      return Math.hypot(k.cx - f.cx, k.cy - f.cy) < m * 0.16 && Math.abs(k.r - f.r) < m * 0.055;
     });
     if (!dup) kept.push(f);
   }
@@ -401,9 +409,9 @@ function buildGuides(motif, seed, density) {
   const g = { strokes: [], lines: [], dashed: [], ticks: [], labels: [] };
   const fits = fitConstructionCircles(motif);
 
-  // 大きい円を優先しつつ seeded に採用本数を決める
+  // 大きい円を優先しつつ seeded に採用本数を決める（お手本は円25〜40個）
   const byR = fits.slice().sort((a, b) => b.r - a.r);
-  const want = Math.round(7 + 15 * density);
+  const want = Math.round(14 + 30 * density);
   const chosen = [];
   for (const f of byR) {
     if (chosen.length >= want) break;
@@ -446,27 +454,27 @@ function buildGuides(motif, seed, density) {
   }
 
   // 3. 主要円の水平・垂直接線
-  chosen.slice(0, 8).forEach(f => {
-    if (rng() < 0.4 * density) pushLine(f.cx - 10, f.cy - f.r, f.cx + 10, f.cy - f.r);
-    if (rng() < 0.4 * density) pushLine(f.cx - 10, f.cy + f.r, f.cx + 10, f.cy + f.r);
-    if (rng() < 0.3 * density) pushLine(f.cx - f.r, f.cy - 10, f.cx - f.r, f.cy + 10);
-    if (rng() < 0.3 * density) pushLine(f.cx + f.r, f.cy - 10, f.cx + f.r, f.cy + 10);
+  chosen.slice(0, 12).forEach(f => {
+    if (rng() < 0.5 * density) pushLine(f.cx - 10, f.cy - f.r, f.cx + 10, f.cy - f.r);
+    if (rng() < 0.5 * density) pushLine(f.cx - 10, f.cy + f.r, f.cx + 10, f.cy + f.r);
+    if (rng() < 0.38 * density) pushLine(f.cx - f.r, f.cy - 10, f.cx - f.r, f.cy + 10);
+    if (rng() < 0.38 * density) pushLine(f.cx + f.r, f.cy - 10, f.cx + f.r, f.cy + 10);
   });
 
   // 4. 円ペアの中心を貫く線
-  const majors = chosen.slice(0, 9);
+  const majors = chosen.slice(0, 10);
   for (let i = 0; i < majors.length; i++) {
     for (let j = i + 1; j < majors.length; j++) {
-      if (rng() < 0.2 * density) {
+      if (rng() < 0.16 * density) {
         const a = majors[i], b = majors[j];
         if (Math.hypot(a.cx - b.cx, a.cy - b.cy) > 24) pushLine(a.cx, a.cy, b.cx, b.cy);
       }
     }
   }
 
-  // 5. 輪郭の接ベクトル延長（斜めの長い線）
+  // 5. 輪郭の接ベクトル延長（シートを横切る長い斜線。お手本の主役級要素）
   const longSubs = subsAll.filter(s => s.length > 30);
-  const nTan = Math.round(5 * density) + 2;
+  const nTan = Math.round(12 * density) + 4;
   for (let k = 0; k < nTan && longSubs.length; k++) {
     const sp = longSubs[Math.floor(rng() * longSubs.length)];
     const i0 = Math.floor(rng() * sp.length);
@@ -601,13 +609,13 @@ function sheetSVG(motif, opts) {
   <!-- 作図領域（テキスト類より先に描き、文字が線の上に載るようにする） -->
   <g clip-path="url(#sheetClip)">
     <g transform="translate(${tx},${ty}) scale(${s})">
-      <g class="fade" opacity="0.16">${markBody(motif, ink, paper)}</g>
-      <g fill="none" stroke="${guideColor}" stroke-width="0.8" opacity="0.75">
+      <g class="fade" opacity="0.22">${markBody(motif, ink, paper)}</g>
+      <g fill="none" stroke="${guideColor}" stroke-width="0.6" opacity="0.66">
         ${guides.strokes.map(x => `<g class="guide">${x}</g>`).join('\n')}
       </g>
-      <g stroke="${guideColor}" stroke-width="0.55" opacity="0.6">${guides.lines.map(x => `<g class="guide">${x}</g>`).join('\n')}</g>
-      <g fill="none" stroke="${guideColor}" stroke-width="0.7" opacity="0.55" stroke-dasharray="4 4">${guides.dashed.join('\n')}</g>
-      <path d="${guides.ticks.join(' ')}" stroke="${guideColor}" stroke-width="0.8" opacity="0.9" fill="none"/>
+      <g stroke="${guideColor}" stroke-width="0.45" opacity="0.55">${guides.lines.map(x => `<g class="guide">${x}</g>`).join('\n')}</g>
+      <g fill="none" stroke="${guideColor}" stroke-width="0.55" opacity="0.5" stroke-dasharray="4 4">${guides.dashed.join('\n')}</g>
+      <path d="${guides.ticks.join(' ')}" stroke="${guideColor}" stroke-width="0.65" opacity="0.8" fill="none"/>
       ${labels}
     </g>
   </g>
@@ -644,7 +652,7 @@ function sheetSVG(motif, opts) {
 /* ── 完成ロゴカードSVG ── */
 function logoSVG(motif, opts) {
   const { ink, paper } = opts;
-  const size = 380, x = (SHEET_W - size) / 2, y = (SHEET_H - size) / 2 - 30;
+  const size = 460, x = (SHEET_W - size) / 2, y = (SHEET_H - size) / 2 - 30;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SHEET_W}" height="${SHEET_H}" viewBox="0 0 ${SHEET_W} ${SHEET_H}" role="img" aria-label="完成ロゴ: ${esc(motif.nameJa || '')}">
   <rect width="${SHEET_W}" height="${SHEET_H}" fill="${paper}"/>
   <g class="fade">${placedMark(motif, ink, paper, x, y, size)}</g>
