@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!--
+  おえかきバトル！ — personal/oekaki-battle
+  Factory外の個人プロジェクト（2026-08-13 Human明示Commit・セッション記録）。
+  works/ や factory.yml のBrowser-Toy Route（Historical Experiment / HOLD）とは無関係。
+  完全オフライン単一ファイル: 写真はこのページの中でだけ解析され、どこにも送信されない。
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>おえかきバトル！</title>
+<style>
+  :root{
+    --paper:#fdf7ea;
+    --ink:#453a32;
+    --card:#ffffff;
+    --accent:#f2994a;
+    --accent2:#5bb3e8;
+    --good:#58c05c;
+    --mid:#f2c94c;
+    --bad:#eb5757;
+    --line:#e0d3bd;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.015) 0 2px, transparent 2px 26px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.012) 0 2px, transparent 2px 26px),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","BIZ UDPGothic","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+    min-height:100vh;
+    overscroll-behavior:none;
+  }
+  #app{max-width:560px;margin:0 auto;padding:12px 12px 40px;}
+  .screen{display:none;}
+  .screen.active{display:block;animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  h1.logo{
+    text-align:center;font-size:2.1rem;margin:28px 0 4px;letter-spacing:.05em;
+    text-shadow:2px 2px 0 #fff, 4px 4px 0 rgba(242,153,74,.35);
+  }
+  .logo small{display:block;font-size:.85rem;color:#8a7a66;margin-top:6px;letter-spacing:.1em;text-shadow:none;}
+  .crayon-line{height:8px;border-radius:6px;margin:10px auto 26px;width:78%;
+    background:linear-gradient(90deg,#eb5757,#f2994a,#f2c94c,#58c05c,#5bb3e8,#9b6bd6);opacity:.75;}
+
+  .btn{
+    display:block;width:100%;border:none;cursor:pointer;
+    background:var(--card);color:var(--ink);
+    border:3px solid var(--ink);border-radius:16px;
+    box-shadow:0 4px 0 rgba(69,58,50,.75);
+    font-family:inherit;font-weight:700;font-size:1.12rem;
+    padding:14px 12px;margin:12px 0;transition:transform .06s ease, box-shadow .06s ease;
+  }
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(69,58,50,.75);}
+  .btn.primary{background:var(--accent);color:#fff;border-color:#c2712c;box-shadow:0 4px 0 #c2712c;}
+  .btn.blue{background:var(--accent2);color:#fff;border-color:#3a83b3;box-shadow:0 4px 0 #3a83b3;}
+  .btn.small{width:auto;display:inline-block;font-size:.95rem;padding:9px 14px;margin:6px 4px;}
+  .btn:disabled{opacity:.45;pointer-events:none;}
+  .btn.ghost{background:transparent;border-style:dashed;box-shadow:none;}
+
+  .note{font-size:.8rem;color:#8a7a66;line-height:1.7;}
+  .center{text-align:center;}
+
+  /* ===== team builder ===== */
+  .slot-row{display:flex;gap:10px;justify-content:center;margin:8px 0 4px;}
+  .slot{
+    flex:1;min-width:0;background:var(--card);border:3px dashed var(--line);border-radius:14px;
+    padding:8px;text-align:center;cursor:pointer;position:relative;min-height:118px;
+  }
+  .slot.done{border-style:solid;border-color:var(--ink);}
+  .slot.selected{outline:4px solid var(--accent);}
+  .slot img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:#f4ede0;}
+  .slot .slot-name{font-size:.78rem;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .slot .plus{font-size:2.2rem;color:#c9baa0;line-height:1;margin-top:22px;}
+  .slot .slot-hint{font-size:.72rem;color:#b0a088;}
+
+  .maker{background:var(--card);border:3px solid var(--ink);border-radius:16px;padding:14px;margin-top:14px;}
+  .maker .photo-wrap{text-align:center;}
+  .maker img.preview{max-width:70%;max-height:220px;border-radius:12px;border:3px solid var(--line);}
+  .field{margin:10px 0;}
+  .field label{display:block;font-size:.85rem;font-weight:700;margin-bottom:4px;}
+  .field input{
+    width:100%;font-family:inherit;font-size:1.05rem;padding:10px;border-radius:10px;
+    border:2px solid var(--line);background:#fffdf8;color:var(--ink);
+  }
+  .field input:focus{outline:none;border-color:var(--accent);}
+  .hintwords{font-size:.72rem;color:#a08f78;margin-top:3px;}
+
+  /* ===== character card ===== */
+  .card{
+    background:var(--card);border:3px solid var(--ink);border-radius:18px;padding:12px;
+    box-shadow:0 5px 0 rgba(69,58,50,.5);margin:12px 0;
+  }
+  .card .card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .card .cname{font-size:1.15rem;font-weight:800;}
+  .type-badge{
+    display:inline-block;font-size:.72rem;font-weight:800;color:#fff;
+    padding:3px 9px;border-radius:999px;letter-spacing:.05em;white-space:nowrap;
+  }
+  .card .card-body{display:flex;gap:12px;margin-top:10px;}
+  .card .card-photo{width:38%;flex:none;}
+  .card .card-photo img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;border:3px solid var(--line);transform:rotate(-1.5deg);}
+  .stats{flex:1;min-width:0;}
+  .stat-row{display:flex;align-items:center;gap:6px;margin:5px 0;}
+  .stat-row .sname{width:4.6em;font-size:.78rem;font-weight:700;flex:none;}
+  .stat-row .sval{width:2.3em;text-align:right;font-size:.82rem;font-weight:800;flex:none;}
+  .bar{flex:1;height:12px;background:#f0e8d8;border-radius:99px;overflow:hidden;}
+  .bar i{display:block;height:100%;border-radius:99px;transition:width .5s ease;}
+  .moves-list{margin-top:10px;border-top:2px dashed var(--line);padding-top:8px;}
+  .moves-list .mv{display:flex;align-items:center;gap:6px;font-size:.85rem;margin:4px 0;}
+  .moves-list .mv .mvpow{margin-left:auto;font-size:.75rem;color:#8a7a66;}
+
+  /* ===== battle ===== */
+  #battle-stage{position:relative;}
+  .fighter{display:flex;gap:10px;align-items:flex-start;margin:6px 0;}
+  .fighter.foe{flex-direction:row-reverse;}
+  .fighter .fimg{
+    width:118px;height:118px;flex:none;border:3px solid var(--ink);border-radius:14px;
+    object-fit:cover;background:#fff;transition:transform .12s ease, filter .12s ease;
+  }
+  .fighter.foe .fimg{transform:rotate(2deg);}
+  .fighter.ally .fimg{transform:rotate(-2deg);}
+  .fpanel{flex:1;background:var(--card);border:3px solid var(--ink);border-radius:14px;padding:8px 10px;min-width:0;}
+  .fpanel .fname{font-weight:800;font-size:1rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .hpbar{height:14px;background:#f0e8d8;border-radius:99px;overflow:hidden;margin-top:6px;border:2px solid #d8ccb4;}
+  .hpbar i{display:block;height:100%;background:var(--good);border-radius:99px;transition:width .45s ease, background .45s ease;}
+  .hptext{font-size:.75rem;text-align:right;margin-top:2px;color:#8a7a66;font-weight:700;}
+  .team-dots{display:flex;gap:4px;margin-top:5px;}
+  .team-dots .dot{width:12px;height:12px;border-radius:50%;background:var(--good);border:2px solid var(--ink);}
+  .team-dots .dot.fainted{background:#d9cbb6;}
+
+  .shake{animation:shake .4s ease;}
+  @keyframes shake{
+    0%,100%{transform:translateX(0) rotate(-2deg);}
+    20%{transform:translateX(-7px) rotate(-3deg);}
+    40%{transform:translateX(6px) rotate(-1deg);}
+    60%{transform:translateX(-5px) rotate(-3deg);}
+    80%{transform:translateX(4px) rotate(-1deg);}
+  }
+  .lunge-ally{animation:lungeA .35s ease;}
+  @keyframes lungeA{40%{transform:translate(16px,-10px) rotate(-2deg);}100%{transform:rotate(-2deg);}}
+  .lunge-foe{animation:lungeF .35s ease;}
+  @keyframes lungeF{40%{transform:translate(-16px,10px) rotate(2deg);}100%{transform:rotate(2deg);}}
+  .hitflash{filter:brightness(1.9) saturate(.3);}
+  .faint-anim{transition:transform .6s ease, opacity .6s ease !important;transform:translateY(24px) rotate(8deg) !important;opacity:0 !important;}
+
+  #battle-log{
+    background:#fffdf6;border:3px solid var(--ink);border-radius:14px;
+    min-height:64px;max-height:110px;overflow-y:auto;padding:8px 12px;margin:10px 0;
+    font-size:.92rem;line-height:1.75;font-weight:600;
+  }
+  #battle-log p{margin:0;}
+  #battle-log p.sub{color:#9a8a74;font-size:.8rem;}
+
+  #cmd-area{margin-top:6px;}
+  .whoturn{font-weight:800;font-size:.9rem;margin:4px 2px;}
+  .move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .mvbtn{
+    border:3px solid var(--ink);border-radius:12px;background:var(--card);cursor:pointer;
+    font-family:inherit;text-align:left;padding:8px 10px;box-shadow:0 3px 0 rgba(69,58,50,.6);
+  }
+  .mvbtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(69,58,50,.6);}
+  .mvbtn .mvname{font-weight:800;font-size:.92rem;display:block;}
+  .mvbtn .mvinfo{font-size:.72rem;color:#8a7a66;font-weight:700;}
+  .mvbtn:disabled{opacity:.4;pointer-events:none;}
+  .bench-row{display:flex;gap:8px;margin-top:10px;align-items:center;}
+  .bench-label{font-size:.78rem;font-weight:800;color:#8a7a66;}
+  .benchbtn{
+    width:52px;height:52px;border-radius:12px;border:3px solid var(--ink);padding:0;overflow:hidden;
+    background:#fff;cursor:pointer;position:relative;flex:none;
+  }
+  .benchbtn img{width:100%;height:100%;object-fit:cover;}
+  .benchbtn.fainted{opacity:.35;}
+  .benchbtn.active-mon{outline:3px solid var(--accent);}
+  .benchbtn:disabled{pointer-events:none;}
+
+  /* modal */
+  .modal-back{
+    position:fixed;inset:0;background:rgba(69,58,50,.55);display:none;
+    align-items:center;justify-content:center;z-index:50;padding:16px;
+  }
+  .modal-back.show{display:flex;}
+  .modal{
+    background:var(--paper);border:3px solid var(--ink);border-radius:18px;
+    max-width:520px;width:100%;max-height:86vh;overflow-y:auto;padding:16px;
+  }
+  .modal h3{margin:4px 0 10px;}
+
+  .float-dmg{
+    position:absolute;font-weight:900;font-size:1.5rem;color:var(--bad);
+    text-shadow:2px 2px 0 #fff;pointer-events:none;z-index:20;
+    animation:floatup 1s ease forwards;
+  }
+  @keyframes floatup{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-46px);}}
+
+  .result-banner{text-align:center;font-size:1.9rem;font-weight:900;margin:26px 0 8px;}
+  .spinner{
+    width:44px;height:44px;border-radius:50%;margin:20px auto;
+    border:5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .analyzing-text{text-align:center;font-weight:800;}
+
+  table.help-table{width:100%;border-collapse:collapse;font-size:.8rem;margin:8px 0;}
+  table.help-table th,table.help-table td{border:2px solid var(--line);padding:5px 7px;text-align:left;}
+  table.help-table th{background:#f6eedd;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ TITLE ============ -->
+  <section id="screen-title" class="screen active">
+    <h1 class="logo">おえかきバトル！<small>DRAW &amp; BATTLE</small></h1>
+    <div class="crayon-line"></div>
+    <p class="center" style="font-weight:700;font-size:.95rem;line-height:1.9;">
+      かいた絵のしゃしんをとると、<br>絵がキャラクターになってバトルできるよ！
+    </p>
+    <button class="btn primary" id="btn-vs-cpu">ひとりであそぶ（コンピューターとバトル）</button>
+    <button class="btn blue" id="btn-vs-2p">ふたりであそぶ（こうたいでバトル）</button>
+    <button class="btn ghost" id="btn-help">あそびかた・しくみ</button>
+    <p class="note center">しゃしんはこのがめんの中だけでつかうよ。<br>インターネットにはどこにもおくらないよ。</p>
+  </section>
+
+  <!-- ============ TEAM BUILDER ============ -->
+  <section id="screen-build" class="screen">
+    <h2 class="center" id="build-title" style="margin:14px 0 2px;">チームをつくろう！</h2>
+    <p class="center note" id="build-sub">3にんのなかまをとうろくしてね（しゃしんをタップ！）</p>
+    <div class="slot-row" id="slot-row"></div>
+    <div id="maker-area"></div>
+    <button class="btn primary" id="btn-build-done" disabled>バトルへすすむ！</button>
+    <button class="btn ghost" id="btn-build-back">タイトルへもどる</button>
+    <input type="file" id="file-input" accept="image/*" hidden>
+  </section>
+
+  <!-- ============ BATTLE ============ -->
+  <section id="screen-battle" class="screen">
+    <div id="battle-stage">
+      <div class="fighter foe">
+        <img class="fimg" id="foe-img" alt="あいて">
+        <div class="fpanel">
+          <div class="fname" id="foe-name"></div>
+          <div class="hpbar"><i id="foe-hp"></i></div>
+          <div class="hptext" id="foe-hptext"></div>
+          <div class="team-dots" id="foe-dots"></div>
+        </div>
+      </div>
+      <div class="fighter ally">
+        <img class="fimg" id="ally-img" alt="じぶん">
+        <div class="fpanel">
+          <div class="fname" id="ally-name"></div>
+          <div class="hpbar"><i id="ally-hp"></i></div>
+          <div class="hptext" id="ally-hptext"></div>
+          <div class="team-dots" id="ally-dots"></div>
+        </div>
+      </div>
+    </div>
+    <div id="battle-log"></div>
+    <div id="cmd-area"></div>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section id="screen-result" class="screen">
+    <div class="result-banner" id="result-banner"></div>
+    <p class="center" id="result-sub" style="font-weight:700;"></p>
+    <div id="result-cards"></div>
+    <button class="btn primary" id="btn-rematch">もういちど おなじチームでバトル！</button>
+    <button class="btn blue" id="btn-newteam">あたらしいチームをつくる</button>
+    <button class="btn ghost" id="btn-result-title">タイトルへもどる</button>
+  </section>
+</div>
+
+<!-- ============ HELP MODAL ============ -->
+<div class="modal-back" id="help-modal">
+  <div class="modal">
+    <h3>あそびかた</h3>
+    <p style="font-size:.9rem;line-height:1.9;">
+      ① かみに絵をかく → しゃしんをとる（えらぶ）<br>
+      ② 「なにをかいたか」をおしえてね<br>
+      ③ 絵のとくちょうから、ステータスとわざがきまるよ<br>
+      ④ 3にんチームで、こうたいしながらバトル！
+    </p>
+    <h3>ステータスのきまりかた</h3>
+    <table class="help-table">
+      <tr><th>ステータス</th><th>絵のどこをみている？</th></tr>
+      <tr><td><b>HP</b></td><td>絵のおおきさ・どっしりかんじ</td></tr>
+      <tr><td><b>こうげき</b></td><td>あかやオレンジのあつい色、ギザギザのせん</td></tr>
+      <tr><td><b>ぼうぎょ</b></td><td>こい色、しっかりぬってあるか、左右のバランス</td></tr>
+      <tr><td><b>すばやさ</b></td><td>ほそながさ、あかるい色、みのかるさ</td></tr>
+      <tr><td><b>タイプ</b></td><td>いちばんつかっている色 ＋ かいたものの正体</td></tr>
+    </table>
+    <p style="font-size:.85rem;line-height:1.8;">
+      「かめ」はぼうぎょが高くなったり、「うさぎ」はすばやくなったり、
+      かいたものの正体もステータスにきいてくるよ。<br>
+      おなじ絵はいつもおなじキャラクターになるよ（ランダムじゃないんだ）。
+    </p>
+    <h3>タイプそうせい（ばつぐん！のくみあわせ）</h3>
+    <p style="font-size:.85rem;line-height:1.8;" id="help-typechart"></p>
+    <p class="note">しゃしんはこのブラウザの中だけでしょりされ、ほぞんも そうしんも しないよ。</p>
+    <button class="btn" id="btn-help-close">とじる</button>
+  </div>
+</div>
+
+<!-- ============ SWITCH MODAL ============ -->
+<div class="modal-back" id="switch-modal">
+  <div class="modal">
+    <h3 id="switch-title">つぎのなかまをえらんでね！</h3>
+    <div id="switch-choices"></div>
+  </div>
+</div>
+
+<!-- ============ HANDOFF MODAL (2P) ============ -->
+<div class="modal-back" id="handoff-modal">
+  <div class="modal center">
+    <h3 id="handoff-title"></h3>
+    <p class="note" id="handoff-sub"></p>
+    <button class="btn primary" id="handoff-ok">じゅんびOK！</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================
+ * 0. utils
+ * =======================================================*/
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
+const sleep = ms => new Promise(r=>setTimeout(r, window.__FAST_TEST ? 1 : ms));
+
+function fnv1a(str){
+  let h = 0x811c9dc5;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function rgb2hsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+  const l=(mx+mn)/2;
+  if(mx===mn) return [0,0,l];
+  const d=mx-mn;
+  const s = l>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+  let h;
+  if(mx===r) h=((g-b)/d + (g<b?6:0));
+  else if(mx===g) h=(b-r)/d + 2;
+  else h=(r-g)/d + 4;
+  return [h*60, s, l];
+}
+function kataToHira(s){
+  return s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0x60));
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =========================================================
+ * 1. タイプ定義・相性表
+ * =======================================================*/
+const TYPES = {
+  fire:  {name:'ほのお', emoji:'🔥', color:'#e8543f'},
+  water: {name:'みず',   emoji:'💧', color:'#3f7fe8'},
+  grass: {name:'くさ',   emoji:'🌿', color:'#4caf50'},
+  elec:  {name:'でんき', emoji:'⚡', color:'#e8b400'},
+  ice:   {name:'こおり', emoji:'❄️', color:'#5bc8e8'},
+  rock:  {name:'いわ',   emoji:'🪨', color:'#9a7b52'},
+  wind:  {name:'かぜ',   emoji:'🌪️', color:'#7fc4a5'},
+  dark:  {name:'やみ',   emoji:'🌙', color:'#6b5b95'},
+  light: {name:'ひかり', emoji:'✨', color:'#e88bc4'},
+  normal:{name:'ふつう', emoji:'⭐', color:'#a0937f'},
+};
+/* 攻撃タイプ → 防御タイプ → 倍率（書いていない組み合わせは1.0） */
+const EFF = {
+  fire:  {grass:2, ice:2,  water:.5, rock:.5, fire:.5},
+  water: {fire:2,  rock:2, grass:.5, water:.5},
+  grass: {water:2, rock:2, fire:.5,  grass:.5, wind:.5},
+  elec:  {water:2, wind:2, grass:.5, elec:.5,  rock:.5},
+  ice:   {grass:2, wind:2, fire:.5,  ice:.5,   water:.5},
+  rock:  {fire:2,  ice:2,  wind:2,   water:.5, grass:.5},
+  wind:  {grass:2, elec:.5, ice:.5,  rock:.5},
+  dark:  {light:2, dark:.5},
+  light: {dark:2,  light:.5},
+  normal:{},
+};
+function typeEffect(moveType, defTypes){
+  let m = 1;
+  for(const t of defTypes){
+    const row = EFF[moveType];
+    if(row && row[t] !== undefined) m *= row[t];
+  }
+  return m;
+}
+
+/* =========================================================
+ * 2. モチーフ辞書（「なにをかいたか」→ タイプ・ステータス補正）
+ *    mods は ポイント加算（±）。type はタイプ上書き（第1タイプになる）。
+ * =======================================================*/
+const SUBJECT_DICT = {
+  // どうぶつ
+  'いぬ':{hp:10,atk:15}, 'ねこ':{spe:25,atk:5,def:-15}, 'うさぎ':{spe:35,def:-15},
+  'らいおん':{atk:30,hp:5,def:-10}, 'とら':{atk:30,spe:10,def:-15}, 'ちーたー':{spe:40,def:-20,hp:-10},
+  'ぞう':{hp:30,def:20,spe:-30}, 'きりん':{spe:15,hp:10}, 'さる':{spe:20,atk:10,def:-15},
+  'くま':{atk:20,hp:20,spe:-20}, 'ぱんだ':{hp:25,def:15,spe:-25}, 'こあら':{hp:15,spe:-10},
+  'きつね':{spe:20,atk:10,def:-10}, 'おおかみ':{atk:25,spe:15,hp:-15,def:-10},
+  'ねずみ':{spe:30,hp:-15,atk:-5}, 'はむすたー':{spe:15,hp:-5}, 'りす':{spe:20,hp:-10},
+  'ひつじ':{def:20,hp:10,spe:-15}, 'ぶた':{hp:20,spe:-10}, 'うま':{spe:30,hp:5,def:-15},
+  'うし':{hp:20,atk:15,spe:-20}, 'へび':{atk:15,spe:10,def:-15}, 'わに':{atk:25,def:10,spe:-20},
+  'かば':{hp:30,def:15,spe:-30}, 'さい':{def:30,atk:15,spe:-30},
+  // みずのいきもの
+  'かめ':{type:'water',def:35,spe:-25,hp:10}, 'さかな':{type:'water',spe:20,def:-10},
+  'たこ':{type:'water',atk:10,def:10,spe:-10}, 'いか':{type:'water',spe:15},
+  'くじら':{type:'water',hp:35,spe:-20,def:5}, 'さめ':{type:'water',atk:30,spe:10,def:-15,hp:-10},
+  'いるか':{type:'water',spe:25,hp:5,def:-10}, 'かに':{type:'water',def:30,spe:-20},
+  'えび':{type:'water',spe:15,hp:-10}, 'たつのおとしご':{type:'water',spe:10},
+  'ぺんぎん':{type:'ice',def:10,hp:5}, 'あざらし':{type:'ice',hp:15,spe:-10}, 'しろくま':{type:'ice',atk:20,hp:15,spe:-15},
+  'かえる':{type:'water',spe:15,def:-5},
+  // そらのいきもの・むし
+  'とり':{type:'wind',spe:25,def:-15}, 'わし':{type:'wind',atk:20,spe:15,def:-20}, 'たか':{type:'wind',atk:20,spe:15,def:-20},
+  'ふくろう':{type:'wind',spe:10,hp:5}, 'こうもり':{type:'dark',spe:20,def:-15,hp:-5},
+  'ちょうちょ':{type:'wind',spe:20,def:-15,atk:-10}, 'ちょう':{type:'wind',spe:20,def:-15,atk:-10},
+  'はち':{type:'wind',atk:20,spe:15,hp:-20}, 'とんぼ':{type:'wind',spe:25,def:-15,hp:-10},
+  'かぶとむし':{def:25,atk:15,spe:-15}, 'くわがた':{atk:25,def:15,spe:-15},
+  'てんとうむし':{spe:10,def:5}, 'ありんこ':{def:10,hp:-10,atk:5}, 'あり':{def:10,hp:-10,atk:5},
+  // でんせつ・キャラ
+  'きょうりゅう':{atk:25,hp:20,spe:-10,def:-5}, 'どらごん':{type:'fire',atk:25,hp:15,def:5,spe:-5},
+  'りゅう':{type:'fire',atk:25,hp:15,def:5,spe:-5}, 'ゆにこーん':{type:'light',spe:25,atk:5},
+  'ぺがさす':{type:'wind',spe:30,def:-15}, 'ふぇにっくす':{type:'fire',spe:20,hp:10,def:-15},
+  'おばけ':{type:'dark',spe:20,def:-20,hp:-10}, 'ゆうれい':{type:'dark',spe:20,def:-20,hp:-10},
+  'かいじゅう':{atk:30,hp:25,spe:-25,def:5}, 'もんすたー':{atk:20,hp:10,spe:-10},
+  'ろぼっと':{type:'rock',def:30,atk:10,spe:-25}, 'にんじゃ':{type:'dark',spe:35,def:-20,hp:-10},
+  'ゆうしゃ':{atk:20,hp:10,def:5,spe:-5}, 'まほうつかい':{type:'light',atk:15,spe:10,def:-15},
+  'まじょ':{type:'dark',atk:15,spe:10,def:-10}, 'おひめさま':{type:'light',hp:10,def:5},
+  'おうさま':{hp:15,def:10,spe:-15}, 'ひーろー':{atk:20,spe:15,def:-10},
+  'てんし':{type:'light',spe:15,hp:5}, 'あくま':{type:'dark',atk:20,spe:10,hp:-10},
+  'ぞんび':{type:'dark',hp:25,spe:-25,def:10}, 'がいこつ':{type:'dark',atk:10,hp:-15,spe:10},
+  'うちゅうじん':{type:'light',spe:15,atk:5,def:-10},
+  // のりもの
+  'くるま':{spe:25,def:5,hp:-10}, 'でんしゃ':{spe:20,hp:15,def:-10}, 'しんかんせん':{spe:40,def:-15,hp:-10},
+  'ひこうき':{type:'wind',spe:30,def:-15}, 'ろけっと':{type:'fire',spe:35,atk:10,def:-25,hp:-10},
+  'ふね':{type:'water',hp:20,def:10,spe:-20}, 'せんすいかん':{type:'water',def:25,hp:10,spe:-25},
+  'しょうぼうしゃ':{type:'water',hp:15,def:15,spe:-15}, 'ぱとかー':{spe:25,atk:5,def:-10},
+  'ばす':{hp:25,spe:-15}, 'とらっく':{hp:20,def:15,spe:-25}, 'しょべるかー':{atk:20,def:15,spe:-25},
+  'ばいく':{spe:30,def:-15,hp:-10}, 'じてんしゃ':{spe:20,hp:-10},
+  // しぜん
+  'たいよう':{type:'fire',atk:20,hp:10,def:-5}, 'つき':{type:'dark',def:10,hp:10,spe:-5},
+  'ほし':{type:'light',spe:15,atk:5}, 'にじ':{type:'light',spe:10,def:5},
+  'くも':{type:'wind',def:10,spe:5}, 'あめ':{type:'water',spe:10},
+  'かみなり':{type:'elec',atk:25,spe:20,def:-25,hp:-10}, 'いなずま':{type:'elec',atk:25,spe:20,def:-25,hp:-10},
+  'ゆきだるま':{type:'ice',def:15,hp:10,spe:-15}, 'ゆき':{type:'ice',def:10,spe:-5},
+  'こおり':{type:'ice',def:20,spe:-10}, 'やま':{type:'rock',hp:30,def:25,spe:-35},
+  'うみ':{type:'water',hp:25,def:5,spe:-15}, 'かわ':{type:'water',spe:15},
+  'き':{type:'grass',hp:25,def:15,spe:-25}, 'はな':{type:'grass',spe:5,hp:-5},
+  'もり':{type:'grass',hp:30,def:10,spe:-25}, 'さぼてん':{type:'grass',atk:15,def:10,spe:-15},
+  'いわ':{type:'rock',def:35,spe:-30,hp:10}, 'いし':{type:'rock',def:35,spe:-30,hp:10},
+  'かざん':{type:'fire',atk:30,hp:15,spe:-30}, 'ほのお':{type:'fire',atk:25,spe:10,def:-20},
+  'ひのたま':{type:'fire',spe:20,atk:15,def:-20,hp:-10},
+  // たべもの・もの
+  'りんご':{hp:10}, 'ばなな':{spe:10}, 'いちご':{spe:10,atk:5}, 'めろん':{hp:15,spe:-5},
+  'けーき':{hp:15,def:-5}, 'あいす':{type:'ice',spe:5}, 'おにぎり':{hp:20,def:5,spe:-10},
+  'らーめん':{hp:15,atk:5,spe:-5}, 'ぴざ':{hp:15,def:5,spe:-10}, 'ぱん':{hp:10},
+  'いえ':{def:25,hp:15,spe:-30}, 'おしろ':{def:35,hp:20,spe:-35}, 'とけい':{spe:15},
+  'ぼーる':{spe:20,def:5,hp:-10}, 'けん':{atk:25,def:-10}, 'たて':{def:30,atk:-10,spe:-15},
+};
+/* 漢字・別表記 → ひらがな読みの追加 */
+const SUBJECT_ALIASES = {
+  '犬':'いぬ','猫':'ねこ','兎':'うさぎ','象':'ぞう','熊':'くま','狼':'おおかみ','馬':'うま','牛':'うし',
+  '蛇':'へび','亀':'かめ','魚':'さかな','鮫':'さめ','鯨':'くじら','蟹':'かに','蛙':'かえる','鳥':'とり',
+  '鷲':'わし','鷹':'たか','蝶':'ちょうちょ','蜂':'はち','恐竜':'きょうりゅう','竜':'どらごん','龍':'どらごん',
+  '車':'くるま','電車':'でんしゃ','新幹線':'しんかんせん','飛行機':'ひこうき','船':'ふね','消防車':'しょうぼうしゃ',
+  '太陽':'たいよう','月':'つき','星':'ほし','虹':'にじ','雲':'くも','雨':'あめ','雷':'かみなり','雪':'ゆき',
+  '氷':'こおり','山':'やま','海':'うみ','川':'かわ','木':'き','花':'はな','森':'もり','岩':'いわ','石':'いし',
+  '火山':'かざん','炎':'ほのお','火':'ほのお','家':'いえ','城':'おしろ','剣':'けん','盾':'たて',
+  '林檎':'りんご','苺':'いちご','獅子':'らいおん','虎':'とら','人':'ひと','忍者':'にんじゃ','勇者':'ゆうしゃ',
+  '魔法使い':'まほうつかい','魔女':'まじょ','天使':'てんし','悪魔':'あくま','幽霊':'ゆうれい','怪獣':'かいじゅう',
+};
+function findSubjectEntry(subjectRaw){
+  if(!subjectRaw) return {key:null, entry:null};
+  let s = kataToHira(String(subjectRaw)).toLowerCase().replace(/[\s　]/g,'');
+  for(const [alias, reading] of Object.entries(SUBJECT_ALIASES)){
+    if(s.includes(alias)) s += reading;
+  }
+  let best = null;
+  for(const key of Object.keys(SUBJECT_DICT)){
+    if(s.includes(key)){
+      if(!best || key.length > best.length) best = key;
+    }
+  }
+  return {key:best, entry: best ? SUBJECT_DICT[best] : null};
+}
+
+/* =========================================================
+ * 3. 画像解析（写真 → 特徴量）
+ *    紙(背景)を外周の色から推定して、描かれた部分(インク)だけを見る。
+ * =======================================================*/
+const ANALYZE_SIZE = 160;
+
+function analyzeImageOnCanvas(srcCanvas){
+  const w0 = srcCanvas.width, h0 = srcCanvas.height;
+  const scale = Math.min(1, ANALYZE_SIZE / Math.max(w0, h0));
+  const w = Math.max(8, Math.round(w0*scale)), h = Math.max(8, Math.round(h0*scale));
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d', {willReadFrequently:true});
+  cx.drawImage(srcCanvas, 0, 0, w, h);
+  const data = cx.getImageData(0, 0, w, h).data;
+  return analyzePixels(data, w, h);
+}
+
+function analyzePixels(data, w, h){
+  const n = w*h;
+  // --- 紙(背景)の色: 外周2pxの中央値 ---
+  const br=[], bg=[], bb=[];
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      if(x>1 && x<w-2 && y>1 && y<h-2) continue;
+      const i=(y*w+x)*4;
+      br.push(data[i]); bg.push(data[i+1]); bb.push(data[i+2]);
+    }
+  }
+  const med = arr => { const a=arr.slice().sort((p,q)=>p-q); return a[a.length>>1]; };
+  const pr=med(br), pg=med(bg), pb=med(bb);
+
+  const mask = new Uint8Array(n);
+  const lum = new Float32Array(n);
+  const TH = 58; // 紙色からの距離しきい値
+  let inkCount = 0;
+  for(let i=0;i<n;i++){
+    const o=i*4, r=data[o], g=data[o+1], b=data[o+2];
+    lum[i] = (0.299*r + 0.587*g + 0.114*b)/255;
+    const d = Math.sqrt((r-pr)*(r-pr)+(g-pg)*(g-pg)+(b-pb)*(b-pb));
+    if(d > TH){ mask[i]=1; inkCount++; }
+  }
+  // fallback: ほぼ全部インク/ほぼゼロ → 輝度しきい値でやりなおし
+  if(inkCount > n*0.92 || inkCount < n*0.004){
+    inkCount = 0;
+    const paperLum = (0.299*pr+0.587*pg+0.114*pb)/255;
+    for(let i=0;i<n;i++){
+      mask[i] = lum[i] < paperLum*0.78 ? 1 : 0;
+      if(mask[i]) inkCount++;
+    }
+  }
+  const coverage = inkCount / n;
+
+  // --- インク画素の色・形の統計 ---
+  const typeW = {fire:0,water:0,grass:0,elec:0,ice:0,rock:0,wind:0,dark:0,light:0,normal:0};
+  const hueHist = new Float32Array(12);
+  let satSum=0, lightSum=0, warmW=0, coolW=0, colorW=0;
+  let minX=w, maxX=0, minY=h, maxY=0;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i=y*w+x;
+      if(!mask[i]) continue;
+      const o=i*4;
+      const [hh, ss, ll] = rgb2hsl(data[o], data[o+1], data[o+2]);
+      satSum += ss; lightSum += ll;
+      if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+      if(ss >= 0.14){
+        const wgt = ss;
+        colorW += wgt;
+        hueHist[Math.min(11, Math.floor(hh/30))] += wgt;
+        if(hh < 65 || hh >= 330) warmW += wgt;
+        if(hh >= 170 && hh < 280) coolW += wgt;
+        let t;
+        if(hh >= 10 && hh < 50 && ll < 0.45 && ss < 0.65) t = 'rock'; // 茶色
+        else t = hueToType(hh);
+        typeW[t] += wgt;
+      }else{
+        if(ll < 0.35) typeW.dark += 0.45;
+        else if(ll < 0.75) typeW.normal += 0.3;
+        // 明るいグレーは紙のかげ扱いでノーカウント
+      }
+    }
+  }
+  const satMean = inkCount ? satSum/inkCount : 0;
+  const lightMean = inkCount ? lightSum/inkCount : 0.5;
+  const warmth = colorW ? warmW/colorW : 0;
+  const coolness = colorW ? coolW/colorW : 0;
+
+  const bw = Math.max(1, maxX-minX+1), bh = Math.max(1, maxY-minY+1);
+  const bboxArea = bw*bh;
+  const fillDensity = clamp(inkCount / bboxArea, 0, 1);
+  const aspect = bh / bw;
+
+  // 色数（有効な色相バケツの数 0..1）
+  let peak = 0; for(let i=0;i<12;i++) peak = Math.max(peak, hueHist[i]);
+  let variety = 0;
+  if(peak > 0){ for(let i=0;i<12;i++) if(hueHist[i] > peak*0.18) variety++; }
+  const hueVariety = clamp((variety-1)/5, 0, 1);
+
+  // ふち(perimeter)・ギザギザ度
+  let perim = 0;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i=y*w+x;
+      if(!mask[i]) continue;
+      if(x===0 || !mask[i-1]) perim++;
+      if(x===w-1 || !mask[i+1]) perim++;
+      if(y===0 || !mask[i-w]) perim++;
+      if(y===h-1 || !mask[i+w]) perim++;
+    }
+  }
+  // 円なら perim ≒ 2*sqrt(pi*area)。それとの比でギザギザ度。
+  const circlePerim = 2*Math.sqrt(Math.PI*Math.max(1,inkCount));
+  const rough = clamp((perim/circlePerim - 1)/9, 0, 1);
+
+  // 左右対称性（bbox内でミラー一致率）
+  let symHit = 0;
+  if(inkCount > 0){
+    for(let y=minY;y<=maxY;y++){
+      for(let x=minX;x<=maxX;x++){
+        if(!mask[y*w+x]) continue;
+        const mx = maxX - (x - minX);
+        if(mask[y*w+mx]) symHit++;
+      }
+    }
+  }
+  const symmetry = inkCount ? symHit/inkCount : 0;
+
+  // 決定的シード（絵のハッシュ）: 8x8に落としたマスク+平均色
+  let hs = '';
+  const gx = 8, gy = 8;
+  for(let yy=0;yy<gy;yy++){
+    for(let xx=0;xx<gx;xx++){
+      let cnt=0, tot=0, rs=0, gs=0, bs=0;
+      const x0=Math.floor(xx*w/gx), x1=Math.floor((xx+1)*w/gx);
+      const y0=Math.floor(yy*h/gy), y1=Math.floor((yy+1)*h/gy);
+      for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){
+        const i=y*w+x; tot++;
+        if(mask[i]){ cnt++; const o=i*4; rs+=data[o]; gs+=data[o+1]; bs+=data[o+2]; }
+      }
+      hs += String.fromCharCode(48 + Math.round(9*cnt/Math.max(1,tot)));
+      if(cnt>0) hs += String.fromCharCode(48+(Math.round(rs/cnt)>>5), 48+(Math.round(gs/cnt)>>5), 48+(Math.round(bs/cnt)>>5));
+    }
+  }
+  const hash = fnv1a(hs);
+
+  // タイプ順位
+  const rank = Object.entries(typeW).sort((a,b)=>b[1]-a[1]).filter(e=>e[1]>0);
+  let colorType = rank.length ? rank[0][0] : (lightMean<0.4 ? 'dark' : 'normal');
+  let colorType2 = null;
+  if(rank.length >= 2 && rank[1][1] >= rank[0][1]*0.5 && rank[1][0] !== colorType){
+    colorType2 = rank[1][0];
+  }
+
+  return {
+    coverage, fillDensity, aspect, satMean, lightMean,
+    warmth, coolness, hueVariety, rough, symmetry,
+    colorType, colorType2, hash,
+  };
+}
+function hueToType(hh){
+  if(hh < 45) return 'fire';
+  if(hh < 68) return 'elec';
+  if(hh < 165) return 'grass';
+  if(hh < 200) return 'ice';
+  if(hh < 258) return 'water';
+  if(hh < 292) return 'dark';
+  if(hh < 335) return 'light';
+  return 'fire';
+}
+
+/* =========================================================
+ * 4. キャラクター生成（特徴量 + モチーフ → ステータス・タイプ・わざ）
+ * =======================================================*/
+const STAT_NAMES = {hp:'HP', atk:'こうげき', def:'ぼうぎょ', spe:'すばやさ'};
+
+const MOVE_POOL = {
+  fire:  [{n:'メラメラだま',p:40,a:100},{n:'かえんスピン',p:65,a:95},{n:'ばくねつフレア',p:90,a:80}],
+  water: [{n:'みずたまシュート',p:40,a:100},{n:'ざっぱんウェーブ',p:65,a:95},{n:'うずまきタイフーン',p:90,a:80}],
+  grass: [{n:'はっぱシュート',p:40,a:100},{n:'つたのぐるぐる',p:65,a:95},{n:'もりのおおあばれ',p:90,a:80}],
+  elec:  [{n:'ビリビリだん',p:40,a:100},{n:'いなずまキック',p:65,a:95},{n:'ゴロゴロサンダー',p:90,a:80}],
+  ice:   [{n:'ゆきだまなげ',p:40,a:100},{n:'つららアタック',p:65,a:95},{n:'こおりのおおあらし',p:90,a:80}],
+  rock:  [{n:'こいしなげ',p:40,a:100},{n:'がんせきごろごろ',p:65,a:95},{n:'おおいわクラッシュ',p:90,a:80}],
+  wind:  [{n:'つむじかぜ',p:40,a:100},{n:'はばたきスラッシュ',p:65,a:95},{n:'たつまきストーム',p:90,a:80}],
+  dark:  [{n:'やみのつぶて',p:40,a:100},{n:'シャドーかみつき',p:65,a:95},{n:'まっくらナイトメア',p:90,a:80}],
+  light: [{n:'ピカッとフラッシュ',p:40,a:100},{n:'ひかりのやじり',p:65,a:95},{n:'キラキラちょうビーム',p:90,a:80}],
+  normal:[{n:'ぺちぺちアタック',p:40,a:100},{n:'ずどんタックル',p:65,a:95},{n:'ぜんしんアタック',p:90,a:80}],
+};
+const UTIL_MOVES = {
+  atkbuff:{n:'きあいチャージ', kind:'buff',  stat:'atk', stages:1, pp:10, desc:'こうげきUP'},
+  defbuff:{n:'ガチガチガード', kind:'buff',  stat:'def', stages:1, pp:10, desc:'ぼうぎょUP'},
+  heal:   {n:'モグモグかいふく', kind:'heal', amount:0.45, pp:4,  desc:'HPかいふく'},
+  prio:   {n:'でんこうダッシュ', kind:'attack', p:40, a:100, prio:1, pp:15, desc:'せんせいこうげき'},
+};
+const SIG_SUFFIX = {
+  atk:['パンチ','キック','クラッシュ'],
+  spe:['ダッシュ','シュート','ビーム'],
+  def:['プレス','ハンマー','ガードばくは'],
+  hp: ['ボンバー','スタンプ','たいあたりスペシャル'],
+};
+const NAME_SUFFIX = ['まる','きち','ちゃん','キング','スター','ぼう','りん','ドン'];
+
+function buildCharacter({features, subject, charName, imageURL}){
+  const f = features;
+  const seed = (f.hash ^ fnv1a(kataToHira(String(subject||'')))) >>> 0;
+  const rng = mulberry32(seed);
+
+  // --- タイプ決定 ---
+  const {key: subjKey, entry: subjEntry} = findSubjectEntry(subject);
+  let types;
+  if(subjEntry && subjEntry.type){
+    types = [subjEntry.type];
+    if(f.colorType !== subjEntry.type) types.push(f.colorType);
+    else if(f.colorType2 && f.colorType2 !== subjEntry.type) types.push(f.colorType2);
+  }else{
+    types = [f.colorType];
+    if(f.colorType2) types.push(f.colorType2);
+  }
+  types = types.slice(0,2);
+
+  // --- ステータス raw(0..1) ---
+  const covN = clamp(f.coverage/0.45, 0, 1);
+  const elong = clamp(Math.abs(Math.log(Math.max(0.05,f.aspect)))/1.2, 0, 1);
+  const raw = {
+    hp:  clamp(0.55*covN + 0.30*f.fillDensity + 0.15*(1-elong), 0, 1),
+    atk: clamp(0.40*f.warmth + 0.38*f.rough + 0.22*f.satMean, 0, 1),
+    def: clamp(0.30*(1-f.lightMean) + 0.30*f.fillDensity + 0.25*f.symmetry + 0.15*covN, 0, 1),
+    spe: clamp(0.38*(1-f.fillDensity) + 0.30*f.lightMean + 0.16*elong + 0.16*f.coolness, 0, 1),
+  };
+  // 決定的なゆらぎ（±8%）と、モチーフ補正
+  const stats = {};
+  for(const k of ['hp','atk','def','spe']){
+    let v = 40 + raw[k]*100;
+    v *= 0.92 + 0.16*rng();
+    if(subjEntry && subjEntry[k]) v += subjEntry[k];
+    stats[k] = clamp(v, 35, 155);
+  }
+  // 合計を一定帯へ正規化（どんな絵でも戦えるように。配分は絵で決まる）
+  const target = 385 + (seed % 41);
+  const sum = stats.hp + stats.atk + stats.def + stats.spe;
+  for(const k of ['hp','atk','def','spe']){
+    stats[k] = Math.round(clamp(stats[k]*target/sum, 35, 158));
+  }
+  const maxHP = 90 + stats.hp;
+
+  // --- わざ ---
+  const t1 = types[0], t2 = types[1];
+  const sorted = ['hp','atk','def','spe'].sort((a,b)=>stats[b]-stats[a]);
+  const topStat = sorted[0];
+  const subjDisp = (subject||'').trim().slice(0,8) || 'おえかき';
+  const sigSuf = SIG_SUFFIX[topStat][seed % SIG_SUFFIX[topStat].length];
+  const moves = [];
+  moves.push({name:`${subjDisp}${sigSuf}`, type:t1, kind:'attack', p:75+(seed%3)*5, a:90, pp:8, sig:true});
+  moves.push({name:MOVE_POOL[t1][0].n, type:t1, kind:'attack', p:MOVE_POOL[t1][0].p, a:MOVE_POOL[t1][0].a, pp:20});
+  if(t2){
+    moves.push({name:MOVE_POOL[t2][1].n, type:t2, kind:'attack', p:MOVE_POOL[t2][1].p, a:MOVE_POOL[t2][1].a, pp:15});
+  }else{
+    moves.push({name:MOVE_POOL.normal[1].n, type:'normal', kind:'attack', p:65, a:95, pp:15});
+  }
+  let util;
+  if(topStat === 'def') util = UTIL_MOVES.defbuff;
+  else if(topStat === 'hp') util = UTIL_MOVES.heal;
+  else if(topStat === 'spe') util = UTIL_MOVES.prio;
+  else util = UTIL_MOVES.atkbuff;
+  const um = Object.assign({}, util);
+  moves.push({name:um.n, type:'normal', kind:um.kind||'attack', p:um.p||0, a:um.a||100,
+              stat:um.stat, stages:um.stages, amount:um.amount, prio:um.prio||0, pp:um.pp, desc:um.desc});
+
+  const autoName = subjDisp + NAME_SUFFIX[seed % NAME_SUFFIX.length];
+  return {
+    name: (charName||'').trim().slice(0,10) || autoName,
+    subject: subjDisp,
+    subjKey,
+    types, stats, maxHP,
+    moves,
+    imageURL,
+    seed,
+    features: f,
+  };
+}
+
+/* 戦闘用の実体（HP・PP・ランクを持つ） */
+function makeFighter(chara){
+  return {
+    chara,
+    hp: chara.maxHP,
+    pp: chara.moves.map(m=>m.pp),
+    stages: {atk:0, def:0, spe:0},
+    fainted: false,
+  };
+}
+function stageMul(st){ return st>=0 ? (2+st)/2 : 2/(2-st); }
+
+/* =========================================================
+ * 5. バトルエンジン（UI非依存・イベント列を返す）
+ * =======================================================*/
+class Battle {
+  constructor(teamA, teamB, namesAB, rng){
+    this.rng = rng || Math.random;
+    this.sides = [
+      {label:namesAB[0], team:teamA.map(makeFighter), active:0, needsSwitch:false},
+      {label:namesAB[1], team:teamB.map(makeFighter), active:0, needsSwitch:false},
+    ];
+    this.winner = null;
+    this.turnCount = 0;
+  }
+  act(side){ return this.sides[side].team[this.sides[side].active]; }
+  alive(side){ return this.sides[side].team.filter(f=>!f.fainted).length; }
+  legalMoves(side){
+    const f = this.act(side);
+    return f.chara.moves.map((m,i)=>({i, m, pp:f.pp[i]})).filter(x=>x.pp>0);
+  }
+  legalSwitches(side){
+    const s = this.sides[side];
+    return s.team.map((f,i)=>({i,f})).filter(x=>!x.f.fainted && x.i!==s.active);
+  }
+
+  /* action: {type:'move', i} | {type:'switch', i} */
+  turn(actions){
+    const ev = [];
+    this.turnCount++;
+    // 1) こうたい（両方）
+    for(let s=0;s<2;s++){
+      const a = actions[s];
+      if(a && a.type==='switch') this._doSwitch(s, a.i, ev);
+    }
+    // 2) わざ（priority → すばやさ順）
+    const order = [0,1].filter(s=>actions[s] && actions[s].type==='move');
+    order.sort((sa,sb)=>{
+      const ma = this.act(sa).chara.moves[actions[sa].i];
+      const mb = this.act(sb).chara.moves[actions[sb].i];
+      const pa = ma.prio||0, pb = mb.prio||0;
+      if(pa!==pb) return pb-pa;
+      const spa = this.act(sa).chara.stats.spe * stageMul(this.act(sa).stages.spe);
+      const spb = this.act(sb).chara.stats.spe * stageMul(this.act(sb).stages.spe);
+      if(spa!==spb) return spb-spa;
+      return this.rng() < 0.5 ? -1 : 1;
+    });
+    for(const s of order){
+      if(this.winner !== null) break;
+      const me = this.act(s);
+      if(me.fainted) continue; // たおれていたら うてない
+      this._doMove(s, actions[s].i, ev);
+      this._checkEnd(ev);
+    }
+    // 3) たおれたら交代要求
+    for(let s=0;s<2;s++){
+      if(this.winner===null && this.act(s).fainted && this.alive(s)>0){
+        this.sides[s].needsSwitch = true;
+      }
+    }
+    return ev;
+  }
+
+  forceSwitch(side, idx){
+    const ev = [];
+    this.sides[side].needsSwitch = false;
+    this._doSwitch(side, idx, ev, true);
+    return ev;
+  }
+
+  _doSwitch(side, idx, ev, forced){
+    const s = this.sides[side];
+    const target = s.team[idx];
+    if(!target || target.fainted || idx===s.active) return;
+    const from = s.team[s.active];
+    if(!forced && !from.fainted){
+      ev.push({t:'msg', text:`${s.label}は ${from.chara.name}を ひっこめた！`});
+    }
+    // ランクは交代でリセット
+    from.stages = {atk:0,def:0,spe:0};
+    s.active = idx;
+    ev.push({t:'switch', side, idx});
+    ev.push({t:'msg', text:`${s.label}は ${target.chara.name}を くりだした！`});
+  }
+
+  _doMove(side, mi, ev){
+    const me = this.act(side);
+    const foeSide = 1-side;
+    const foe = this.act(foeSide);
+    const mv = me.chara.moves[mi];
+    if(me.pp[mi] <= 0){
+      // がむしゃら（PPぎれ用）
+      ev.push({t:'msg', text:`${me.chara.name}は もう ちからがのこっていない…！`});
+      this._dealDamage(side, foeSide, {name:'がむしゃらアタック', type:'normal', p:45, a:100}, ev);
+      return;
+    }
+    me.pp[mi]--;
+    ev.push({t:'msg', text:`${me.chara.name}の ${mv.name}！`, atkSide:side});
+    if(mv.kind === 'buff'){
+      me.stages[mv.stat] = clamp(me.stages[mv.stat]+mv.stages, -3, 3);
+      ev.push({t:'buff', side});
+      ev.push({t:'msg', text:`${me.chara.name}の ${STAT_NAMES[mv.stat]}が ぐーんと あがった！`});
+      return;
+    }
+    if(mv.kind === 'heal'){
+      const amt = Math.round(me.chara.maxHP * mv.amount);
+      const before = me.hp;
+      me.hp = clamp(me.hp + amt, 0, me.chara.maxHP);
+      ev.push({t:'heal', side, hp:me.hp});
+      ev.push({t:'msg', text:`${me.chara.name}は げんきをとりもどした！（${me.hp-before}かいふく）`});
+      return;
+    }
+    if(mv.kind === 'debuff'){
+      foe.stages[mv.stat] = clamp(foe.stages[mv.stat]-mv.stages, -3, 3);
+      ev.push({t:'msg', text:`${foe.chara.name}の ${STAT_NAMES[mv.stat]}が さがった！`});
+      return;
+    }
+    // attack
+    if(this.rng()*100 >= (mv.a||100)){
+      ev.push({t:'miss', side});
+      ev.push({t:'msg', text:`しかし ${foe.chara.name}には あたらなかった！`});
+      return;
+    }
+    this._dealDamage(side, foeSide, mv, ev);
+  }
+
+  _dealDamage(side, foeSide, mv, ev){
+    const me = this.act(side);
+    const foe = this.act(foeSide);
+    const A = me.chara.stats.atk * stageMul(me.stages.atk);
+    const D = foe.chara.stats.def * stageMul(foe.stages.def);
+    const eff = typeEffect(mv.type, foe.chara.types);
+    const stab = me.chara.types.includes(mv.type) ? 1.25 : 1;
+    const crit = this.rng() < 1/12;
+    const rand = 0.85 + 0.15*this.rng();
+    let dmg = Math.floor((22 * mv.p * A / D) / 50) + 2;
+    dmg = Math.max(1, Math.floor(dmg * eff * stab * (crit?1.5:1) * rand));
+    foe.hp = clamp(foe.hp - dmg, 0, foe.chara.maxHP);
+    ev.push({t:'dmg', side:foeSide, hp:foe.hp, amount:dmg, eff, crit});
+    if(crit) ev.push({t:'msg', text:'きゅうしょに あたった！', sub:true});
+    if(eff >= 2) ev.push({t:'msg', text:'こうかは ばつぐんだ！', sub:true});
+    else if(eff < 1) ev.push({t:'msg', text:'こうかは いまひとつ みたい…', sub:true});
+    if(foe.hp <= 0){
+      foe.fainted = true;
+      ev.push({t:'faint', side:foeSide});
+      ev.push({t:'msg', text:`${foe.chara.name}は たおれた！`});
+    }
+  }
+
+  _checkEnd(ev){
+    for(let s=0;s<2;s++){
+      if(this.alive(s) === 0){
+        this.winner = 1-s;
+        ev.push({t:'end', winner:this.winner});
+        return;
+      }
+    }
+  }
+}
+
+/* CPUの手えらび: だいたい強い手を選ぶ（少しゆらぎ） */
+function cpuChoose(battle, side, rng){
+  rng = rng || Math.random;
+  const me = battle.act(side);
+  const foe = battle.act(1-side);
+  const legal = battle.legalMoves(side);
+  if(legal.length === 0) return {type:'move', i:0}; // がむしゃらになる
+  let best = null, bestScore = -1;
+  for(const {i, m} of legal){
+    let score;
+    if(m.kind === 'heal'){
+      score = (me.hp < me.chara.maxHP*0.45) ? 70 + rng()*20 : 2;
+    }else if(m.kind === 'buff'){
+      score = (battle.turnCount <= 1 && me.hp > me.chara.maxHP*0.6) ? 40 + rng()*25 : 6 + rng()*6;
+    }else{
+      const eff = typeEffect(m.type, foe.chara.types);
+      const stab = me.chara.types.includes(m.type) ? 1.25 : 1;
+      score = (m.p||0) * eff * stab * ((m.a||100)/100) / 1.6;
+    }
+    score += rng()*8;
+    if(score > bestScore){ bestScore = score; best = {type:'move', i}; }
+  }
+  return best;
+}
+function cpuPickSwitch(battle, side){
+  const foe = battle.act(1-side);
+  const choices = battle.legalSwitches(side);
+  let best = choices[0], bestScore = -1;
+  for(const c of choices){
+    let score = c.f.hp / c.f.chara.maxHP * 50;
+    for(const m of c.f.chara.moves){
+      if(m.kind==='attack' || !m.kind) score = Math.max(score, typeEffect(m.type, foe.chara.types)*30 + c.f.hp/c.f.chara.maxHP*40);
+    }
+    if(score > bestScore){ bestScore = score; best = c; }
+  }
+  return best ? best.i : choices[0].i;
+}
+
+/* =========================================================
+ * 6. CPUチーム生成（らくがきを自動でかいて、同じ解析にとおす）
+ * =======================================================*/
+const CPU_ARCHETYPES = [
+  {subject:'たいよう', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2,R=70+r()*20;
+    c2fill(c,'#f59a23'); circle(c,x,y,R,'#f59a23');
+    c.ctx.strokeStyle='#e8543f'; c.ctx.lineWidth=9;
+    for(let i=0;i<12;i++){const a=i/12*Math.PI*2+r()*.2;
+      line(c, x+Math.cos(a)*(R+8), y+Math.sin(a)*(R+8), x+Math.cos(a)*(R+38+r()*16), y+Math.sin(a)*(R+38+r()*16));}
+    face(c,x,y,r);
+  }},
+  {subject:'さかな', draw:(c,r)=>{
+    const x=c.width/2-14,y=c.height/2;
+    c.ctx.fillStyle='#4a90d9';
+    ellipse(c,x,y,95+r()*15,52+r()*8,'#4a90d9');
+    tri(c, x+80,y, x+130,y-42, x+130,y+42, '#3a78b8');
+    circle(c, x-42, y-12, 8, '#ffffff'); circle(c, x-42, y-12, 4, '#333333');
+    c.ctx.strokeStyle='#89c4f0'; c.ctx.lineWidth=6;
+    arc(c, x, y, 30, .6, 2.4);
+  }},
+  {subject:'き', draw:(c,r)=>{
+    const x=c.width/2, y=c.height/2;
+    rect(c, x-18, y+10, 36, 100+r()*20, '#8a5a33');
+    circle(c, x, y-30, 78+r()*14, '#4caf50');
+    circle(c, x-52, y+4, 44, '#5abf5e'); circle(c, x+52, y+4, 44, '#3f9a45');
+    circle(c, x-20, y-46, 10, '#e8543f'); circle(c, x+30, y-16, 10, '#e8543f');
+  }},
+  {subject:'おばけ', draw:(c,r)=>{
+    const x=c.width/2, y=c.height/2;
+    c.ctx.fillStyle='#8a6bc0';
+    c.ctx.beginPath();
+    c.ctx.arc(x, y-12, 76, Math.PI, 0);
+    const base=y+70;
+    c.ctx.lineTo(x+76, base);
+    for(let i=0;i<5;i++){ c.ctx.lineTo(x+76-(i*38+19), base-24); c.ctx.lineTo(x+76-(i+1)*38+9, base); }
+    c.ctx.closePath(); c.ctx.fill();
+    circle(c,x-26,y-18,10,'#ffffff'); circle(c,x+26,y-18,10,'#ffffff');
+    circle(c,x-26,y-18,5,'#333333'); circle(c,x+26,y-18,5,'#333333');
+    arc2(c, x, y+16, 16, .2, Math.PI-.2, '#5b3d8f', 6);
+  }},
+  {subject:'いわ', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2;
+    poly(c, x, y+10, 92+r()*16, 7, .35, '#8a7455', r);
+    poly(c, x-60, y+66, 40, 6, .3, '#6e5c44', r);
+    poly(c, x+66, y+62, 34, 6, .3, '#a08a68', r);
+    circle(c,x-20,y-8,7,'#3f3428'); circle(c,x+22,y-8,7,'#3f3428');
+    line2(c, x-14, y+28, x+14, y+28, '#3f3428', 5);
+  }},
+  {subject:'とり', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2;
+    ellipse(c,x,y,70,52,'#5bb3e8');
+    circle(c,x+56,y-34,30,'#5bb3e8');
+    tri(c, x+82, y-36, x+108, y-30, x+82, y-22, '#f2c94c');
+    circle(c, x+64, y-40, 5, '#333333');
+    c.ctx.fillStyle='#4693c4';
+    tri(c, x-10, y-8, x-70, y-52-r()*20, x-40, y+6, '#4693c4');
+    tri(c, x-60, y+6, x-108, y+18, x-58, y+30, '#4693c4');
+  }},
+  {subject:'はな', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2-20;
+    line2(c, x, y+30, x, y+130, '#4caf50', 10);
+    tri(c, x, y+80, x-42, y+96, x-6, y+104, '#5abf5e');
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;
+      ellipse(c, x+Math.cos(a)*40, y+Math.sin(a)*40, 30, 22, '#f08bbf', a);}
+    circle(c,x,y,26,'#f2c94c');
+    face(c,x,y,r,0.5);
+  }},
+  {subject:'かみなり', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2;
+    c.ctx.fillStyle='#f2c94c';
+    c.ctx.beginPath();
+    c.ctx.moveTo(x+14,y-110); c.ctx.lineTo(x-42,y+8); c.ctx.lineTo(x-4,y+8);
+    c.ctx.lineTo(x-26,y+110); c.ctx.lineTo(x+46,y-24); c.ctx.lineTo(x+6,y-24);
+    c.ctx.closePath(); c.ctx.fill();
+    c.ctx.strokeStyle='#e8b400'; c.ctx.lineWidth=6; c.ctx.stroke();
+  }},
+  {subject:'ゆきだるま', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2;
+    circle(c,x,y+48,64,'#eef4fa'); circle(c,x,y-38,46,'#eef4fa');
+    c.ctx.strokeStyle='#9fc0dd'; c.ctx.lineWidth=5;
+    c.ctx.beginPath(); c.ctx.arc(x,y+48,64,0,Math.PI*2); c.ctx.stroke();
+    c.ctx.beginPath(); c.ctx.arc(x,y-38,46,0,Math.PI*2); c.ctx.stroke();
+    circle(c,x-16,y-46,6,'#333'); circle(c,x+16,y-46,6,'#333');
+    tri(c,x,y-34,x+30,y-30,x,y-24,'#f2994a');
+    rect(c,x-34,y-98,68,16,'#5bb3e8'); rect(c,x-24,y-130,48,36,'#5bb3e8');
+  }},
+  {subject:'どらごん', draw:(c,r)=>{
+    const x=c.width/2,y=c.height/2;
+    ellipse(c,x,y+10,88,60,'#c0392b');
+    circle(c,x+62,y-46,36,'#c0392b');
+    tri(c,x+50,y-78,x+58,y-108,x+70,y-80,'#8e2418');
+    tri(c,x+74,y-76,x+88,y-104,x+92,y-72,'#8e2418');
+    circle(c,x+70,y-52,6,'#f2c94c');
+    for(let i=0;i<4;i++) tri(c, x-70+i*36, y-40, x-54+i*36, y-72-r()*10, x-38+i*36, y-40, '#e67e22');
+    tri(c, x-80, y+20, x-140, y+2, x-96, y+52, '#c0392b');
+    c.ctx.strokeStyle='#f2994a'; c.ctx.lineWidth=7;
+    line(c, x+92, y-36, x+124, y-52); line(c, x+96, y-28, x+130, y-30);
+  }},
+];
+/* かんたん描画ヘルパ（CPUらくがき用） */
+function cpuCanvas(){
+  const c = document.createElement('canvas');
+  c.width = 320; c.height = 320;
+  const ctx = c.getContext('2d', {willReadFrequently:true});
+  ctx.fillStyle = '#fbf8f1'; ctx.fillRect(0,0,320,320);
+  return {width:320, height:320, ctx, el:c};
+}
+function c2fill(c, color){ /* no-op: 背景は紙のまま */ }
+function circle(c,x,y,r,fill){ c.ctx.fillStyle=fill; c.ctx.beginPath(); c.ctx.arc(x,y,Math.max(1,r),0,Math.PI*2); c.ctx.fill(); }
+function ellipse(c,x,y,rx,ry,fill,rot){ c.ctx.fillStyle=fill; c.ctx.beginPath(); c.ctx.ellipse(x,y,Math.max(1,rx),Math.max(1,ry),rot||0,0,Math.PI*2); c.ctx.fill(); }
+function rect(c,x,y,w,h,fill){ c.ctx.fillStyle=fill; c.ctx.fillRect(x,y,w,h); }
+function tri(c,x1,y1,x2,y2,x3,y3,fill){ c.ctx.fillStyle=fill; c.ctx.beginPath(); c.ctx.moveTo(x1,y1); c.ctx.lineTo(x2,y2); c.ctx.lineTo(x3,y3); c.ctx.closePath(); c.ctx.fill(); }
+function line(c,x1,y1,x2,y2){ c.ctx.beginPath(); c.ctx.moveTo(x1,y1); c.ctx.lineTo(x2,y2); c.ctx.stroke(); }
+function line2(c,x1,y1,x2,y2,color,wd){ c.ctx.strokeStyle=color; c.ctx.lineWidth=wd; line(c,x1,y1,x2,y2); }
+function arc(c,x,y,r,a1,a2){ c.ctx.beginPath(); c.ctx.arc(x,y,r,a1,a2); c.ctx.stroke(); }
+function arc2(c,x,y,r,a1,a2,color,wd){ c.ctx.strokeStyle=color; c.ctx.lineWidth=wd; arc(c,x,y,r,a1,a2); }
+function poly(c,x,y,R,nsides,jag,fill,r){
+  c.ctx.fillStyle=fill; c.ctx.beginPath();
+  for(let i=0;i<nsides;i++){
+    const a=i/nsides*Math.PI*2 - Math.PI/2;
+    const rr=R*(1-jag/2+jag*r());
+    const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr*0.85;
+    if(i===0) c.ctx.moveTo(px,py); else c.ctx.lineTo(px,py);
+  }
+  c.ctx.closePath(); c.ctx.fill();
+}
+function face(c,x,y,r,scale){
+  const s = scale||1;
+  circle(c,x-18*s,y-8*s,7*s,'#3f3428'); circle(c,x+18*s,y-8*s,7*s,'#3f3428');
+  arc2(c,x,y+8*s,14*s,.25,Math.PI-.25,'#3f3428',4);
+}
+const CPU_NAME_SUFFIX = ['マン','キング','スター','ジュニア','ロボ','マスター'];
+
+function makeCpuTeam(seed){
+  const rng = mulberry32(seed >>> 0);
+  const picks = [];
+  const pool = CPU_ARCHETYPES.slice();
+  for(let i=0;i<3;i++){
+    const idx = Math.floor(rng()*pool.length);
+    picks.push(pool.splice(idx,1)[0]);
+  }
+  return picks.map((arch, i)=>{
+    const c = cpuCanvas();
+    arch.draw(c, rng);
+    const feats = analyzeImageOnCanvas(c.el);
+    const chara = buildCharacter({
+      features: feats,
+      subject: arch.subject,
+      charName: arch.subject + CPU_NAME_SUFFIX[Math.floor(rng()*CPU_NAME_SUFFIX.length)],
+      imageURL: c.el.toDataURL('image/png'),
+    });
+    return chara;
+  });
+}
+
+/* =========================================================
+ * 7. 画像ファイル読み込み
+ * =======================================================*/
+async function fileToCanvas(file, maxSize){
+  let bmp = null;
+  try{
+    bmp = await createImageBitmap(file, {imageOrientation:'from-image'});
+  }catch(e){
+    bmp = await new Promise((res, rej)=>{
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('decode failed')); };
+      img.src = url;
+    });
+  }
+  const w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+  if(!w0 || !h0) throw new Error('empty image');
+  const scale = Math.min(1, maxSize/Math.max(w0,h0));
+  const c = document.createElement('canvas');
+  c.width = Math.max(8, Math.round(w0*scale));
+  c.height = Math.max(8, Math.round(h0*scale));
+  c.getContext('2d', {willReadFrequently:true}).drawImage(bmp, 0, 0, c.width, c.height);
+  if(bmp.close) bmp.close();
+  return c;
+}
+
+/* =========================================================
+ * 8. UI — 画面遷移・チームビルダー
+ * =======================================================*/
+const state = {
+  mode: null,          // 'cpu' | '2p'
+  buildingPlayer: 0,   // 0 or 1
+  teams: [[null,null,null],[null,null,null]],  // chara objects
+  playerLabels: ['プレイヤー1','プレイヤー2'],
+  editingSlot: -1,
+  pendingCanvas: null, // 選択中写真のcanvas
+  battle: null,
+  uiLock: false,
+};
+
+function showScreen(id){
+  $$('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* ---- title ---- */
+$('#btn-vs-cpu').addEventListener('click', ()=>{ startBuild('cpu'); });
+$('#btn-vs-2p').addEventListener('click', ()=>{ startBuild('2p'); });
+$('#btn-help').addEventListener('click', ()=>{ $('#help-modal').classList.add('show'); });
+$('#btn-help-close').addEventListener('click', ()=>{ $('#help-modal').classList.remove('show'); });
+(function renderTypeChart(){
+  const lines = [];
+  for(const [att, row] of Object.entries(EFF)){
+    const strong = Object.entries(row).filter(([,v])=>v>1).map(([d])=>TYPES[d].emoji+TYPES[d].name);
+    if(strong.length) lines.push(`${TYPES[att].emoji}${TYPES[att].name} → ${strong.join('、')}`);
+  }
+  $('#help-typechart').innerHTML = lines.map(esc).join('<br>');
+})();
+
+function startBuild(mode){
+  state.mode = mode;
+  state.buildingPlayer = 0;
+  state.teams = [[null,null,null],[null,null,null]];
+  state.playerLabels = mode==='cpu' ? ['あなた','コンピューター'] : ['プレイヤー1','プレイヤー2'];
+  openBuilder(0);
+}
+function openBuilder(player){
+  state.buildingPlayer = player;
+  state.editingSlot = -1;
+  state.pendingCanvas = null;
+  $('#build-title').textContent = state.mode==='2p'
+    ? `${state.playerLabels[player]}のチームをつくろう！`
+    : 'チームをつくろう！';
+  renderSlots();
+  $('#maker-area').innerHTML = '';
+  showScreen('#screen-build');
+}
+$('#btn-build-back').addEventListener('click', ()=>{ showScreen('#screen-title'); });
+
+function renderSlots(){
+  const row = $('#slot-row');
+  row.innerHTML = '';
+  const team = state.teams[state.buildingPlayer];
+  team.forEach((chara, i)=>{
+    const d = document.createElement('div');
+    d.className = 'slot' + (chara ? ' done' : '') + (state.editingSlot===i ? ' selected' : '');
+    if(chara){
+      d.innerHTML = `<img src="${chara.imageURL}" alt=""><div class="slot-name">${esc(chara.name)}</div>`;
+    }else{
+      d.innerHTML = `<div class="plus">＋</div><div class="slot-hint">しゃしんをえらぶ</div>`;
+    }
+    d.addEventListener('click', ()=> beginSlot(i));
+    row.appendChild(d);
+  });
+  const done = team.every(c=>c);
+  $('#btn-build-done').disabled = !done;
+}
+
+function beginSlot(i){
+  state.editingSlot = i;
+  renderSlots();
+  $('#file-input').value = '';
+  $('#file-input').click();
+}
+$('#file-input').addEventListener('change', async e=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const area = $('#maker-area');
+  area.innerHTML = `<div class="maker"><div class="spinner"></div><p class="analyzing-text">しゃしんをよみこみちゅう…</p></div>`;
+  try{
+    const canvas = await fileToCanvas(file, 640);
+    state.pendingCanvas = canvas;
+    renderMakerForm(canvas);
+  }catch(err){
+    area.innerHTML = `<div class="maker"><p style="font-weight:700;">うまくよみこめなかったみたい…。<br>べつのしゃしんでためしてね！</p>
+      <p class="note">（HEICなど、ブラウザがひらけないしゃしんかも。スクリーンショットにするとうまくいくよ）</p></div>`;
+  }
+});
+
+function renderMakerForm(canvas){
+  const area = $('#maker-area');
+  const prevURL = canvas.toDataURL('image/jpeg', 0.85);
+  const slot = state.editingSlot;
+  const existing = state.teams[state.buildingPlayer][slot];
+  area.innerHTML = `
+    <div class="maker">
+      <div class="photo-wrap"><img class="preview" src="${prevURL}" alt="えのしゃしん"></div>
+      <div class="field">
+        <label>これは なにをかいたの？</label>
+        <input type="text" id="in-subject" maxlength="12" placeholder="れい：らいおん、ドラゴン、くるま"
+               value="${existing ? esc(existing.subject) : ''}">
+        <div class="hintwords">かいたものの正体で、とくいわざやステータスがかわるよ！</div>
+      </div>
+      <div class="field">
+        <label>キャラクターのなまえ（きめなくてもOK）</label>
+        <input type="text" id="in-name" maxlength="10" placeholder="じどうできまるよ">
+      </div>
+      <button class="btn primary" id="btn-make">キャラクターたんじょう！</button>
+    </div>`;
+  $('#btn-make').addEventListener('click', ()=>{
+    const subject = $('#in-subject').value;
+    const charName = $('#in-name').value;
+    const feats = analyzeImageOnCanvas(canvas);
+    const chara = buildCharacter({features:feats, subject, charName, imageURL:prevURL});
+    state.teams[state.buildingPlayer][state.editingSlot] = chara;
+    renderSlots();
+    area.innerHTML = `<p class="center" style="font-weight:800;margin:6px 0 0;">✨ たんじょう！ ✨</p>` + charaCardHTML(chara);
+    area.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+}
+
+function charaCardHTML(chara){
+  const bars = ['hp','atk','def','spe'].map(k=>{
+    const v = chara.stats[k];
+    const pct = clamp((v-30)/130*100, 4, 100);
+    const col = v>=110 ? 'var(--good)' : v>=75 ? 'var(--mid)' : 'var(--bad)';
+    return `<div class="stat-row"><span class="sname">${STAT_NAMES[k]}</span>
+      <div class="bar"><i style="width:${pct}%;background:${col};"></i></div>
+      <span class="sval">${v}</span></div>`;
+  }).join('');
+  const badges = chara.types.map(t=>
+    `<span class="type-badge" style="background:${TYPES[t].color};">${TYPES[t].emoji} ${TYPES[t].name}</span>`).join(' ');
+  const mvs = chara.moves.map(m=>{
+    const ty = TYPES[m.type];
+    const info = m.kind==='attack' || !m.kind ? `いりょく${m.p}` : (m.desc||'');
+    return `<div class="mv"><span class="type-badge" style="background:${ty.color};">${ty.emoji}</span>
+      <b>${esc(m.name)}</b><span class="mvpow">${info}</span></div>`;
+  }).join('');
+  return `<div class="card">
+    <div class="card-head"><span class="cname">${esc(chara.name)}</span>${badges}</div>
+    <div class="card-body">
+      <div class="card-photo"><img src="${chara.imageURL}" alt=""></div>
+      <div class="stats">${bars}</div>
+    </div>
+    <div class="moves-list">${mvs}</div>
+  </div>`;
+}
+
+$('#btn-build-done').addEventListener('click', ()=>{
+  if(state.mode === '2p' && state.buildingPlayer === 0){
+    showHandoff(`${state.playerLabels[1]}のばん！`, 'つぎは あいてチームをつくってね', ()=> openBuilder(1));
+    return;
+  }
+  if(state.mode === 'cpu'){
+    // CPUチームはプレイヤーチームのハッシュから決定的に生成（同じチームなら同じ相手）
+    const seed = state.teams[0].reduce((a,c)=>(a ^ c.seed) >>> 0, 0x9e3779b9);
+    state.teams[1] = makeCpuTeam(seed);
+  }
+  startBattle();
+});
+
+function showHandoff(title, sub, cb){
+  $('#handoff-title').textContent = title;
+  $('#handoff-sub').textContent = sub;
+  $('#handoff-modal').classList.add('show');
+  $('#handoff-ok').onclick = ()=>{ $('#handoff-modal').classList.remove('show'); cb(); };
+}
+
+/* =========================================================
+ * 9. UI — バトル
+ * =======================================================*/
+function startBattle(){
+  state.battle = new Battle(state.teams[0], state.teams[1], state.playerLabels);
+  $('#battle-log').innerHTML = '';
+  showScreen('#screen-battle');
+  logMsg(`${state.playerLabels[0]} VS ${state.playerLabels[1]}！ バトルスタート！`);
+  logMsg(`${state.playerLabels[0]}は ${state.battle.act(0).chara.name}を くりだした！`);
+  logMsg(`${state.playerLabels[1]}は ${state.battle.act(1).chara.name}を くりだした！`);
+  renderBattle();
+  promptTurn();
+}
+
+function fighterView(side){
+  return side===0
+    ? {img:$('#ally-img'), name:$('#ally-name'), hp:$('#ally-hp'), hptext:$('#ally-hptext'), dots:$('#ally-dots'), card:$('.fighter.ally .fimg')}
+    : {img:$('#foe-img'), name:$('#foe-name'), hp:$('#foe-hp'), hptext:$('#foe-hptext'), dots:$('#foe-dots'), card:$('.fighter.foe .fimg')};
+}
+function renderBattle(){
+  for(let s=0;s<2;s++){
+    const b = state.battle;
+    const f = b.act(s);
+    const v = fighterView(s);
+    v.img.src = f.chara.imageURL;
+    v.img.classList.remove('faint-anim');
+    const badges = f.chara.types.map(t=>
+      `<span class="type-badge" style="background:${TYPES[t].color};">${TYPES[t].emoji} ${TYPES[t].name}</span>`).join('');
+    v.name.innerHTML = `${esc(f.chara.name)} ${badges}`;
+    updateHP(s);
+    v.dots.innerHTML = b.sides[s].team.map(x=>
+      `<span class="dot${x.fainted?' fainted':''}"></span>`).join('');
+  }
+}
+function updateHP(side){
+  const f = state.battle.act(side);
+  const v = fighterView(side);
+  const pct = clamp(f.hp / f.chara.maxHP * 100, 0, 100);
+  v.hp.style.width = pct + '%';
+  v.hp.style.background = pct > 50 ? 'var(--good)' : pct > 20 ? 'var(--mid)' : 'var(--bad)';
+  v.hptext.textContent = `${f.hp} / ${f.chara.maxHP}`;
+}
+function logMsg(text, sub){
+  const p = document.createElement('p');
+  if(sub) p.className = 'sub';
+  p.textContent = text;
+  const box = $('#battle-log');
+  box.appendChild(p);
+  box.scrollTop = box.scrollHeight;
+}
+function floatDamage(side, amount){
+  const v = fighterView(side);
+  const stage = $('#battle-stage');
+  const r = v.card.getBoundingClientRect();
+  const sr = stage.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'float-dmg';
+  el.textContent = '-' + amount;
+  el.style.left = (r.left - sr.left + r.width/2 - 14) + 'px';
+  el.style.top  = (r.top - sr.top) + 'px';
+  stage.appendChild(el);
+  setTimeout(()=>el.remove(), 1000);
+}
+
+/* コマンド表示。sideは常にどちらの入力かを持つ（2P対応） */
+function promptTurn(){
+  if(state.battle.winner !== null){ finishBattle(); return; }
+  collectAction(0).then(async a0=>{
+    let a1;
+    if(state.mode === 'cpu'){
+      a1 = cpuChoose(state.battle, 1);
+    }else{
+      a1 = await collectAction(1);
+    }
+    await runTurn([a0, a1]);
+  });
+}
+
+function collectAction(side){
+  return new Promise(resolve=>{
+    const b = state.battle;
+    const f = b.act(side);
+    const area = $('#cmd-area');
+    const show = ()=>{
+      const legalSw = b.legalSwitches(side);
+      const mvBtns = f.chara.moves.map((m,i)=>{
+        const ty = TYPES[m.type];
+        const pp = f.pp[i];
+        const info = (m.kind==='attack'||!m.kind)
+          ? `${ty.emoji}${ty.name} いりょく${m.p}`
+          : `${m.desc||''}`;
+        return `<button class="mvbtn" data-mv="${i}" ${pp<=0?'disabled':''}>
+          <span class="mvname">${esc(m.name)}</span>
+          <span class="mvinfo">${info}　PP ${pp}/${m.pp}</span></button>`;
+      }).join('');
+      const benches = b.sides[side].team.map((x,i)=>{
+        const dis = x.fainted || i===b.sides[side].active;
+        return `<button class="benchbtn${x.fainted?' fainted':''}${i===b.sides[side].active?' active-mon':''}"
+          data-sw="${i}" ${dis?'disabled':''}><img src="${x.chara.imageURL}" alt=""></button>`;
+      }).join('');
+      area.innerHTML = `
+        <div class="whoturn">▼ ${esc(b.sides[side].label)}の ${esc(f.chara.name)}は どうする？</div>
+        <div class="move-grid">${mvBtns}</div>
+        <div class="bench-row"><span class="bench-label">こうたい→</span>${benches}</div>`;
+      area.querySelectorAll('[data-mv]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          area.innerHTML = '';
+          resolve({type:'move', i:+btn.dataset.mv});
+        });
+      });
+      area.querySelectorAll('[data-sw]:not(:disabled)').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          area.innerHTML = '';
+          resolve({type:'switch', i:+btn.dataset.sw});
+        });
+      });
+    };
+    if(state.mode === '2p'){
+      showHandoff(`${b.sides[side].label}のばん！`, 'あいてに みえないように えらんでね', show);
+    }else{
+      show();
+    }
+  });
+}
+
+async function runTurn(actions){
+  const b = state.battle;
+  const ev = b.turn(actions);
+  await playEvents(ev);
+  // 交代要求の処理
+  for(let s=0;s<2;s++){
+    if(b.winner===null && b.sides[s].needsSwitch){
+      if(state.mode==='cpu' && s===1){
+        const idx = cpuPickSwitch(b, 1);
+        await sleep(500);
+        await playEvents(b.forceSwitch(1, idx));
+      }else{
+        const idx = await promptForcedSwitch(s);
+        await playEvents(b.forceSwitch(s, idx));
+      }
+    }
+  }
+  if(b.winner !== null){ finishBattle(); return; }
+  promptTurn();
+}
+
+function promptForcedSwitch(side){
+  return new Promise(resolve=>{
+    const b = state.battle;
+    $('#switch-title').textContent = `${b.sides[side].label}：つぎのなかまをえらんでね！`;
+    const box = $('#switch-choices');
+    box.innerHTML = '';
+    b.legalSwitches(side).forEach(({i, f})=>{
+      const div = document.createElement('div');
+      div.innerHTML = charaCardHTML(f.chara);
+      div.style.cursor = 'pointer';
+      const hpLine = document.createElement('p');
+      hpLine.className = 'center note';
+      hpLine.textContent = `のこりHP ${f.hp}/${f.chara.maxHP}`;
+      div.appendChild(hpLine);
+      div.addEventListener('click', ()=>{
+        $('#switch-modal').classList.remove('show');
+        resolve(i);
+      });
+      box.appendChild(div);
+    });
+    $('#switch-modal').classList.add('show');
+  });
+}
+
+async function playEvents(evs){
+  for(const e of evs){
+    switch(e.t){
+      case 'msg':
+        logMsg(e.text, e.sub);
+        if(e.atkSide !== undefined){
+          const v = fighterView(e.atkSide);
+          v.card.classList.remove('lunge-ally','lunge-foe');
+          void v.card.offsetWidth;
+          v.card.classList.add(e.atkSide===0?'lunge-ally':'lunge-foe');
+        }
+        await sleep(e.sub ? 350 : 520);
+        break;
+      case 'dmg': {
+        const v = fighterView(e.side);
+        v.card.classList.remove('shake'); void v.card.offsetWidth;
+        v.card.classList.add('shake');
+        v.card.classList.add('hitflash');
+        setTimeout(()=>v.card.classList.remove('hitflash'), 180);
+        floatDamage(e.side, e.amount);
+        updateHP(e.side);
+        await sleep(480);
+        break;
+      }
+      case 'heal':
+      case 'buff':
+        updateHP(e.side !== undefined ? e.side : 0);
+        await sleep(320);
+        break;
+      case 'switch':
+        renderBattle();
+        await sleep(380);
+        break;
+      case 'faint': {
+        const v = fighterView(e.side);
+        v.card.classList.add('faint-anim');
+        renderDots();
+        await sleep(650);
+        break;
+      }
+      case 'end':
+        await sleep(300);
+        break;
+      case 'miss':
+        await sleep(200);
+        break;
+    }
+  }
+}
+function renderDots(){
+  for(let s=0;s<2;s++){
+    const v = fighterView(s);
+    v.dots.innerHTML = state.battle.sides[s].team.map(x=>
+      `<span class="dot${x.fainted?' fainted':''}"></span>`).join('');
+  }
+}
+
+/* =========================================================
+ * 10. UI — 結果
+ * =======================================================*/
+function finishBattle(){
+  const b = state.battle;
+  const winSide = b.winner;
+  const isPlayerWin = winSide === 0;
+  $('#result-banner').textContent = state.mode==='cpu'
+    ? (isPlayerWin ? '🏆 しょうり！！' : '😢 まけちゃった…')
+    : `🏆 ${b.sides[winSide].label}の かち！`;
+  $('#result-sub').textContent = state.mode==='cpu'
+    ? (isPlayerWin ? 'きみのチームのだいしょうり！' : 'つぎは かてるよ！チームをかえてみよう！')
+    : 'ふたりとも いいバトルだったね！';
+  const cards = $('#result-cards');
+  cards.innerHTML = `<h3>かったチーム</h3>` +
+    b.sides[winSide].team.map(f=>charaCardHTML(f.chara)).join('');
+  showScreen('#screen-result');
+}
+$('#btn-rematch').addEventListener('click', ()=>{ startBattle(); });
+$('#btn-newteam').addEventListener('click', ()=>{ startBuild(state.mode); });
+$('#btn-result-title').addEventListener('click', ()=>{ showScreen('#screen-title'); });
+
+/* =========================================================
+ * 11. テスト用フック（UIとは独立してエンジンを検証できる）
+ * =======================================================*/
+window.__test = {
+  analyzeImageOnCanvas,
+  analyzePixels,
+  buildCharacter,
+  makeCpuTeam,
+  findSubjectEntry,
+  typeEffect,
+  Battle,
+  cpuChoose,
+  cpuPickSwitch,
+  /* CPU同士で1戦シミュレート（UIなし・決定的rng） */
+  simulate(seedA, seedB){
+    const ta = makeCpuTeam(seedA), tb = makeCpuTeam(seedB);
+    const rng = mulberry32((seedA ^ (seedB*2654435761)) >>> 0);
+    const b = new Battle(ta, tb, ['A','B'], rng);
+    let turns = 0;
+    while(b.winner === null && turns < 300){
+      const a0 = cpuChoose(b, 0, rng), a1 = cpuChoose(b, 1, rng);
+      b.turn([a0, a1]);
+      for(let s=0;s<2;s++){
+        if(b.winner===null && b.sides[s].needsSwitch){
+          b.forceSwitch(s, cpuPickSwitch(b, s));
+        }
+      }
+      turns++;
+    }
+    return {winner:b.winner, turns, hpLeft:b.sides.map(sd=>sd.team.map(f=>f.hp))};
+  },
+  /* 描画関数から直接キャラを作る（テスト用） */
+  buildFromDraw(drawFn, subject){
+    const c = cpuCanvas();
+    drawFn(c);
+    const feats = analyzeImageOnCanvas(c.el);
+    return buildCharacter({features:feats, subject, charName:'', imageURL:''});
+  },
+};
+</script>
+</body>
+</html>
