@@ -155,6 +155,7 @@ Evidence scope: **the default branch at the SHA above, recorded GitHub Actions r
 - 本リポジトリは**ゲーム工場ではない**。現在のMissionは `OS.md` 冒頭のCurrent Identity、North Star / Major Desireは `DESIRES.md` を参照。
 - Browser-Toy Production Route（SEED 001〜024、`factory.yml`）は**Historical Experiment（HOLD）**。`factory.yml` ファイル内にはhistorical cron定義が残るが、GitHub Actions workflow `factory` 自体は **disabled_manually**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。**cron定義の残存とworkflow enabled stateは別のfact**であり、残存riskはre-enable（Human Gate）時のみ（§4）。
 - 現在のActive Reality Experimentは**Batch 1 Discovery Contact**（§2。現在Phase = World Signal回収）。
+- **2026-08-13 追記（日付付き追加。2026-08-09観測の本文・ヘッダ・canonical blockは変更しない）**: **E-014 Desire to Game Reality Test が承認された**（PR #65 merge = 契約 `direction/EVAL_DESIRE_TO_GAME_2026-08.md` §5 が事前登録したHuman Gate。merge commit `0dcf7d6`）。status = **ACTIVE — Phase 1未着手・納品0**。台帳 = `experiments/desire-to-game/LEDGER.md`。E-006 / E-011 / E-012 / E-013 は変更なし（並走）。現在の戦略・ベット（§7-0）も変更なし——E-014は探索期のprobeであり全ベットではない。
 - 上位Direction統合はD-003（`DECISIONS.md`）。現在の律速は§7。
 - **Public Identity = `Living Ground`**（D-004。2026-08-09 Human決定）。商品面・公開媒体の名称。GitHub org `LightsOutWorks` は作業場として不変更。シンボル（巽 ☴）とアセット一式は `brand/`、幾何規格は `brand/BRAND_SPEC.md`。
 - **Identity rollout = 部分実施済み**（2026-08-10 00:59 Human実施・画像実測）: X表示名 / **Xハンドル `@livinggroundjp`** / Xアイコン / X bio / noteアカウント（表示名・アイコン）は切替済み。Googleアカウントは新規作成が電話番号上限で不可のため、既存 `lightsoutworks@gmail.com` の表示名・アイコンを Living Ground へ変更して対応。**noteメール認証は完了**（2026-08-10 Human-confirmed）。**投稿の前提条件は解除された。** 残る未完了: Xヘッダー（**旧名 `LIGHTS OUT FACTORY` が公開面に残存**）/ note自己紹介 / noteヘッダー / note ID は **`livinggroundjp` で確定**（`https://note.com/livinggroundjp`。2026-08-10 Human報告。**Xハンドル `@livinggroundjp` と完全一致**しており、`LLMO_EXECUTION_PLAN` §5-6 のEntity一貫性を満たす）。詳細と貼付用の実文は `experiments/md2-distribution/PROFILE_COPY_LIVING_GROUND.md` §0。
@@ -352,6 +353,7 @@ Control-plane側のbottleneck判定（Generation / Distribution / Feedbackのど
 | MD-2 Content Canary（E-011） | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md`（main。PR #34 merge済み 2026-08-09。C-1公開はHuman-reported・X上の反応は `UNKNOWN`） |
 | xAI credit実測 | Human-confirmed 2026-08-09（D-003 AMENDMENT）: consumed USD 4.351 / remaining ≈ USD 0.649。追加チャージはDay 3 SCALE判定時のみ条件付き承認（§5・会話レベル） |
 | Daily Encounter Queue trigger設定（one-shot×3） | Human-confirmed 2026-08-09（PR #40 FINAL REALITY SYNC）。private session state・**repo-unverified** |
+| E-014 Desire to Game Reality Test（承認・2026-08-13追記） | 契約 `direction/EVAL_DESIRE_TO_GAME_2026-08.md`（PR #65 merge済み 2026-08-13・merge commit `0dcf7d6`）/ 台帳 `experiments/desire-to-game/LEDGER.md`（納品0・全欄未記入） |
 
 `experiments/INDEX.md` のstale 2行（E-006「Sent 7」/ E-001「⚠ schedule trigger残存」）は、2026-08-09 PR #40 FINAL REALITY SYNCの裁定に基づき本PR内で修正済み（main上の確定事実 — LEDGER正本・Actions実測 — のみによる機械的修正。open PR 4本のいずれもINDEX.mdを変更しないことをbranch diff実測で確認済み・競合なし）。
 
