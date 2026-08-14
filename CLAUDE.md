@@ -44,5 +44,6 @@
 | 英語を公開してよいか | `direction/WRITING_SYSTEM_EN_2026-08.md` §9（EN_GATE） |
 | Web Marketingの一次調査・生データ | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md` / `research/INDEX.md`（109,174字・§A〜§Nを質問キーで引く） |
 | 実験の一覧と状態 | `experiments/INDEX.md` |
+| 新しくアプリ・サービス・自動化・大型独立機能を作る依頼 | `.claude/skills/reuse-before-build/SKILL.md` |
 
 **この表を引く義務がいつ発生するかは `OS.md` HI-4 F10（既出の再発明）が定める。** 本ファイルは表を持つだけで、規則を持たない。
