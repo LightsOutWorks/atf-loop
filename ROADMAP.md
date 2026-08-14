@@ -218,7 +218,19 @@ North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CUR
 
 ---
 
-現在の実験順序（D-003 AMENDMENT 2026-08-09 / Human裁定）:
+### 実験順序（D-003 AMENDMENT 2026-08-09 / Human裁定）— **2026-08-14 SUPERSEDED / Historical**
+
+> **訂正追記（2026-08-14。下の 1. ・ 2. の原文は不変更で保持する）**
+>
+> PR #68 のmergeにより、**E-013 Daily Encounter Queue Canary は `HISTORICAL — result: VOID`** で終了した（正本 = `experiments/INDEX.md` および `experiments/encounter-queue/LEDGER.md`「Final Verdict — `VOID`」）。**Day 4以降の自動継続はない。** `VOID` であるため、**需要・品質・返信率について学習しない**（`CONSTRAINTS.md` Part I §6: `VOID` を `FAIL` として学習しない）。
+>
+> したがって、**下に残す順序はDecision Historyであり、現在の実行指示ではない。** 1. の `Current approved experiment` は2026-08-09時点の記述であって、2026-08-14時点で承認されている実験を指さない。
+>
+> ただし 2. の `HOLD` 自体は失効していない——継続は `CURRENT_STATE.md` §7 の2026-08-14追記が確定しており、正本はそちらである。**本節は順序としてHistoricalになったのであって、個々のstatusを取り消すものではない。**
+>
+> **現在の実験statusの正本は `experiments/INDEX.md`、現在の戦略・ベット・位相の正本は `CURRENT_STATE.md` §7-0 である。** 本追記はどちらも上書きしない。
+>
+> **本追記は新しい最優先実験を決めない。** E-013の後継を指名せず、**E-014 Desire to Game Reality Test を全ベット・最優先へ昇格させない**（E-014は探索期のprobeであり、承認範囲は契約 `direction/EVAL_DESIRE_TO_GAME_2026-08.md` が持つ）。
 
 1. **Current approved experiment: Daily Encounter Queue Canary**（status = **DAY_1_EXECUTED / SENT 4 / REPLY 0**（2026-08-09 Human-confirmed） — one-shot trigger 3本設定済み・Day 1未実行。**Human-confirmed / repo-unverified**（private session state）— `CURRENT_STATE.md` §7）: 3日間限定（Day 1〜3 = 2026-08-09〜11 各18:30 JST）/ xAI Grok x_searchで毎日最大10件のEncounter候補を非公開供給 / HUMAN_SHORT / Private delivery / **Human manual send（自動送信なし）** / Adaptive query learning / **Day 3後の自動継続なし**。恒久recurringではなく常時Radarでもない。Budget capは `CURRENT_STATE.md` §5（daily USD 0.18 / 3-day USD 0.50 / 追加top-up禁止）。
 2. **X World Signal / Reply Ingestion Canary** = **HOLD**（trigger: 最初の実reply発生、またはHuman返信監視負担の実測ボトルネック化。budget未承認。それまで実行しない — `CURRENT_STATE.md` §7）。
