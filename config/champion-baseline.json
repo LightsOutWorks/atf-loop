@@ -2,31 +2,31 @@
   "schema": "atf-configuration-provenance/v1",
   "kind": "champion-baseline",
   "title": "Current production configuration baseline (C0 — Configuration Provenance)",
-  "declared_at": "2026-08-08",
+  "declared_at": "2026-08-14",
   "declaration_note": "This file is NOT a claim that the current configuration is the best possible one. It is a baseline declaration that makes the currently-running production configuration comparable and re-runnable, including its uncertainty. Every OBSERVED value IS the canonical value deterministically extracted from its evidence source at declaration time; scripts/c0-provenance.mjs re-extracts the canonical value at observation time and requires a deep exact match (no token-presence checks, so subsets, additions and substitutions all FAIL). Fields whose canonical value cannot be safely extracted are UNKNOWN with reason and resolution — keeping the OBSERVED count high is explicitly not a goal. The observer also enforces the exact v1 schema, step-scoped secret declarations, repository/history binding and production/snapshot separation.",
   "base": {
     "repository": "LightsOutWorks/atf-loop",
     "default_branch": "main",
-    "base_sha": "0f9b4fd828e698c0839440fcad007350c3892f34",
+    "base_sha": "0486dc2cd1ea9f1536bcbd4996a54291bbad21d5",
     "base_sha_policy": "base_sha must exist as a commit in the executing repository, must be an ancestor of the inspected HEAD, and its tree must contain the declared material blobs. A change of the default-branch head alone does NOT make this baseline STALE. The baseline becomes materially STALE only when a production_material source below changes content; control_plane_snapshot sources may drift through normal updates and their drift is recorded as information only."
   },
   "material_sources": {
     "OS.md": {
       "classification": "control_plane_snapshot",
-      "git_blob_sha1": "f1fc105a595cc748b286eca4e150d897eda41ae4",
-      "sha256": "02340dd882b9e786c816f1861e770f1bada22a7ba187ca6b835fc09671add406",
+      "git_blob_sha1": "b24d503e9a68794ffe1917058981f08e0724af53",
+      "sha256": "abfab9a342f73ebe42caffe9d4a19cf39d29399e87f928616ca811b6b65b6c3e",
       "role": "Layer1/Layer2 principles governing what the Factory should optimize (v1.1, amended by D-001)"
     },
     "CURRENT_STATE.md": {
       "classification": "control_plane_snapshot",
-      "git_blob_sha1": "78ed70512a6432cce65ac54f9471071509718ce4",
-      "sha256": "cc480af850c315e6f62f129ebf8362aac7c6e09849f8d120e2b15a7b9a77a700",
+      "git_blob_sha1": "5b4f3f0db8c0e04158211d2168aa001844a41243",
+      "sha256": "98fcd2d5eed434c99a263474ec0e2a9e167e974efa1f661ff98b507147e0eb72",
       "role": "Observed snapshot of proven capabilities; source of the C0 gate definition"
     },
     "ROADMAP.md": {
       "classification": "control_plane_snapshot",
-      "git_blob_sha1": "a56b97eb2c9121642c02dcfaba476bf744b3e735",
-      "sha256": "adf295e540b1153eb134d419050fa74275f3cbfac0a8d0f834834877003344f5",
+      "git_blob_sha1": "a334222fafeee12666bb1b01abad90549efc5686",
+      "sha256": "ad1d5820fbe11c6d69eb340d89ef89de68a0ae5454bfbb5a4e19f71802207438",
       "role": "Evidence-gated roadmap; defines C0 PASS criteria and the STALE rule"
     },
     ".github/workflows/factory.yml": {
@@ -35,11 +35,11 @@
       "sha256": "b0db5655de6830ed33863326fcdbb7d1ed1259270ff7adbbffe756f1b0c4b322",
       "role": "Production Loop definition; primary evidence for generation, gate, verification and publish configuration"
     },
-    "CONSTRAINTS.md": {
+    "CONSTRAINTS_BROWSER_TOY_ROUTE.md": {
       "classification": "production_material",
-      "git_blob_sha1": "c0ea169fa2f54c5dfeed7cd5fdfbe5c715733be7",
-      "sha256": "27349d0a5b4a23dc4aa316edaa28f705c1322f2c3d4dc02c4f2d1b38a7e850e1",
-      "role": "Factory boundary (Part I) plus the browser-toy route generation constraints and fixed 6-check verification contract preserved verbatim in Part II (route on HOLD per D-001, 2026-08-08); redeclared when the file was restructured by the canonical migration"
+      "git_blob_sha1": "d257136f7195d38fdbf5741a3444d49588fefbf3",
+      "sha256": "3870285dcc78d875e145f2523009bb2539421d50ce04ef716ba72f3b4bdfbebe",
+      "role": "Browser-Toy Production Route generation constraints and the fixed 6-check verification contract, preserved verbatim from the former CONSTRAINTS.md Part II (route on HOLD per D-001, 2026-08-08). Separated into its own file and redeclared here by D-011 (2026-08-14) so that CONSTRAINTS.md — the current mission's top-priority boundary — is no longer pinned by this frozen route's provenance."
     },
     "smoke.mjs": {
       "classification": "production_material",
@@ -465,13 +465,13 @@
       "constraints_contract": {
         "status": "OBSERVED",
         "value": {
-          "contract_sha256": "27349d0a5b4a23dc4aa316edaa28f705c1322f2c3d4dc02c4f2d1b38a7e850e1"
+          "contract_sha256": "3870285dcc78d875e145f2523009bb2539421d50ce04ef716ba72f3b4bdfbebe"
         },
         "evidence": {
           "kind": "repository",
-          "path": "CONSTRAINTS.md",
-          "git_blob_sha1": "c0ea169fa2f54c5dfeed7cd5fdfbe5c715733be7",
-          "derived_from": "SHA-256 of the complete CONSTRAINTS.md content (the contract is the file itself; browser-toy contract preserved verbatim in Part II)"
+          "path": "CONSTRAINTS_BROWSER_TOY_ROUTE.md",
+          "git_blob_sha1": "d257136f7195d38fdbf5741a3444d49588fefbf3",
+          "derived_from": "SHA-256 of the complete CONSTRAINTS_BROWSER_TOY_ROUTE.md content (the contract is the file itself; separated verbatim from CONSTRAINTS.md Part II by D-011, 2026-08-14)"
         }
       },
       "integrity_check": {
