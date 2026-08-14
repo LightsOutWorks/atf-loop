@@ -6,6 +6,67 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-012 — 長期実証済みの他系統をArchitecture仕様ではなくPriorとして扱う。Factoryは独立に探索し、Realityが判定する
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract「今後のArchitecture探索の方針」（2026-08-14。同日、対象をBrainのみからCross-Systemへ拡張する追加裁定を受けて本recordの範囲を広げた。**採択前の提案段階での範囲拡大であり、確定した判断の事後変更ではない**——D-recordの採択はヒロの本PR mergeである）。**Architectureの探索範囲＝戦略レベルの前提であり、決定権はHumanが持つ**（`OS.md` HI-11 Humanリスト: 戦略の探索範囲 / 対象範囲とNon-goals）。
+- **Decision**: `OS.md` Layer2 へ **「Architecture候補の探索 — Cross-System Priors」1節だけ**を置く。要点は次の7つで、いずれも既存規則の**適用**であり新原則ではない。
+  1. **長期実証済みの系統は解法ライブラリとして参照してよいが、設計図としては使わない。** 或る分野に或る仕組みが存在することは、それ自体では導入理由にならない。**Prior / Factory = Independent Search / Reality = Judge。優先順位は常に Reality > Cross-System Prior > Internal elegance。**
+  2. **探索順序**: Factory Problem → Abstract Problem → Cross-System Priors → AI-native Alternatives → Smallest Test → Reality Selection → Retain / Prune。**関係する系統だけを必要時に使い、毎回全分野を調べない。どれもDefaultにせず、AI・Software-nativeと新規異種の候補を常に1つずつ残す。**
+  3. **参照する系統と借りるもの**は次の索引で持つ。**チェックリストではない。関係する系統だけを必要時に引く。**
+
+     | 系統 | 主に借りるもの |
+     |---|---|
+     | Evolution / Ecology | Variation / Selection / Retention / Extinction / **Evolvability** / Robustness / Modularity / Niche / Diversity |
+     | Control Theory / Cybernetics | **Observability / Controllability** / Feedback と遅れ / Stability / Noise / Adaptive control |
+     | Markets / Economics | 分散した私的情報が、中央集約なしに行動・価格・取引へ圧縮されて返ってくること |
+     | Immune Systems | Memory / Recognition / **Tolerance / Response threshold** / Overreaction avoidance |
+     | Distributed Systems | Fault tolerance / Local failure / Idempotency / Retry / State isolation / **Graceful degradation** / 同期強度の選択 |
+     | Information Theory / Compression | 記録量ではなく**次の判断を変える情報**を持つこと |
+     | Collective Intelligence / Swarm | Decentralization / Local interaction / Shared environment / Stigmergy / Self-organization |
+     | Brain / Cognitive | Attention / Forgetting / 記憶の分離 / Selective retrieval / Sparse activation / Consolidation / Credit assignment |
+     | AI / Software-native | 正確な記憶・大量の並列化・Architecture自体の変更・完全な履歴保持・能力単位の交換・外部Tool利用 |
+  4. **Cross-System Convergence を強いPriorとして扱う。** 制約も媒体も異なる複数系統が同じ抽象問題へ似た解を採っている場合（例: forgetting / tolerance / extinction / garbage collection / sunset →「価値を失った構造を永続保持しない」）、単一分野の模倣より強い。**ただしScoreにせず、「N分野が一致したら採用」のような固定判定規則を作らない。Reality判定の代わりにはならない。**
+  5. **分野名ではなく問いとして持つ4点**: ①「今もっとも性能が高いか」だけでなく**「次に安全に変異できるか」** ②**その状態を観測できているか / Factory側からその変数を動かせるか**（観測不能・操作不能な対象を内部推論だけで最適化しない）③**一部が壊れても全体が止まらないか**（全stateの常時完全同期を前提にしない。**ただし支払い・permission・公開・credential・破壊的操作は既存のHuman Gateと強い一貫性を維持する** — `CONSTRAINTS.md` §4）④**Agent同士を大量に会話させる必要が本当にあるか**（artifact / state change経由で成立するなら直接通信を増やさない）。
+  6. **分野固有の制約まで模倣しない。** Biology（エネルギー / 身体 / 繁殖 / 寿命）/ Markets（貨幣 / 誘因 / 所有）/ Distributed systems（レイテンシ / 機械故障）/ Immune（生物学的生存）/ Organizations（人間の誘因 / 政治）はFactoryに無い制約を含む。導入前に**一般的な知能・適応問題への解か / その系統固有の制約への妥協か**を必ず分ける。
+  7. **独立収束はSignalであり、因果順序を逆転させない。** Factory側の実測から独立に必要になった構造が後から他系統にも見つかった場合はコピーではなく収束として扱い、**その場合に限り**追加探索してよい。既に採用した機構へ後から他分野の理由づけを与えない。
+  8. **Factory Architecture自身も `OS.md` §7 Evolution の対象である**（Variation → Reality Test → Selection → Retention / Pruning）。最終形は、脳に似た部分・市場に似た部分・進化に似た部分・分散システムに似た部分・**どこにも無いFactory-native構造**が混在してよい。**Factoryはどの既存分野にも所属しない。**
+- **Why**: 本方針の実質的な新規性は**「特定分野へのアンカリングを禁じること」と「Cross-System Convergenceを単一分野より強いPriorとして扱うこと」の2点**である。それ以外は既存正本が既に持っている——**Reality > Prior は §12 No Teacher**、**Variation → Reality Test → Selection は §7 Evolution**、**問題先・提案後の順序は Operating Philosophy 2**、**優位構造への置換は Operating Philosophy 7 / §6 Capability First**、**先回り建造の禁止は HI-10 Non-goals と `ROADMAP.md` §6**、**Need未確認での機構着手は HI-4 F1**、**単発の失敗やHuman修正1件で恒久ルールを増やさない（Factory版の自己免疫回避）は HI-4 F6**、**蓄積するのはログ量ではなく次の意思決定を変えるRealityは D-010 Decision 2**、**市場Signalの階層と内部指標の扱いは `DESIRES.md` §5 / HI-4 F2 / D-002**。したがって新設したのは1節のみで、これらは節内で**参照するだけで再掲していない**。
+- **既存規律との関係（本方針の位置づけ）**: 本方針は新しいResearch laneではなく、**Operating Philosophy 3（REUSE → BUY → ADAPT → COMPOSE → DELEGATE → BUILD）と `.claude/skills/reuse-before-build/` が既に持つ「BUILD前にPrior Artを探す」規律の、探索対象をSoftware外へ一般化したもの**である。要旨は **「GitHubを検索するように、世界を検索する」**——課題をゼロからの発明で解く前に、その問題を媒体非依存へ抽象化し、Software / Biology / Markets / Control / Distributed Systems 等に**Realityが既に解いた類似問題**が無いかを探す。見つかった解は設計図ではなく **Prior** として使い、Factory向けに再構成し、**AI-native代替も残した上でRealityで選ぶ**。**Cross-System Convergence はそのPriorの信頼度を考えるためのSignalであって、採用条件ではない。** 変わったのは探索対象が「GitHub上の実装」から「Reality Selectionを通過した世界中の解法」へ広がったことだけであり、**新しいlane・Skill・調査枠は増やさない。**
+- **発火条件**: Factory自身で具体的なArchitecture問題が観測された時のみ。**常時Researchテーマにしない。「面白そうだから脳・免疫・市場を研究する」は禁止**で、問題が無ければ `NO_ACTION`（HI-10）。
+- **設計上の選択（何を追加しなかったか）**: 新しい正本ファイル・管理文書・Skill・Research lane・Agent・評価機構・Capability・schema・恒久語彙・Experiment IDをいずれも作っていない。同節に**先回りで作らないもの**として次を明記した——Brain Architecture framework / Cognitive module一覧 / 記憶分類体系 / 人工海馬・人工前頭前野 / Sleep cycle automation / Neuroscience dashboard / Brain-inspired agent群 / **Genome System / pricing engine / agent swarm / Learning Compression Ratio 等の新KPI / Cross-System判定の恒久checklist・Score** / 新しいcanonical layer / 各分野の用語を使った恒久schema。
+- **Complexity Gardener（D-011 Decision 6）への適用**: 同Skillの導入理由は**Factory自身の実測**（正本肥大 → Current Task Surface 37,174字 → HI-12 実行不能 → Operational Complexity増大）であり、**生物のforgetting / pruningやその他分野の存在ではない。** 本recordはその因果順序を確認するだけで、**Skill本体には他分野由来の理由づけを一切書き加えていない。** 今後、forgetting / tolerance / extinction / garbage collection / sunset との独立収束から改善候補を得ることは、本節の順序に従う限り認める。
+- **Supersedes**: 無し。`CONSTRAINTS.md` / Layer1 / HI-1〜HI-12 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7-0 の戦略・ベット・優位・位相 / D-001〜D-011 / E-014契約 / `ROADMAP.md` §0 の事前登録はいずれも変更していない。Layer2の既存節（Current Route Status / 能力 / 境界 / 移譲の現在地 / Cadence / 探索と固定 / Open Questions）も変更していない。
+- **Rollback**: 本PRのrevertで `OS.md` の当該1節と本recordが戻る。物理削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
+## D-011 — Current Surfaceを畳む。Boundaryを凍結Routeのprovenanceから切り離す
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract（2026-08-14。A-1〜A-4の実施指示とA-3のGO）。採択はヒロの本PR merge。
+- **決定を可能にした実測**（本セッションの一次計測）:
+  1. `OS.md` HI-12 の取得上限は **anchor 5件・計6,000字**。参照タスク「E-014の次の一手を決める」の必読セットは **37,174字＝6.2倍**（`CONSTRAINTS.md` Part I 2,109 + `CURRENT_STATE.md` §7-0/§7 16,036 + `experiments/desire-to-game/LEDGER.md` 19,029）。**制定日の2026-08-10時点で既に10,389字＝1.7倍**であり、規律は最初から未達だった。
+  2. `CURRENT_STATE.md` は「原文は不変更で保持する／正本はこの追記側」型の追記が8箇所。E-013の現在値 `VOID` を得るには**原文＋5層＝6層**を通過する必要があった。
+  3. C0 baseline は `CONSTRAINTS.md` を**ファイル全体**で production_material としてpinしており、他5件の production_material はすべてBrowser-Toy Route（HOLD）の資産だった。**現Missionの最優先Sourceを編集するとC0がSTALEに倒れる**構造で、2026-08-10に実際に発生している（`OS.md` HI-4 R1注釈）。
+- **Decision**:
+  1. **`CONSTRAINTS.md` Part II を `CONSTRAINTS_BROWSER_TOY_ROUTE.md` へ本文無改変で分離する**（契約本文のSHA-256一致を確認済み）。**効力・scope・status（HOLD）はいずれも不変。** 分離は所在の変更である。
+  2. **C0 baseline の production_material から `CONSTRAINTS.md` を外し、pin対象を分離先へ移す。C0 canary は廃止しない。** `REQUIRED_MATERIALS` の件数（9件）とschema形状は不変で、1件のpath付け替えのみ。`base_sha` は分離後のcommitへ移し、全材料を再宣言する。
+  3. **`CURRENT_STATE.md` を現在値だけへ畳む。** 訂正の経緯・棄却した仮説・過去の観測値は**git historyと該当D-record・実験台帳が持ち、本文へ積層させない**。**過去観測のために新しいD-recordを作らない**（本recordは構造変更の記録であって、畳んだ観測の退避先ではない）。§1〜§9の節番号は外部参照61件があるため維持する。
+  4. **harnessの重複を除去する。** `.claude/settings.json` の2本目 UserPromptSubmit hook（`[routing]` echo）は `model-dispatch` skill の `description` と同内容のため削除。`.claude/hooks/context-brief.py` の `DEADLINES` は全件が過去日で出力ゼロだったため削除し、F10再注入のみ残す。**新しいhookは追加しない。**
+  5. **`README.md` の「schedule triggerは現在も稼働中」を `disabled_manually` の実測へ訂正する。** これは整理ではなく事実誤記の修正である。
+  6. **`complexity-gardener` Skillを1本だけ置く**（`.claude/skills/complexity-gardener/SKILL.md`）。役割は**read-onlyの検出器**——認知面積が再び肥大していないかを監査し、`KEEP` / `SLIM` / `RETIRE` の候補と最小修正までを返して停止する。**判定語彙は3語だけで、新しいSeverity・Score体系を作らない。** 基準は HI-12 を再利用し（Current Task Surface 6,000字）、**6,000をHard Boundaryへ昇格させない。** 削除・書換え・archive移動・PR作成・status変更・Mechanism追加はいずれも禁止で、**異常のない監査結果をrepoへ蓄積しない**。本Skill自身の退役条件（4回連続で候補0 → 月1へ / 3か月実質的な発見なし → `RETIRE` 候補）を内包するが、**専用のledger・counterは作らない**——既存の実行履歴で判断し、判断不能なら `UNKNOWN` のままにする。
+     - **定期実行は成立していない（実測 2026-08-14）。** repo側の既存schedule機構は `factory.yml` の cron のみで当該workflowは `disabled_manually`（re-enableはHuman Gate・Browser-Toy Route専用）、他2 workflowはscheduleを持たず、session側Routineは0件かつprivate session state（**E-013を `VOID` にした欠陥と同型**）。**REUSEできる既存機構が無いため新設せず、制約そのものをHumanへ返す。** 加えて、read-onlyのcron workflowを新設しても本Task Contractが禁じる範囲（PR・issue・comment・external communication）を守る限りHumanへの到達経路が無く、**Reality Connectionを持たないMechanismになる**——それは本Skill自身が `RETIRE` と判定する対象である。
+     - **恒久Mechanismの純増は0**: Skill +1（complexity-gardener）/ hook −1（`[routing]` echo）。新規のworkflow・script・agent・schema・ledger・dashboardはいずれも作っていない。
+- **Why**: 内部Mechanismが増える速度に対し、現在地を得るための認知面積を抑える規律（HI-12）が機能していなかった。**上限の数字を緩めれば規律は形式的に満たせるが、読む量は減らない。** 本decisionは上限を変えず、読む対象そのものを薄くする。
+- **HI-12の6,000字上限を変更しない理由**: 上限を緩めるより正本肥大を直すほうが根本解だから。**「`CONSTRAINTS.md` §6により変更不能」ではない**——上限はEvidenceで将来変更可能な運用基準であり、Hard Boundaryではない。
+- **Supersedes**: `CURRENT_STATE.md` 本文の過去観測レイヤ（git historyが保持）と、C0 baseline の旧宣言のみ。**次のいずれも変更しない**——`CONSTRAINTS.md` の全条項（Hard Boundary / Budget JPY 50,000 / Risk Tiers / Human Gates / Data Boundary / 検証の誠実性）/ `OS.md` Layer1・HI-1〜HI-12の規律本体 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7-0 の戦略・ベット・優位・位相（探索期）/ D-001〜D-010 / E-014契約 / `ROADMAP.md` §0 の事前登録。**D-001のBrowser-Toy Route HOLDも不変**——本recordは旧Routeの再稼働根拠にならない。
+- **Current Task Surface の定義（Human裁定 2026-08-14）**: **`CURRENT_STATE.md` が示す現在TARGETを判断するために、実際に取得する最小anchorの総量**とする。**Reality記録の総量ではない**——Realityを蓄積することと、現在の判断のためにReality全件を取得することは別である。実験台帳の全文を毎回読む前提を作らず、特定の実験をSkillへhardcodeしない。**必要anchorを特定できず全文Readが要る場合は、Reality量の問題ではなく `retrieval defect`** として当該文書を `SLIM` 候補に挙げる（新しいindex / schema / summary ledgerは作らない）。Reality履歴の本体（台帳の過去行 / Retrospective Seed Corpus / verbatim reaction / raw evidence）は **Cold Memory として保持し、削除も要約もしない**。
+- **残った超過（隠さない）**: 上の定義での実測は **10,882字**（`CONSTRAINTS.md` 全文 2,106 ＋ `CURRENT_STATE.md` §7-0・§7 4,168 ＋ E-014契約 §6 解除trigger 821 ＋ 台帳「G1 第三者Exposure — 実行メモ」3,787）で、**6,000字上限には戻っていない**。**内訳が示す構造**: HI-12 が節を選ばず読ませる①`CONSTRAINTS.md` 全文と③`CURRENT_STATE.md` §7-0・§7 の2つだけで **6,274字**あり、**実験側を1字も読む前から上限を超える**。残りは現在TARGETの定義（821字）と次Actionの手順（3,787字）で、いずれも判断に直接使う。**台帳19,029字の全文は必要anchorではない**（畳み込みも要約も行わない — Cold Memoryとして保持）。上限の緩和も追加機構の新設も行わず、この構造をそのまま報告する。
+- **Rollback**: 本PRのrevertで全ファイルと本recordが旧stateへ戻る。物理削除・外部作用・支出を伴わない（分離元の本文はgit historyに残る）ため単一revertで完結する。
+
+---
+
 ## D-010 — Factoryの価値主張を「生成能力」から外す。最有力候補をReality-learning（＝Factory私有の複利prior）へ移す
 
 - **Date**: 2026-08-14

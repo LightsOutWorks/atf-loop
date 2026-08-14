@@ -6,38 +6,33 @@ direction/ の戦略文書7本の要約を全て落とし、その後AIが「人
 解けない」と4回断定した（既にリポジトリ内で否定済みの主張）。SessionStart は
 起動時1回きりなので圧縮で消える。UserPromptSubmit は毎ターン再注入される。
 
+2026-08-14 の縮小: 期限リマインド（DEADLINES）を削除した。登録されていた4件
+（Encounter Queue Day 3 / ココナラ判断 / ChatGPT $100枠 / @HatoNozomu 3通目）は
+すべて 2026-08-11〜13 で、2026-08-14 時点で全件が過去日となり出力ゼロだった。
+期限を静的リストで持つ設計は、期限が過ぎた瞬間に沈黙し、しかも沈黙が正常時と
+区別できない。期限の正本は `CURRENT_STATE.md` と各実験台帳であり、hook側で
+二重に持たない（`OS.md` §11: 証拠が無くなれば削除する）。
+
+残したのは F10（既出の再発明）の再注入だけ。これは圧縮で実際に失われたものへの
+対処であり、上の実測がそのまま根拠になっている。
+
 原則:
 - 注入するだけ。ツール呼出を拒否しない。
-- 導出値（残り何日）はここで毎回計算する。ファイルに書かない（腐るため）。
+- 導出値はここで毎回計算する。ファイルに書かない（腐るため）。
 - 失敗しても会話を止めない。ただし失敗を黙らせない（末尾に理由を出す）。
 """
-import sys, json, datetime, pathlib
+import sys, datetime
 
-DEADLINES = [
-    ("2026-08-11", "Encounter Queue Day 3"),
-    ("2026-08-12", "ココナラ判断（現状 NO_ACTION）"),
-    ("2026-08-13", "ChatGPT $100枠（P1未実行）"),
-    ("2026-08-13", "@HatoNozomu 3通目 無応答タイムアウト"),
-]
 
 def main():
     today = datetime.date.today()
-    lines = [f"[常設] {today.isoformat()}"]
-    urgent = []
-    for d, label in DEADLINES:
-        y, m, dd = (int(x) for x in d.split("-"))
-        left = (datetime.date(y, m, dd) - today).days
-        if left < 0:
-            continue
-        urgent.append(f"{label} 残{left}日" if left else f"{label} **本日**")
-    if urgent:
-        lines.append("期限: " + " / ".join(urgent))
-    lines.append(
+    print(
+        f"[常設] {today.isoformat()}\n"
         "圧縮で消えやすい結論の所在は CLAUDE.md の索引（§3）から正本を引く。"
         "「無い・できない・詰んでいる・新しく作る」と書く直前に "
         "DECISIONS.md と direction/ と research/INDEX.md を引く（OS.md HI-4 F10）。"
     )
-    print("\n".join(lines))
+
 
 if __name__ == "__main__":
     try:

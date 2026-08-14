@@ -21,7 +21,8 @@
 
 | Path | 責務 |
 |---|---|
-| `CONSTRAINTS.md` | Boundary / Budget / Risk Tiers / Human Gates（+ 旧Browser-Toy契約をPart IIに保存） |
+| `CONSTRAINTS.md` | Boundary / Budget / Risk Tiers / Human Gates |
+| `CONSTRAINTS_BROWSER_TOY_ROUTE.md` | 旧Browser-Toy契約（Historical / HOLD。2026-08-14に `CONSTRAINTS.md` Part IIから分離） |
 | `OS.md` | Factory Identity / Mission / Operating Philosophy（IOS） |
 | `DESIRES.md` | North Star / Major Desire Portfolio |
 | `CURRENT_STATE.md` | 実測状態のみ（canonical control block + 本文） |
@@ -38,8 +39,8 @@
 以下は旧Mission（Game Factory）の成果物である。Decision Historyとして保存されており、現在の指示ではない。
 
 - ルートの `index.html` は全作品（SEED 001〜024）を一覧できるカタログ（英語表記）。GitHub Pagesで公開。
-- 各作品は `works/seed-<連番>/` に単一 `index.html` で完結（外部通信・外部ライブラリ・外部素材ゼロ）。ルールは `CONSTRAINTS.md` Part II。
-- 生成パイプライン: [.github/workflows/factory.yml](.github/workflows/factory.yml)（生成→smoke→interaction smoke→Codex gate→公開）。⚠ **schedule trigger（毎週土曜10:00 JST）は現在も稼働中** — 停止はHuman Gate（`CURRENT_STATE.md` §1参照）。
+- 各作品は `works/seed-<連番>/` に単一 `index.html` で完結（外部通信・外部ライブラリ・外部素材ゼロ）。ルールは `CONSTRAINTS_BROWSER_TOY_ROUTE.md`。
+- 生成パイプライン: [.github/workflows/factory.yml](.github/workflows/factory.yml)（生成→smoke→interaction smoke→Codex gate→公開）。**workflow `factory`（id 322145639）は `disabled_manually`**（2026-08-07 10:39 JST停止。2026-08-09 Actions API read-only実測）。ファイル内にhistorical cron定義（毎週土曜10:00 JST）は残るが**運用scheduleは停止済み**であり、re-enableはHuman Gate（`CURRENT_STATE.md` §1参照）。
 - 遊び方: カタログの **Play** リンクから各作品を開く → **START** → 60秒プレイ → **REPLAY**。
 - 動作検証: `node smoke.mjs works/seed-001`（固定6項目。カタログ自体は静的ページのため対象ディレクトリ指定が必要）。
 - `works/seed-<連番>/devlog.md` に各作品の開発ログ、`JOURNAL.md` にFactory能力進化の記録がある。seed-009は既知のVerification Failureとして意図的に未修正で保存。

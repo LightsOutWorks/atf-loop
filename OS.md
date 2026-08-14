@@ -44,6 +44,7 @@ Amended v1.2 — 2026-08-09(D-004: Human Interface — Operator Priors節を追�
 Amended v1.3 — 2026-08-10(D-006: HI-10 Action Default（`NO_ACTION`）とHI-11 権限分界を追加。HI-2の「既定はやる」の適用範囲を着手後のHandoffへ限定。Layer2「探索と固定」Bへ成立条件10〜12を追加。HI-4 F5へObserved / Derivedの区別を追加。Layer1の既存原則は変更していない)
 Amended v1.4 — 2026-08-10(D-007: Layer2「探索と固定」Aへ探索範囲の交差条件を1段落追加。HI-10 条件5とHI-11 Humanリストは行内参照のみ。新設した節は無く、Layer1・HI-10の7条件・HI-11の分界は変更していない)
 Amended v1.5 — 2026-08-10(D-008: HI-12 取得規律を追加。上限・順序・棄却の条件・字数境界の4つだけを持ち、既存規則を再掲しない。Layer1・HI-10・HI-11・Layer2は変更していない)
+Amended v1.6 — 2026-08-14(D-011: HI-4 R1注釈の C0 結合をpin移動後の事実へ訂正。HI-12 の `CONSTRAINTS.md` 字数と Part II の所在を更新。規律本体は変更していない ／ D-012: Layer2へ「Architecture候補の探索 — Cross-System Priors」を1節追加。原則のみを持ち、参照系統の索引・具体例・実務上の問い・先回り禁止例は `DECISIONS.md` D-012 が持つ。Layer1・HI-1〜HI-12・Layer2の既存節は変更していない)
 
 Status: **LOCKED**
 Layer1 frozen until evidence exists / Layer2 evidence-driven evolution / Layer3 continuous implementation
@@ -318,9 +319,9 @@ Humanへ返すのは、Humanにしか越えられない最後の1行為まで圧
 2. **repo外にしか存在しない記録の破棄**。コンテナ内の作業記録・スクラッチは、失えば削除と同じ
 3. **時点依存の観測機会の消費**。外部サービスの状態・他者の投稿など、後から同じものを観測できないもの
 
-**この注釈をここに置く理由**: 2026-08-10、同じ内容を `CONSTRAINTS.md` §3 へ直接書き込んだところ、C0 provenance canary が STALE を返した。`CONSTRAINTS.md` は production_material として champion-baseline に焼かれており、変更にはベースライン全体の再宣言（`base_sha` の移動と全9材料の再declare）を要する。一方 `OS.md` は control_plane_snapshot で、drift は情報として記録されるだけである。**この区別は HI-8 の配置原則「変わりうるものをBoundaryへ置かない」を、canaryが機構として実装したものだった。** repo固有の具体例を含む本注釈は「変わりうるもの」であり、`OS.md` 側が正しい置き場所である。
+**この注釈をここに置く理由**: 2026-08-10、同じ内容を `CONSTRAINTS.md` §3 へ直接書き込んだところ、C0 provenance canary が STALE を返した。当時 `CONSTRAINTS.md` は production_material として champion-baseline に焼かれており、変更にはベースライン全体の再宣言を要したためである。**この区別は HI-8 の配置原則「変わりうるものをBoundaryへ置かない」を、canaryが機構として実装したものだった。** repo固有の具体例を含む本注釈は「変わりうるもの」であり、`OS.md` 側が正しい置き場所である。
 
-条文そのもの（R1の定義文）を変える場合は、champion-baseline の再宣言を伴うHuman判断とする。
+**2026-08-14 の変更（D-011）**: `CONSTRAINTS.md` は production_material から外れた。pin対象はBrowser-Toy Route契約を持つ `CONSTRAINTS_BROWSER_TOY_ROUTE.md` へ移り、`CONSTRAINTS.md` の編集は C0 を STALE にしない。**上の配置原則は変わらない**——変わったのは、現Missionの最優先Sourceが凍結Routeの provenance に縛られていた結合だけである。
 
 **AI側の頻出失敗**（本Factoryで実測されたもの）: ①実行可能性を理由に早すぎる棄却をする ②構造的ボトルネックを即時の最優先へ誤変換する ③データの不在からの推論を観測として断定する。
 
@@ -461,7 +462,7 @@ North Star / Major Desire / Hard Boundary / 戦略 / **戦略の探索範囲**�
 正本を全部読まない。着手前に「今回何を決めるか」を1文にし、`CLAUDE.md` §3 でその問いの正本を引く。この1文はHumanの指示と `CURRENT_STATE.md` §7-0 だけで書く——**何を読むか決めるために正本を横断しない。** §3に無い正本が要るときは実在を確認して必要な文書だけ引き、**到達不能を検出したら索引欠陥として報告する。推測で代替しない。**
 
 1. **上限**: 1タスクの取得は **anchor 5件・計6,000字**。超えたら削る。削れないなら正本が肥大しており、それ自体を欠陥として報告して止まる。
-2. **順序**: `CONSTRAINTS.md` **Part I 全文**（2,109字。**第1位Sourceは節を選ばない**——どのBoundaryが効くかは読む前には分からない。Part IIはHistorical Experiment契約なので対象外）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
+2. **順序**: `CONSTRAINTS.md` **Part I 全文**（＝2026-08-14以降はファイル全文。2,106字。**第1位Sourceは節を選ばない**——どのBoundaryが効くかは読む前には分からない。Browser-Toy Route契約は `CONSTRAINTS_BROWSER_TOY_ROUTE.md` へ分離済みで、Historical Experiment契約なので対象外）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
 3. **過去の棄却は条件付き**: 同一の市場・Route・候補・Experiment・戦術仮説のいずれかが一致する時だけ `KILL` / `NO_ACTION` と再検討triggerを引く。一致しないものは読まない。triggerが未充足なら `NO_ACTION`。
 4. **全文Readは6,000字未満のファイルだけ。20,000字以上は `grep` / anchor のみ**（2026-08-10時点で該当10本。`research/INDEX.md` は109,174字だが497行のため `Read` 1回で全文が返る。`OS.md` `CURRENT_STATE.md` `ROADMAP.md` 自身も該当する）。
 
@@ -504,6 +505,12 @@ Human Desire → Objective（人間） → Selection（Factory） → Execution�
 週1。原則ではなく仮説。
 
 律速候補は Generation / Distribution / Feedback の3つで、現時点でどこが律速かの証拠は無い。**（適用範囲: 本節はBrowser-Toy時代のcontrol-planeについての記述であり、Browser-Toy凍結とともに凍結している。現Missionの律速は `CURRENT_STATE.md` §7 が「World Signalを回収し次のActionへ戻す経路が弱いこと」と特定している。両者を同じ話として読まない。）**DistributionとFeedbackが未成熟な間は、頻度を上げても学習速度は比例しない。
+
+### Architecture候補の探索 — Cross-System Priors（2026-08-14 / D-012）
+
+**Architecture問題が実測された時だけ**、問題を媒体非依存に抽象化し、関連する長期実証済み系統と AI / Software-native 解を **Prior** として参照する。**複数の独立系統への収束は強いPriorだが、採用条件ではない。** 特定分野を設計図にしない。**Reality > Cross-System Prior > Internal elegance。** 問題が無ければ `NO_ACTION`（HI-10）。
+
+参照系統の一覧と借りるもの・収束の具体例・実務上の問い・分野固有制約の分離・先回りで作らないものは `DECISIONS.md` D-012 が持つ。**本節は原則のみを持ち、詳細を持たない。**
 
 ### 探索と固定（Exploration / Commitment）
 

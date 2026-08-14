@@ -54,7 +54,11 @@ export const CLASSIFICATIONS = ['production_material', 'control_plane_snapshot']
 
 export const REQUIRED_MATERIALS = {
   '.github/workflows/factory.yml': 'production_material',
-  'CONSTRAINTS.md': 'production_material',
+  // 2026-08-14 (D-011): Browser-Toy Route の成果物契約は CONSTRAINTS.md Part II から
+  // CONSTRAINTS_BROWSER_TOY_ROUTE.md へ本文無改変で分離した。pin対象を分離先へ移す。
+  // CONSTRAINTS.md（現Missionの最優先Source）は production_material から外れ、
+  // その編集は本canaryを STALE にしない。材料の件数と schema 形状は不変（9件）。
+  'CONSTRAINTS_BROWSER_TOY_ROUTE.md': 'production_material',
   'smoke.mjs': 'production_material',
   'scripts/interaction-smoke.mjs': 'production_material',
   'scripts/gate-prompt.txt': 'production_material',
@@ -774,9 +778,11 @@ export const OBSERVED_VERIFIERS = {
         : null,
   },
   'deterministic_verification.constraints_contract': {
-    evidence: 'CONSTRAINTS.md',
+    evidence: 'CONSTRAINTS_BROWSER_TOY_ROUTE.md',
     canonical: (ctx) =>
-      typeof ctx.sources['CONSTRAINTS.md'] === 'string' ? { contract_sha256: computeSha256(ctx.sources['CONSTRAINTS.md']) } : null,
+      typeof ctx.sources['CONSTRAINTS_BROWSER_TOY_ROUTE.md'] === 'string'
+        ? { contract_sha256: computeSha256(ctx.sources['CONSTRAINTS_BROWSER_TOY_ROUTE.md']) }
+        : null,
   },
   'deterministic_verification.integrity_check': {
     evidence: FACTORY_PATH,
