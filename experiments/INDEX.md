@@ -27,3 +27,14 @@ Status語彙: `ACTIVE` / `HOLD` / `NO-GO` / `RETIRED` / `HISTORICAL` / `PROPOSED
 - statusの変更はCURRENT_STATE.mdの観測更新と同時に行う。Direction級の変更はD-record（`DECISIONS.md`）。
 - 過去実験の成果物は削除しない。Decision History（何を仮説し、何が失敗し、なぜRouteを変えたか）として保存する。
 - E-005 / E-006 / E-008のWorld Signalから抽出した次回Demand Scan向け学習は `experiments/batch-1/LEARNINGS.md`（Lane C / MD-3）が保持する（台帳事実はLEDGER、能力変更はJOURNALの管轄のまま）。
+
+### 契約の事前登録検査（2026-08-13追記。新規実験の実行前に適用）
+
+E-013とBatch 1で、実行後のHuman amendmentを要した契約欠陥の再発防止。**すべて既存正本の適用であり、新しい規則ではない**——各項の正本・実測記録は括弧内が持つ。本節と正本が矛盾したら正本が勝つ。
+
+1. **事前登録の完備**: hypothesis（反証可能形）/ 変更変数 / 取得可能なworld_signal / 判定点 / PASS・FAIL・VOID・STALEの成立条件 / budget_cap / Human時間上限 / rollback / KILL条件 / 通過すべきHuman Gate（`CONSTRAINTS.md` Part I §4）を、実行前に契約へ書く。結果の観測後の基準変更は、書き換えではなく訂正追記とする（`CONSTRAINTS.md` Part I §6）。
+2. **判定語彙の定義存在**: 契約や正本が参照する全verdict語に、成立条件が実行前に定義されている。未定義のverdict語へ下流の決定（支出・継続・拡大）を紐づけない（実測欠陥: `SCALE` が未定義のままUSD 10チャージの条件になっていた — `experiments/encounter-queue/LEDGER.md` Day 3事前登録 冒頭）。
+3. **判定窓の起点明示**: タイムアウト・判定窓は絶対時刻に加えて起点事象を明示する。送信起点であるべき窓を受信時刻から書かない——送信がHuman Gateである以上、受信から送信までの間隔は常に `UNKNOWN`（実測欠陥: `experiments/batch-1/LEDGER.md` Reply Log 004）。
+4. **検出力（自己閉塞・循環の禁止）**: 契約のN・期間・既知の実測率の下で「発生ゼロ」が最頻結果になりうるSignalを、PASSや資源決定の必須条件にしない。供給が小さすぎて作れない結果に判定を紐づけない。判定がその判定の結果（拡大後にしか得られない量のSignal）に依存する循環も同型として扱う（実測欠陥と訂正: `experiments/encounter-queue/LEDGER.md` Day 3 Final Verdict — Human amendment 訂正理由2。正例: E-014契約の「強シグナル（記録するがPASS条件にしない）」）。
+5. **独立Human Commitの非連動**: verdict成立に、支出・チャージ・送信・公開など別のHuman Gate行為を自動連動させない。判定と各Gate行為は独立のHuman Commit（実測欠陥と訂正: 同amendment — USD 10チャージの独立 `HOLD` 分離）。
+6. **判定入力の規律**: 判定に使う値はHuman-confirmedの実測のみ。未確認は `UNKNOWN` のまま扱い、判定のために推測で確定させない。供給不足・観測不能・記録欠損は `VOID` であり、`VOID` を `FAIL` として学習しない（`CONSTRAINTS.md` Part I §6 / 同amendment 判定手順）。
