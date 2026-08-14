@@ -6,6 +6,22 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-009 — Current Operational Priority を Reality Funnel（外部ユーザー → 利用 → 継続利用 → 価値確認 → 売上）へ差し替える
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract「Factory / ATF-loop の当面の最優先を更新する」（2026-08-14 Human裁定）。**戦略レベルの裁定であり、決定権はHumanが持つ**（`OS.md` HI-11 Humanリスト: 戦略 / 主要な資源配分 / 対象範囲とNon-goals）。採択はヒロの本PR merge。
+- **Decision**:
+  1. **`CURRENT_STATE.md` §7 の Current Operational Priority を、5段のReality Funnelの通過へ差し替える**——`外部ユーザー → 利用 → 継続利用 → 価値確認 → 売上`。2026-08-09原文（接点候補の毎日供給）は E-013 の `VOID` 終了に伴い最優先の座を失っており、`ROADMAP.md` §0 の2026-08-14追記が後継を指名しなかったため**本節の最優先は空席だった**。本decisionはその空席を埋めるものであって、E-013 の再開ではない。
+  2. **上流だけの前進を前進と数えない。** 優先は上流から下流の順だが、評価はファネル全体の通過で行う。どの段にも直接つながらない作業は原則 `NO_ACTION`（`OS.md` HI-10 の既定の適用であり、新しい既定ではない）。
+  3. **段の読みを確定する**: 段1〜4は家族・友人・知人を外部ユーザーに数え、**段5だけが第三者からの支払いを要求する**（裁定原文が「第三者」を段5にのみ書いたため）。
+  4. **現在値を `UNKNOWN` として記録する**（`CURRENT_STATE.md` §7）。段1〜4はいずれも `UNKNOWN`（**0ではない**——既存ゲーム5本以上が実在するが参加者・プレイ行動が未分解）、段5は JPY 0（FACT）。**段2〜4に一度も実測値が入ったことがない一方、入りうる実体は既に手元にある。**
+- **Why**: 既存正本にファネルは2本あるが、**いずれも「使われたか」を測っていない**。`direction/SALES_OS_2026-08.md` 7行目（公開リプ → 会話 → DM → 一問一答 → 有償診断 → Paid Pilot）と `ROADMAP.md` §0 の③1円までの経路（公開リプ → 会話 → DM → 一問一答 → 無料で繋ぐ → 依頼 → 有償）は**接触ファネルであり、会話から直接有償へ跳んでいる**。`DESIRES.md` §5 World Signal Hierarchy は tool usage / recurring use を持つが、**強度の階層であって順序ゲートではなく、価値確認の段を持たない**。本decisionの新規性は**「利用 → 継続利用 → 価値確認」の3段を接触と売上の間に順序ゲートとして挿入すること**、ただ1点である。
+- **設計上の選択（何を追加しなかったか）**: 新しい節・恒久語彙・管理文書・Experiment IDをいずれも作らない。裁定に含まれた要素のうち、内部指標を成果としない規律は `OS.md` HI-6 が同一リストを既に持ち（HI-4 F2 が発生Signal）、内部改善・管理層追加・先回り実装の禁止は HI-10 Non-goals と `ROADMAP.md` §6 が既に持ち、「作る」以外のRouteは Operating Philosophy 3 のラダーが既に持つ。着手前判定（TARGET / EXPECTED SIGNAL / SHORTEST ROUTE / VERDICT）は HI-10 の7条件と因果1文の圧縮版であり、**新ゲートを置かず HI-10 条件3・4 を当面この5段で読む**運用判断とした。段2〜4の記録欄は `experiments/desire-to-game/LEDGER.md` に既に存在するため E-015 を起こさない。`CLAUDE.md` は §7 を指すだけで内容を持たないため変更不要（`CURRENT_STATE.md` §7-0 末尾の規定どおり）。
+- **Supersedes**: `CURRENT_STATE.md` §7 の2026-08-09 Current Operational Priority を最優先の座から外す（原文は不変更で保持）。**次のいずれも変更しない**——`CONSTRAINTS.md`（Hard Boundary / Budget JPY 50,000 / Risk Tiers / Human Gates / Data Boundary / 検証の誠実性）/ `OS.md` Layer1・HI-1〜HI-12 / `DESIRES.md` North Star・MD-1〜MD-3・§5 World Signal Hierarchy / `CURRENT_STATE.md` §7-0 の現在の戦略・現在のベット・現在の優位・**位相（探索期）**/ D-001〜D-008 / E-014契約（`direction/EVAL_DESIRE_TO_GAME_2026-08.md`）のhypothesis・PASS・FAIL・VOID・判定点・budget_cap・Human時間上限・非目標 / `ROADMAP.md` §0 の事前登録（律速「会話の本数」・2026-11-10の失敗判定）——**結果を見てから判定基準を変更しない**（`CONSTRAINTS.md` Part I §6）。段3（継続利用）は外部ベースレート（**二次情報**: AIアプリ月次リテンション6.1%・非AI 9.5% / コンパニオン・セラピー系 Day30 8〜18% — `research/INDEX.md`）の下でN 3〜5では発生ゼロが最頻になりうるため、**PASS必須条件へ格上げしない**（`experiments/INDEX.md` 事前登録検査4 検出力）。
+- **Rollback**: 本PRのrevertで `CURRENT_STATE.md` / `DECISIONS.md` / `ROADMAP.md` と本recordが旧stateへ戻る。物理移動・削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
 ## D-008 — 取得規律（HI-12）を置く。Contextの上限と字数境界を正本化する
 
 - **Date**: 2026-08-10
