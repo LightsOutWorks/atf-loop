@@ -23,6 +23,7 @@
 
 - **判定点**: 最初の納品から14日後 または 2026-09-15 の早い方（最初の納品が発生した時点で日付を本行へ確定記入する）→ **未確定**
 - **Budget消費**: JPY 0（cap: 追加支出0）/ **Human時間消費**: 0分（cap: 合計90分）
+- **Retrospective Seed Corpus（本ファイル末尾）はこの数に含めない。** 承認前・承認前後が未確認の既存ゲームはE-014の判定母集団外である。
 
 ## 参加者（匿名）
 
@@ -52,3 +53,73 @@
 
 - Verdict: **未判定**
 - 根拠: —
+
+---
+
+## Retrospective Seed Corpus（E-014判定母集団の外。2026-08-14追加）
+
+E-014承認（2026-08-13 PR #65 merge / merge commit `0dcf7d6`）**より前**に作られた、または承認前後が未確認の既存ゲームを、**E-014の判定母集団へ混ぜずに**回収するための表。
+
+**この表の行は、上のFunnel現在値・Desire → 納品記録・Signal記録・Repair Request Log・判定のいずれも動かさない。** 変換能力の学習とTaste学習（`OS.md` HI-3）には使ってよいが、**E-014のPASS / FAIL / VOIDの根拠には使わない。**
+
+### E-014 eligibility（3値。既定は `UNKNOWN`）
+
+| 値 | 成立条件 |
+|---|---|
+| `ELIGIBLE` | 納品がE-014承認（2026-08-13 `0dcf7d6`）**以後**であること、**かつ**契約§5の対象・納品・観測規律の下で行われたこと。**両方がHuman-confirmed** |
+| `PRE-CONTRACT` | 納品が承認**より前**であることがHuman-confirmed |
+| `UNKNOWN` | 上のどちらも確認できない（**既定値**） |
+
+- **`UNKNOWN` を推測で `ELIGIBLE` へ上げない。** 「たぶん最近」「承認後のはず」はHuman-confirmedではない。
+- `PRE-CONTRACT` と `UNKNOWN` は判定母集団に入らない。**`ELIGIBLE` がHuman-confirmedになった行だけ**を日付付きで上のDesire → 納品記録 / Signal記録へ転記する（Corpus行は削除せず、転記先を evidence note に書く）。
+
+### 記録規律（上の凡例に加えて適用）
+
+1. **artifact本体をrepoへ入れない**: ゲーム本体HTML・Claude Artifact URL・画像・動画・音声のいずれも追加しない。原本はHuman保持・repo外。台帳は**ファイル名とSHA-256だけ**をjoin keyとして持つ（凡例2の適用）。
+2. **SHA-256が取得できなければ `UNKNOWN`。** 架空値・仮ハッシュ・切り詰め値を作らない（`CONSTRAINTS.md` Part I §6）。
+3. **PII非記載**（凡例1と同じ）: 実名・顔・年齢・具体的な家族関係を書かない。参加者は匿名ID `P1` 〜 と続柄カテゴリ（子 / 家族 / 友人 / 知人）のみ。
+4. **ゲーム件数と参加者Nを混同しない。** 参加者Nは異なる `participant_id` の数で数える。1人へ5本作った場合は**ゲーム5件・参加者N=1**。
+5. **Hiro Taste SignalとObserved World Signalを混同しない。** 前者はヒロの評価（Human Taste）、後者は参加者本人の行動・発話（World Signal）。ヒロの「出来が良かった」はWorld Signalではない。
+6. **Observed World Signalは種別ラベル付きで書く**: `促しなし再プレイ（別日）` / `Continuation Desire` / `Repair Request` / `他人に見せた` / `再挑戦`。**Repair RequestをContinuation Desireへカウントしない**（凡例4）。
+7. 未報告欄は `UNKNOWN` 既定。予定・会話・推測を実施済みとして書かない（凡例5）。
+
+| game_id | participant_id | E-014 eligibility | expressed_desire（本人の言葉・PII除去） | 解釈と実装内容 | artifact（ファイル名 / SHA-256） | delivered_at | Hiro Taste Signal | Observed World Signal（種別ラベル付き） | evidence note |
+|---|---|---|---|---|---|---|---|---|---|
+| — | — | — | — | — | — | — | — | — | — |
+
+### Corpus現在値（2026-08-14 Human報告。個別ゲームへ未分解）
+
+| 項目 | 値 | 等級 |
+|---|---|---|
+| existing_games | **5以上** | **Human-confirmed（FACT）** |
+| Hiro Taste | **全作品の出来が良かった** | **Human-confirmed（FACT）**。**Human Taste Signal**であり、World SignalでもE-014のPASS証拠でもない |
+| 参加者N / 個別分解 / artifact / 制作・納品日 / プレイ行動 / eligibility | **UNKNOWN** | 未報告。推測で埋めない |
+| 原本・成果物 | **Human保持・repo外** | — |
+
+**この報告はE-014のFunnel現在値（聞き取り0 / 納品0）・判定点・Verdictを動かさない。** 個別ゲームへ分解できた時点で上の表へ行を起こす。
+
+---
+
+## Evolution Transfer Log（前作の学びが次作へ移ったかの実測。2026-08-14追加）
+
+**「作ったゲームの数」ではなく「前作の学びが次作へ移り、適用後のSignalが観測された数」を進化の証拠にするための表。**
+
+### 判定規律
+
+1. **`source_game_id` の無い一般論は登録しない。** どのゲームの何から出た学びかを特定できないものは、学びとして扱わない。
+2. **evidence sourceをHuman TasteとWorld Signalで分ける。** ヒロの評価 = Human Taste / 参加者の行動・発話 = World Signal。1行に混ぜない。
+3. **抽出しただけでは「進化」と書かない。** `applied_to_game_id` が埋まって初めて**移転実績**である。
+4. **適用後のHuman TasteまたはWorld Signalが取得できた時点で** conclusion へ `支持` / `反証` を記録する。取得できていない間は `UNKNOWN` のまま残す（効果を推測で書かない）。
+5. **結果が悪化した学びも削除しない。** `反証` された学びとして残す（`CONSTRAINTS.md` Part I §6）。
+6. **同じ学びを複数作品へ適用した場合は、適用先ごとに行を分ける**（`learning_id` は共通、`applied_to_game_id` が異なる行を並べる）。各適用先が独立に追跡できることを優先する。
+7. **ここでの実測を新しいKPI・恒久ルールへ昇格させない**（`OS.md` HI-4 F6）。まず実測を残す。
+
+| learning_id | source_game_id | evidence source（Human Taste / World Signal） | 抽出した学び | applied_to_game_id | 実際に変えたこと | 適用後のHuman Taste / World Signal | conclusion（支持 / 反証 / UNKNOWN） |
+|---|---|---|---|---|---|---|---|
+| — | — | — | — | — | — | — | — |
+
+### Transfer現在値（2026-08-14）
+
+抽出済み学び 0 / 移転実績（適用済み）0 / 適用後Signal取得済み 0 / 支持 0 / 反証 0
+
+**現時点で「Factoryが進化した」と書ける実測は存在しない。**
