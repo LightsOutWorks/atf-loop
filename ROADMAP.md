@@ -176,6 +176,14 @@ Initial evidence base: `main@6bef0f7e001d6ecebddcea4f9904b9dc47cc0343`
 
 North StarとMajor Desire Portfolioの正本は `DESIRES.md`。現在地は `CURRENT_STATE.md`。ここは「次に何を証明するか」だけを持つ。
 
+> **2026-08-14 追記（本節の以下の記述は不変更で保持する）**
+>
+> **Current Operational Priority は `外部ユーザー → 利用 → 継続利用 → 価値確認 → 売上` の5段Reality Funnelへ差し替わった**（Human裁定 / D-009。正本 = `CURRENT_STATE.md` §7）。本節の下にある律速「会話の本数」と③1円までの経路は**接触ファネルであり、「使われたか」を測っていない**——5段のうち段1のみを扱う。
+>
+> **ただし本節の事前登録は動かさない。** 2026-11-10の失敗判定（確定収益0なら④が誤り / 会話5件未達なら接触の作り方を変える）と判定日は**結果を見てから基準を変えないため不変更**（`CONSTRAINTS.md` Part I §6）。5段ファネルはこれと併置し、どちらが先に動くかを実測させる。
+>
+> **本追記は新しい最優先実験を指名しない。** 現在の実験statusの正本は `experiments/INDEX.md`、現在の戦略・ベット・位相の正本は `CURRENT_STATE.md` §7-0 である。
+
 1. **Batch 1 World Signal回収**（MD-1）: 送信枠は消化済み（SENT 20 / VOID 3 / REACHABLE 17 — 正本 `experiments/batch-1/LEDGER.md`）。残る仕事はreply / reactionの回収・元Contactへの帰属・記録のみ。追加送信・候補準備は本Batchにない。
 2. **Reply学習の最小記録**: Contactごとの最小記録（source / cluster / freshness / message_style / reply / pain / pilot / payment）をrepo内へ機械可読で残す形式を、Batch 1の実データが揃った時点で最小実装する。巨大なschemaを先に作らない。
 3. **Pilot → Confirmed Revenue**（MD-1 Terminal Signal）: 返金・取消可能期間を経過した確定実収益1件。これが現在の最重要未証明区間である。
