@@ -6,6 +6,29 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-010 — Factoryの価値主張を「生成能力」から外す。最有力候補をReality-learning（＝Factory私有の複利prior）へ移す
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract（2026-08-14）。**Factoryの価値の所在＝戦略レベルの前提であり、決定権はHumanが持つ**（`OS.md` HI-11 Humanリスト: 戦略 / 対象範囲とNon-goals）。採択はヒロの本PR merge。
+- **決定を可能にしたReality**（推測ではなく実測）:
+  1. **Human-confirmed（FACT）**: G1〜G7の生成時、atf-loopのファイル・過去ゲーム・Factory規律を**一切見せていない**。入力は雑なHuman Desire / 指示のみ。**Corpus 7件はFactory文脈なしのClaude出力である。**
+  2. そのうち **G1はHuman Desire → Playable Artifact → 外部2名の利用 → 2名とも別日・促しなし再プレイ → P1「売れるね」まで到達**（`experiments/desire-to-game/LEDGER.md`）。
+  3. **一次実測（本セッション）**: Factory経由の `works/` 24作でも WebAudio 22/24・ポインタ入力 24/24・Canvas 2D 24/24 が独立に成立している。土台の一致は**移転ではなく収束**。safe-area の差（0/24 対 7/7）は対象端末というHuman側の入力で説明がつく。
+  4. Factory経由24作の外部信号は **0**（`eval.json` スコア9件すべて `world: null`）。Factory側の累積学習も **移転実績0**（同台帳 Evolution Transfer Log）。
+- **Decision**:
+  1. **「良いゲームを生成できる」ことをFactoryの価値主張に置かない。** 単一HTMLの実装品質・スマホ対応・コード生成音・UIといった能力の主要因は、現時点の実測ではClaude本体にある。**これはFactoryの失敗ではなく、モデル側で足りている能力をFactory側で再実装・再発明・管理しない根拠として使う。**
+  2. **最有力候補を Reality-learning へ移す**——Realityとの接触を重ねるほど「誰が何を本当に欲し、何を使い続け、何に価値を感じ、何なら支払うか」の理解が蓄積し、次回の変換精度が上がること。**蓄積するのはログ量ではなく、次の意思決定を変えるRealityだけ。**
+  3. **語彙は `moat` を使わず「Factory私有の複利prior」を用いる**（`ops/OWNERSHIP_AUDIT_2026-08-08.md` H-1 の推奨。理由は「moat語はdataset infraの過剰建設への入口」であり、本decisionの主旨と一致する）。**本decisionはその監査の再発明ではなく、独立経路からの追認である**——監査は2026-08-08に「North Starが要求するのはmoatではなくFactory私有の複利prior」と裁定済みで、その反転条件③「実測lift（自前履歴がfrontier prior を上回ること）」は、今回の相乗り検証が測ろうとしている量と同型である。
+  4. **判定は既存機構だけで行う。** 既存のReality Funnel（`CURRENT_STATE.md` §7）と既存台帳の列で読む。**新しい正本・Capability・schema・dashboard・agent・評価システム・Experiment IDをいずれも作らない。**
+  5. **検証は相乗り限定。** 新しい自然なDesireが発生した時にだけ、最小条件で実施する（条件の事前登録は `experiments/desire-to-game/LEDGER.md`「Reality-learning検証の相乗り条件」）。**E-014 §6 trigger取得を止めない。**
+  6. **どこまで削っても残る因果価値を探す。** 相乗り検証でFactory側が勝った場合、**観測メモ3行だけを渡した裸のClaudeで再現できるかを必ず追試する**。再現できたなら、価値はrepoではなくメモ1枚にあり、**repo全体を私有priorと呼ばない**。
+- **Why**: この前提が未記録のままだと、次のセッションが「良いゲームができるのはFactoryのおかげ」という暗黙の前提から**部品化・共通ライブラリ・恒久索引の再建設へ戻る**。同型の再発明は**2026-08-14に現に1度発生し、Human裁定で撤回されている**（部品索引 — commit `c66a94a`）。本recordはその再発を止めるために置く。
+- **Supersedes**: 「生成能力＝Factoryの価値」という**未記録の暗黙前提**のみを降格する。**次のいずれも変更しない**——`CONSTRAINTS.md` 全項 / `OS.md` Layer1・HI-1〜HI-12 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7-0（戦略・ベット・優位・探索期）/ D-001〜D-009 / E-014契約のhypothesis・PASS・FAIL・VOID・判定点・budget_cap・Human時間上限・非目標・§6解除trigger / `ROADMAP.md` §0 の事前登録。**D-001（Browser-Toy RouteのHOLD）も不変**——本recordは旧Routeの再稼働根拠にならない。
+- **等級の限界（隠さない）**: 「生成モート未検出」は**未検出であって不在の証明ではない**。比較した2母集団は最低4変数（Desireの起点 / 受け手の実在 / 成果物様式 / 配布形態）と生成モデル差の可能性（`UNKNOWN`）を同時に含み、**現時点で因果は確定していない**。Reality-learningの側も**仮説であり実測0**（移転実績0）。**どちらの側も「証明済み」と書かない。**
+- **Rollback**: 本PRのrevertで本recordと台帳追記が戻る。外部作用・支出・物理削除を伴わないため単一revertで完結する。
+
+---
+
 ## D-009 — Current Operational Priority を Reality Funnel（外部ユーザー → 利用 → 継続利用 → 価値確認 → 売上）へ差し替える
 
 - **Date**: 2026-08-14
