@@ -1,6 +1,6 @@
 ---
 name: record-world-signal
-description: atf-loopの実験対象・接触相手から返ったWorld Signalの報告を、該当実験台帳へ規律どおり転記し、次の一手を1案だけ起草するスキル。発火条件は、Batch 1等の接触相手・E-011の投稿への反応・E-014のプレイ観測参加者など「atf-loopが接触または観測している相手から反応が返った」と特定できるHuman報告であること（例:「接触した相手から返信きた」「出した投稿にリプが来た」「P1が遊んでた」「World Signalを記録して」「台帳に記録して」「Reply Logに追記して」）。非発火: 実験対象と結びつかない日常会話・第三者や友人知人の雑談・一般的な感想の共有・世間話の引用。「〜って言ってた」「遊んでた」「スクショ送る」等の言い回しは単独では発火語にしない——atf-loopの実験対象からの反応だと特定できる文脈が同時に無ければ発火しない。対象実験の探索はACTIVEを優先しつつ、HOLD・HISTORICAL実験への遅延返信や事後Signalも除外しない。FACT / INFERENCE / UNKNOWNの等級付け・PII除去済みverbatimの保存・join key欠落防止を機械的に適用し、確認できない値を補完しない。起草後に停止し、送信・X監視・API取得・常駐処理は一切行わない。
+description: "atf-loopの実験対象・接触相手から返ったWorld Signalの報告を、該当実験台帳へ規律どおり転記し、次の一手を1案だけ起草するスキル。発火条件は、Batch 1等の接触相手・E-011の投稿への反応・E-014のプレイ観測参加者など「atf-loopが接触または観測している相手から反応が返った」と特定できるHuman報告であること（例:「接触した相手から返信きた」「出した投稿にリプが来た」「P1が遊んでた」「World Signalを記録して」「台帳に記録して」「Reply Logに追記して」）。E-014またはRetrospective Seed Corpusに属するゲームについては、次も発火対象に含める——制作・納品の報告 / そのゲームに対するヒロの具体的なTaste評価 / 参加者のプレイ行動・発言 / Repair Request・Continuation Desire / あるゲームの学びを次のゲームへ使ったという報告 / 適用後の結果報告。非発火: 実験対象と結びつかない日常会話・第三者や友人知人の雑談・一般的な感想の共有・世間話の引用。「〜って言ってた」「遊んでた」「スクショ送る」等の言い回しは単独では発火語にしない——atf-loopの実験対象からの反応だと特定できる文脈が同時に無ければ発火しない。対象実験の探索はACTIVEを優先しつつ、HOLD・HISTORICAL実験への遅延返信や事後Signalも除外しない。FACT / INFERENCE / UNKNOWNの等級付け・PII除去済みverbatimの保存・join key欠落防止を機械的に適用し、確認できない値を補完しない。起草後に停止し、送信・X監視・API取得・常駐処理は一切行わない。"
 argument-hint: "[Humanの報告内容 または 報告を含むファイル]"
 ---
 
@@ -25,6 +25,8 @@ HumanのWorld Signal報告を、該当台帳へ正しい等級・欠落なしで
 
 帰属は **join key**（contact id・participant id・元投稿URL・送信文面・ファイルSHA-256等）と報告内容の照合で決める。**join keyと報告内容で一意に特定できない場合はHumanに確認する。推測で割り当てない。** join key自体が報告から取れない場合も同じ——聞くか `UNKNOWN` と書く。ACTIVEに1件、終了済みに1件の候補が並ぶ場合も、「ACTIVEだから」を決め手にしない（それはjoin keyではない）。
 
+**E-014の台帳は記録面が3つに分かれる。混同しない**（正本 = `experiments/desire-to-game/LEDGER.md`）: ①**判定母集団**（Desire → 納品記録 / Signal記録 / Repair Request Log）②**Retrospective Seed Corpus**（承認前・承認前後が未確認の既存ゲーム。判定母集団の外）③**Evolution Transfer Log**（前作の学びの次作への移転）。eligibilityの既定は `UNKNOWN` であり、**推測で `ELIGIBLE` にして判定母集団へ入れない。**
+
 終了済み実験へ事後Signalを転記しても、**その実験の確定verdictは書き換えない**（`VOID` を `FAIL` として学習しない等）。追記は事後Signalとして日付付きで行い、確定判定の見直しが要ると判断した場合はその旨を指摘するだけに留め、再判定はHuman裁定に委ねる。
 
 ### 2. 対象台帳の規律を読む
@@ -37,6 +39,22 @@ HumanのWorld Signal報告を、該当台帳へ正しい等級・欠落なしで
 - **INFERENCE**: 解釈・分類・推定。必ずFACTと区別してラベルする。
 - **UNKNOWN**: 報告に含まれない値。**補完しない。それらしい値・時刻・数値を発明しない。** 精度も落とさない——「昨日の夜」しか報告が無ければ、分単位の時刻を作らず日付レベル＋精度UNKNOWNで書く。
 - 台帳が定める分離を適用する: **Expressed / Observed**（発言と行動の矛盾はObserved優先）、**Repair / Continuation**（E-014: Repair Requestは「次のDesire」にカウントせずRepair Request Logへ）、その他対象台帳固有の分離。
+
+### 3-a. E-014系報告の分離（Retrospective Seed Corpus / Evolution Transfer Log）
+
+E-014またはRetrospective Seed Corpusのゲームに関する報告では、次の4つを**それぞれ別の記録として**扱う。1つの行に混ぜない。
+
+| 報告の中身 | 何として記録するか |
+|---|---|
+| 作った・渡した（制作・納品） | Factory側の事実。**World Signalではない** |
+| ヒロの評価（「出来が良かった」等） | **Human Taste Signal**。World SignalでもE-014のPASS証拠でもない |
+| 参加者本人の行動・発話（遊んだ・また遊びたい・人に見せた・直して） | **World Signal**。さらにRepair / Continuationを分ける（§3の分離規律） |
+| 前作の学びを次作へ使った / 使った結果 | **Evolution Transfer Log** の移転実績・適用後Signal |
+
+- **帰属**: `game_id` / `participant_id` / artifactのファイル名・SHA-256のいずれでも一意に特定できない場合は `UNKNOWN` と書く。推測で割り当てない（§1と同じ規律）。
+- **artifact**: ゲーム本体・Claude Artifact URL・画像・動画・音声はrepoへ入れない（§4「生データ自体をcommitしない」と同じ）。台帳へ入るのは**ファイル名とSHA-256だけ**であり、**SHA-256が取れなければ `UNKNOWN`。架空のハッシュを作らない。**
+- **参加者**: 匿名ID（P1〜）と続柄カテゴリのみ。**1人へ複数本作られていても参加者Nは1**（ゲーム件数と参加者数を混同しない）。
+- **学びの等級**: `source_game_id` の無い一般論は登録しない。**抽出しただけでは「Factoryが進化した」と書かない**——後続ゲームへ適用された時点で**移転実績**、適用後のHuman TasteまたはWorld Signalが取れた時点で `支持` / `反証` を記録する。**取れていない間は効果を `UNKNOWN` のまま残す。** 悪化した学びも削除せず `反証` として残す。
 
 ### 4. 転記（最小差分・追記のみ）
 
@@ -76,10 +94,12 @@ HumanのWorld Signal報告を、該当台帳へ正しい等級・欠落なしで
 
 会話の往復をファネルの前進と読み替えない。Stageの変更は台帳の定義が根拠づける場合だけ差分として提案し、確定はHuman確認に委ねる。
 
+**E-014系の場合**: 次の一手として**新しいゲーム制作を自動提案しない**——既存のRetrospective Seed Corpus（未分解の既存ゲーム）の回収を先に置く。不足情報は**ゲームごとに何度も聞かない。全作品分を一度に返せる最小バッチ表1枚へ圧縮し、Humanへ1回だけ依頼する**（HI-2: 1ターンにつきHuman Actionは原則1つ）。
+
 ### 7. 停止
 
 起草を提示して止まる。**送信しない。**
 
 ## 停止線（常に適用）
 
-行わないこと: 第三者への送信・投稿・DM（`CONSTRAINTS.md` Part I §4 Human Gate）/ X・SNSの読取・監視・ポーリング・API取得（D-003により `HOLD`。**環境上読めるかどうかとは無関係に行わない**）/ 常駐処理・スケジュール登録・通知の設定 / **報告として渡された生データ（スクリーンショット・画像・音声・動画・原文エクスポート）のpublic repoへのcommit** / 確定済みverdictの書き換え / mainへのmerge / 支出。記録の反映はbranch上のcommitまでとし、PR作成は依頼の文脈に従う。mergeは常にHuman Gate。
+行わないこと: 第三者への送信・投稿・DM（`CONSTRAINTS.md` Part I §4 Human Gate）/ X・SNSの読取・監視・ポーリング・API取得（D-003により `HOLD`。**環境上読めるかどうかとは無関係に行わない**）/ 常駐処理・スケジュール登録・通知の設定 / **報告として渡された生データ（スクリーンショット・画像・音声・動画・原文エクスポート）のpublic repoへのcommit**（E-014系ではゲーム本体HTML・Claude Artifact URLも同じ扱い） / 確定済みverdictの書き換え / **E-014の契約・PASS / FAIL / VOID条件・判定点の変更**（Retrospective Seed Corpusへの記録でFunnel現在値・判定点・Verdictを動かさない） / mainへのmerge / 支出。記録の反映はbranch上のcommitまでとし、PR作成は依頼の文脈に従う。mergeは常にHuman Gate。
