@@ -85,7 +85,8 @@ E-014承認（2026-08-13 PR #65 merge / merge commit `0dcf7d6`）**より前**�
 
 | game_id | participant_id | E-014 eligibility | expressed_desire（本人の言葉・PII除去） | 解釈と実装内容 | artifact（ファイル名 / SHA-256） | delivered_at | Hiro Taste Signal | Observed World Signal（種別ラベル付き） | evidence note |
 |---|---|---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | — | — | — |
+| G1 | P1 | **`UNKNOWN`** | `UNKNOWN`（本人の言葉の記録なし） | `UNKNOWN`（忍者・手裏剣を題材とすることのみHuman報告。実装内容は未報告） | `shuriken_game.html` / SHA-256 **`UNKNOWN`** | **`UNKNOWN`** | 商用アプリ級だと感じた / 非常に面白かった / Claudeの制作能力を高く評価（**Human Taste・Capability評価。World SignalでもE-014のPASS証拠でもない**） | `初回反応` 強く面白がった / `利用` プレイした / `促しなし再プレイ（別日）` 本人から促しなし / `価値確認` 発話「売れるね」 | 2026-08-14 Human報告（**FACT**）。**「売れるね」は購入意思・支払いではない**——段5の売上へ昇格させず価値確認Signalとしてのみ扱う。**P1は納品対象であり、契約§6 trigger①の「納品対象外の第三者」ではない**（trigger未発火）。**添付 `verify.mjs` は実装前提の異なる別バージョン用のため、本作のWorld Signalに使わない。ChatGPTによる実ブラウザでの人間同等プレイも未確認。** 原本: Human保持・repo外 |
+| G1 | P2 | **`UNKNOWN`** | `UNKNOWN` | 同上（G1） | 同上（G1） | **`UNKNOWN`** | ゲーム単位のためP1行に記載 | `利用` プレイした / `促しなし再プレイ（別日・翌朝）` 本人から促しなし | 2026-08-14 Human報告（**FACT**）。続柄カテゴリ `UNKNOWN`。原本: Human保持・repo外 |
 
 ### Corpus現在値（2026-08-14 Human報告。個別ゲームへ未分解）
 
@@ -97,6 +98,23 @@ E-014承認（2026-08-13 PR #65 merge / merge commit `0dcf7d6`）**より前**�
 | 原本・成果物 | **Human保持・repo外** | — |
 
 **この報告はE-014のFunnel現在値（聞き取り0 / 納品0）・判定点・Verdictを動かさない。** 個別ゲームへ分解できた時点で上の表へ行を起こす。
+
+> **2026-08-14 追記 — G1の分解（上の表は不変更で保持する）**
+>
+> G1（`shuriken_game.html`）が個別ゲームへ分解できたため、Corpus表へ2行（G1/P1・G1/P2）を起こした。確定したのは**G1についてのみ**であり、G2以降は引き続き `UNKNOWN`。
+>
+> | 項目 | 値 | 等級 |
+> |---|---|---|
+> | G1の参加者N | **2**（P1 / P2） | **Human-confirmed（FACT）** |
+> | G1の利用 | **2人がプレイした** | **Human-confirmed（FACT）** |
+> | G1の継続利用 | **2人とも別日・促しなし再プレイ**（P2は翌朝） | **Human-confirmed（FACT）** |
+> | G1の価値確認 | **P1の発話「売れるね」** | **Human-confirmed（FACT）**。**購入意思・支払いではない** |
+> | G1の eligibility / delivered_at / SHA-256 / expressed_desire | **`UNKNOWN`** | 未報告。推測で埋めない |
+> | G2〜（残り3本以上） | **`UNKNOWN`** | 未分解 |
+>
+> **eligibility は既定どおり `UNKNOWN` であり、G1はE-014の判定母集団に入らない。** したがって本追記は **E-014のFunnel現在値（聞き取り0 / 納品0）・判定点・Verdict（未判定）のいずれも動かさない**。判定母集団へ転記できるのは、納品が承認（`0dcf7d6`）以後であることと契約§5の規律下で行われたことの**両方がHuman-confirmed**になった行だけである（`UNKNOWN` を推測で `ELIGIBLE` へ上げない）。
+>
+> **AI側の検証結果を本作のWorld Signalとして使わない。** 添付 `verify.mjs` は実装前提の異なる別バージョン用であり、ChatGPTによる実ブラウザでの人間同等プレイも未確認（**Claude Artifact URLからの直接プレイは不可だった。HTML本体の受け渡しでコード監査は可能になったが、それは人間のプレイ観測の代替にならない**）。**AIの品質評価より、既に得られている人間のReality Signalを優先する。**
 
 ---
 
