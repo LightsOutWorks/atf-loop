@@ -44,6 +44,7 @@
 | 英語を公開してよいか | `direction/WRITING_SYSTEM_EN_2026-08.md` §9（EN_GATE） |
 | Web Marketingの一次調査・生データ | `direction/WEB_MARKETING_INTELLIGENCE_2026-08.md` / `research/INDEX.md`（109,174字・§A〜§Nを質問キーで引く） |
 | 実験の一覧と状態 | `experiments/INDEX.md` |
+| 過去作の中に再利用できる部品はあるか（所在と重複本数のみ。コードは持たない） | `ops/COMPONENT_INDEX.md`（再利用の**実績**は `experiments/desire-to-game/LEDGER.md` Evolution Transfer Log） |
 | 新しくアプリ・サービス・自動化・大型独立機能を作る依頼 | `.claude/skills/reuse-before-build/SKILL.md` |
 
 **この表を引く義務がいつ発生するかは `OS.md` HI-4 F10（既出の再発明）が定める。** 本ファイルは表を持つだけで、規則を持たない。
