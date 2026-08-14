@@ -6,6 +6,24 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-012 — 生物知能をArchitecture仕様ではなくPriorとして扱う。Factoryは独立に探索し、Realityが判定する
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract「今後のArchitecture探索の方針」（2026-08-14）。**Architectureの探索範囲＝戦略レベルの前提であり、決定権はHumanが持つ**（`OS.md` HI-11 Humanリスト: 戦略の探索範囲 / 対象範囲とNon-goals）。採択はヒロの本PR merge。
+- **Decision**: `OS.md` Layer2 へ **「Architecture候補の探索 — 他分野からの借用」1節だけ**を置く。内容は次の5点で、いずれも既存規則の**適用**であり新原則ではない。
+  1. **Biology is a library of proven solutions, not an architecture specification.** 脳に或る仕組みが存在することは、それ自体では導入理由にならない。**Brain = Prior / Factory = Independent Search / Reality = Judge。**
+  2. **探索順序**: Factory自身から問題を観測 → 媒体非依存の抽象問題へ言い換え → **3系統（Biology-inspired / AI・Software-native / 新規異種）を同等に扱う** → 最小コストで違いが観測できる実装だけRealityへ出す → **Reality > Biology** でSelectionする。
+  3. **生物の制約まで模倣しない。** エネルギー・物理サイズ・伝達速度・生存繁殖という目的関数・身体との固定結合・寿命・変更コストはFactoryに無い。Software固有の優位（正確な記憶 / 並列化 / Architecture自体の変更 / 完全な履歴保持 / 能力単位の交換 / 外部Tool利用）は積極的に使う。
+  4. **独立収束はSignalである。** Factory側の実測から独立に必要になった構造が後から生物側にも見つかった場合、コピーではなく「異なる媒体が同じ問題へ収束した可能性」として扱う。**その場合に限り**追加探索してよい。
+  5. **因果順序を逆転させない。** 既に採用した機構へ後から生物学的な理由づけを与えない。調査は問題発生後にのみ行い、結果は導入前に Biology固有の制約由来 / 一般的な知能問題への解 / Software-nativeな上位解の有無 へ分離する。
+- **Why**: 本方針の実質的な新規性は**「脳へのアンカリングを禁じること」の1点**である。それ以外は既存正本が既に持っている——**Reality > Biology は §12 No Teacher**（教師は最初から存在しない。世界が勝てば評価基準を書き換える）、**Variation → Reality Test → Selection は §7 Evolution**、**問題先・提案後の順序は Operating Philosophy 2**（Proposalを先に作って都合の良いEvidenceを探さない）、**優位構造への置換は Operating Philosophy 7 と §6 Capability First**、**先回り建造の禁止は HI-10 Non-goals と `ROADMAP.md` §6**、**Need未確認での機構着手は HI-4 F1**。したがって新設したのは1節のみで、これらを**再掲していない**。
+- **設計上の選択（何を追加しなかったか）**: 新しい正本ファイル・管理文書・Skill・Capability・schema・語彙・Experiment IDをいずれも作っていない。Brain Architecture framework / Cognitive module一覧 / 記憶分類体系 / 人工海馬・人工前頭前野 / Sleep cycle automation / Neuroscience dashboard / Brain-inspired agent群 / 新しいcanonical layer / 生物学用語を使った恒久schema は**先回りで作らない**ことを同節に明記した。実測された問題が無ければ `NO_ACTION`。
+- **Complexity Gardener（D-011 Decision 6）への適用**: 同Skillの導入理由は**Factory自身の実測**（正本肥大 → Current Task Surface 37,174字 → HI-12 実行不能 → Operational Complexity増大）であり、**生物のforgetting / pruning の存在ではない。** 本recordはその因果順序を確認するだけで、**Skill本体には生物学的な理由づけを一切書き加えていない。** 今後、生物側のforgetting / pruning / consolidationとの類似から改善候補を得ることは本節の順序に従う限り認める。
+- **Supersedes**: 無し。`CONSTRAINTS.md` / Layer1 / HI-1〜HI-12 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7-0 の戦略・ベット・優位・位相 / D-001〜D-011 / E-014契約 / `ROADMAP.md` §0 の事前登録はいずれも変更していない。Layer2の既存節（Current Route Status / 能力 / 境界 / 移譲の現在地 / Cadence / 探索と固定 / Open Questions）も変更していない。
+- **Rollback**: 本PRのrevertで `OS.md` の当該1節と本recordが戻る。物理削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
 ## D-011 — Current Surfaceを畳む。Boundaryを凍結Routeのprovenanceから切り離す
 
 - **Date**: 2026-08-14

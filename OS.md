@@ -44,6 +44,7 @@ Amended v1.2 — 2026-08-09(D-004: Human Interface — Operator Priors節を追�
 Amended v1.3 — 2026-08-10(D-006: HI-10 Action Default（`NO_ACTION`）とHI-11 権限分界を追加。HI-2の「既定はやる」の適用範囲を着手後のHandoffへ限定。Layer2「探索と固定」Bへ成立条件10〜12を追加。HI-4 F5へObserved / Derivedの区別を追加。Layer1の既存原則は変更していない)
 Amended v1.4 — 2026-08-10(D-007: Layer2「探索と固定」Aへ探索範囲の交差条件を1段落追加。HI-10 条件5とHI-11 Humanリストは行内参照のみ。新設した節は無く、Layer1・HI-10の7条件・HI-11の分界は変更していない)
 Amended v1.5 — 2026-08-10(D-008: HI-12 取得規律を追加。上限・順序・棄却の条件・字数境界の4つだけを持ち、既存規則を再掲しない。Layer1・HI-10・HI-11・Layer2は変更していない)
+Amended v1.6 — 2026-08-14(D-011: HI-4 R1注釈の C0 結合をpin移動後の事実へ訂正。HI-12 の `CONSTRAINTS.md` 字数と Part II の所在を更新。規律本体は変更していない ／ D-012: Layer2へ「Architecture候補の探索 — 他分野からの借用」を1節追加。Layer1・HI-1〜HI-12・Layer2の既存節は変更していない)
 
 Status: **LOCKED**
 Layer1 frozen until evidence exists / Layer2 evidence-driven evolution / Layer3 continuous implementation
@@ -504,6 +505,30 @@ Human Desire → Objective（人間） → Selection（Factory） → Execution�
 週1。原則ではなく仮説。
 
 律速候補は Generation / Distribution / Feedback の3つで、現時点でどこが律速かの証拠は無い。**（適用範囲: 本節はBrowser-Toy時代のcontrol-planeについての記述であり、Browser-Toy凍結とともに凍結している。現Missionの律速は `CURRENT_STATE.md` §7 が「World Signalを回収し次のActionへ戻す経路が弱いこと」と特定している。両者を同じ話として読まない。）**DistributionとFeedbackが未成熟な間は、頻度を上げても学習速度は比例しない。
+
+### Architecture候補の探索 — 他分野からの借用（2026-08-14 / D-012）
+
+> **Biology is a library of proven solutions, not an architecture specification.**
+
+生物知能は「長期のReality Selectionを通過した解法ライブラリ」として参照してよい。**設計図としては使わない。** 脳に或る仕組みが存在することは、それ自体ではFactoryへ導入する理由にならない（HI-4 F1 Capability先行と同型）。**Brain = Prior / Factory = Independent Search / Reality = Judge。**
+
+**順序**（Operating Philosophy 2 の World → Evidence → Gap → Proposal の適用であり、新しい手順ではない）:
+
+1. **Factory自身から問題を観測する。** Realityまたは実運用から出ていない問題を、他分野を理由に先回りして解かない
+2. **媒体非依存の抽象問題へ言い換える。** 「脳の○○が要る」ではなく「有限の認知資源でRelevant informationへ高速に到達する必要がある」の形にする
+3. **解法候補を3系統から同等に集める** — Biology-inspired / AI・Software-native / 新規異種Architecture。**どれもDefaultにしない**
+4. **最小コストで違いが観測できる実装だけRealityへ出す**（§5 Goal First）
+5. **RealityでSelectionする。Reality > Biology。** 異なる構造が勝ったら生物側を捨てる（§12 No Teacher / Operating Philosophy 7）
+
+**生物の制約まで模倣しない。** エネルギー / 物理サイズ / 伝達速度 / 生存・繁殖という目的関数 / 身体との固定結合 / 寿命 / 学習速度 / 変更コストは、Factoryには無い制約である。**正確な記憶・大量の並列化・Architecture自体の変更・完全な履歴保持・能力単位の交換・外部Tool利用**というSoftware固有の優位は積極的に使う（§6 Capability First）。
+
+**独立収束はSignalである。** Factory側の実測から独立に必要になった構造が、後から生物側にも見つかった場合、それはコピーではなく**異なる媒体が同じ問題へ収束した可能性**として扱う。**その場合に限り**「同じ問題について生物側にFactoryが未発見の解があるか」を追加探索してよい。
+
+**因果順序を逆転させない。** 既に採用した機構へ、後から生物学的な理由づけを与えない（HI-4 F5 / F9）。調査は問題発生後に「同じ抽象問題を生物知能はどう解いているか」の形でのみ行い、結果は導入前に **Biology固有の制約由来 / 一般的な知能問題への解 / Software-nativeな上位解の有無** へ分離する。
+
+**Factory Architecture自身も §7 Evolution の対象である** — Variation → Reality Test → Selection → Retention / Pruning → 次のVariation。結果として、脳と同じ構造・脳を単純化した構造・脳に無いSoftware-native構造が混在してよい。
+
+**先回りで作らないもの**: Brain Architecture framework / Cognitive module一覧 / 記憶分類体系 / 人工海馬・人工前頭前野 / Sleep cycle automation / Neuroscience dashboard / Brain-inspired agent群 / 新しいcanonical layer / 生物学用語を使った恒久schema。実測された問題が無ければ `NO_ACTION`（HI-10）。
 
 ### 探索と固定（Exploration / Commitment）
 
