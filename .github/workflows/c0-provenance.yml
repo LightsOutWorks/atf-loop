@@ -25,7 +25,7 @@ on:
       - 'scripts/c0-provenance.test.mjs'
       # Production material(これだけが変わるPRでもC0を自動起動し、STALEを検出する)
       - '.github/workflows/factory.yml'
-      - 'CONSTRAINTS.md'
+      - 'CONSTRAINTS_BROWSER_TOY_ROUTE.md'
       - 'smoke.mjs'
       - 'scripts/interaction-smoke.mjs'
       - 'scripts/gate-prompt.txt'

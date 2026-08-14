@@ -146,7 +146,7 @@ jobs:
 
 const FIXTURE_FILES = {
   [FY]: FIXTURE_FACTORY,
-  'CONSTRAINTS.md': '# fixture 最優先ルール\n検証項目は次の 6 つに固定\n',
+  'CONSTRAINTS_BROWSER_TOY_ROUTE.md': '# fixture 最優先ルール\n検証項目は次の 6 つに固定\n',
   'smoke.mjs': 'console.log("PASS (6/6)");\n',
   'scripts/interaction-smoke.mjs': "const VALID_INPUTS = ['tap', 'hold', 'drag'];\nconsole.log(VALID_INPUTS);\n",
   'scripts/gate-prompt.txt': 'fixture gate prompt\n',
@@ -844,7 +844,7 @@ test('absolute, symlinked and untracked provenance paths FAIL', (t) => {
   assert.ok(oa.reasons.some((r) => r.includes('absolute paths are forbidden')));
 
   const b = makeFixture(t, {
-    preCommit: (repo) => fs.symlinkSync('CONSTRAINTS.md', path.join(repo, 'link.md')),
+    preCommit: (repo) => fs.symlinkSync('CONSTRAINTS_BROWSER_TOY_ROUTE.md', path.join(repo, 'link.md')),
     mutateBaseline: (doc) => {
       doc.material_sources['link.md'] = { classification: 'production_material', git_blob_sha1: 'a'.repeat(40), sha256: 'b'.repeat(64), role: 'symlink attempt' };
     },
@@ -961,10 +961,10 @@ test('a full run never modifies the observed tree', (t) => {
 
 test('a missing material source yields VOID', (t) => {
   const fix = makeFixture(t);
-  fs.rmSync(path.join(fix.repo, 'CONSTRAINTS.md'));
+  fs.rmSync(path.join(fix.repo, 'CONSTRAINTS_BROWSER_TOY_ROUTE.md'));
   const outcome = runFixture(fix);
   assert.equal(outcome.result, 'VOID');
-  assert.ok(outcome.reasons.some((r) => r.includes('CONSTRAINTS.md')));
+  assert.ok(outcome.reasons.some((r) => r.includes('CONSTRAINTS_BROWSER_TOY_ROUTE.md')));
 });
 
 function stripVolatile(doc) {

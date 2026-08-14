@@ -28,7 +28,7 @@
 
 | 問い | 正本 |
 |---|---|
-| 何をしてよいか／いけないか、いくらまで使えるか | `CONSTRAINTS.md` Part I（§1 Hard Boundary / §2 Budget / §3 Risk Tiers / §4 Human Gates / §5 Data Boundary / §6 検証の誠実性。2,109字） |
+| 何をしてよいか／いけないか、いくらまで使えるか | `CONSTRAINTS.md`（§1 Hard Boundary / §2 Budget / §3 Risk Tiers / §4 Human Gates / §5 Data Boundary / §6 検証の誠実性。2,106字＝全文） |
 | 判断の順序・判定語彙、失敗の型、提案を組み立てる順序、探索と固定の切替 | `OS.md`（HI-5 / HI-4 / HI-9 / Layer2「探索と固定」） |
 | **そもそも着手してよいか**（行動の既定 = `NO_ACTION`・7条件・Non-goals）、**誰が決めるか**（HumanとClaudeの権限分界） | `OS.md`（HI-10 / HI-11） |
 | 何を目指しているか（北極星・Major Desire・その順位） | `DESIRES.md` |

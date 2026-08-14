@@ -6,6 +6,28 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-011 — Current Surfaceを畳む。Boundaryを凍結Routeのprovenanceから切り離す
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract（2026-08-14。A-1〜A-4の実施指示とA-3のGO）。採択はヒロの本PR merge。
+- **決定を可能にした実測**（本セッションの一次計測）:
+  1. `OS.md` HI-12 の取得上限は **anchor 5件・計6,000字**。参照タスク「E-014の次の一手を決める」の必読セットは **37,174字＝6.2倍**（`CONSTRAINTS.md` Part I 2,109 + `CURRENT_STATE.md` §7-0/§7 16,036 + `experiments/desire-to-game/LEDGER.md` 19,029）。**制定日の2026-08-10時点で既に10,389字＝1.7倍**であり、規律は最初から未達だった。
+  2. `CURRENT_STATE.md` は「原文は不変更で保持する／正本はこの追記側」型の追記が8箇所。E-013の現在値 `VOID` を得るには**原文＋5層＝6層**を通過する必要があった。
+  3. C0 baseline は `CONSTRAINTS.md` を**ファイル全体**で production_material としてpinしており、他5件の production_material はすべてBrowser-Toy Route（HOLD）の資産だった。**現Missionの最優先Sourceを編集するとC0がSTALEに倒れる**構造で、2026-08-10に実際に発生している（`OS.md` HI-4 R1注釈）。
+- **Decision**:
+  1. **`CONSTRAINTS.md` Part II を `CONSTRAINTS_BROWSER_TOY_ROUTE.md` へ本文無改変で分離する**（契約本文のSHA-256一致を確認済み）。**効力・scope・status（HOLD）はいずれも不変。** 分離は所在の変更である。
+  2. **C0 baseline の production_material から `CONSTRAINTS.md` を外し、pin対象を分離先へ移す。C0 canary は廃止しない。** `REQUIRED_MATERIALS` の件数（9件）とschema形状は不変で、1件のpath付け替えのみ。`base_sha` は分離後のcommitへ移し、全材料を再宣言する。
+  3. **`CURRENT_STATE.md` を現在値だけへ畳む。** 訂正の経緯・棄却した仮説・過去の観測値は**git historyと該当D-record・実験台帳が持ち、本文へ積層させない**。**過去観測のために新しいD-recordを作らない**（本recordは構造変更の記録であって、畳んだ観測の退避先ではない）。§1〜§9の節番号は外部参照61件があるため維持する。
+  4. **harnessの重複を除去する。** `.claude/settings.json` の2本目 UserPromptSubmit hook（`[routing]` echo）は `model-dispatch` skill の `description` と同内容のため削除。`.claude/hooks/context-brief.py` の `DEADLINES` は全件が過去日で出力ゼロだったため削除し、F10再注入のみ残す。**新しいhookは追加しない。**
+  5. **`README.md` の「schedule triggerは現在も稼働中」を `disabled_manually` の実測へ訂正する。** これは整理ではなく事実誤記の修正である。
+- **Why**: 内部Mechanismが増える速度に対し、現在地を得るための認知面積を抑える規律（HI-12）が機能していなかった。**上限の数字を緩めれば規律は形式的に満たせるが、読む量は減らない。** 本decisionは上限を変えず、読む対象そのものを薄くする。
+- **HI-12の6,000字上限を変更しない理由**: 上限を緩めるより正本肥大を直すほうが根本解だから。**「`CONSTRAINTS.md` §6により変更不能」ではない**——上限はEvidenceで将来変更可能な運用基準であり、Hard Boundaryではない。
+- **Supersedes**: `CURRENT_STATE.md` 本文の過去観測レイヤ（git historyが保持）と、C0 baseline の旧宣言のみ。**次のいずれも変更しない**——`CONSTRAINTS.md` の全条項（Hard Boundary / Budget JPY 50,000 / Risk Tiers / Human Gates / Data Boundary / 検証の誠実性）/ `OS.md` Layer1・HI-1〜HI-12の規律本体 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7-0 の戦略・ベット・優位・位相（探索期）/ D-001〜D-010 / E-014契約 / `ROADMAP.md` §0 の事前登録。**D-001のBrowser-Toy Route HOLDも不変**——本recordは旧Routeの再稼働根拠にならない。
+- **残った超過（隠さない）**: 畳んだ後の参照タスク実測は **25,303字**（`CONSTRAINTS.md` 2,106 + §7 4,168 + E-014台帳 19,029）で、**6,000字上限には戻っていない**。残差の75%は E-014 台帳であり、これはReality由来の記録（参加者・利用・継続利用・verbatim反応）で**代謝対象ではない**。台帳の畳み込みは本Task Contractの承認範囲外のため実施していない。
+- **Rollback**: 本PRのrevertで全ファイルと本recordが旧stateへ戻る。物理削除・外部作用・支出を伴わない（分離元の本文はgit historyに残る）ため単一revertで完結する。
+
+---
+
 ## D-010 — Factoryの価値主張を「生成能力」から外す。最有力候補をReality-learning（＝Factory私有の複利prior）へ移す
 
 - **Date**: 2026-08-14

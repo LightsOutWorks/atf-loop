@@ -318,9 +318,9 @@ Humanへ返すのは、Humanにしか越えられない最後の1行為まで圧
 2. **repo外にしか存在しない記録の破棄**。コンテナ内の作業記録・スクラッチは、失えば削除と同じ
 3. **時点依存の観測機会の消費**。外部サービスの状態・他者の投稿など、後から同じものを観測できないもの
 
-**この注釈をここに置く理由**: 2026-08-10、同じ内容を `CONSTRAINTS.md` §3 へ直接書き込んだところ、C0 provenance canary が STALE を返した。`CONSTRAINTS.md` は production_material として champion-baseline に焼かれており、変更にはベースライン全体の再宣言（`base_sha` の移動と全9材料の再declare）を要する。一方 `OS.md` は control_plane_snapshot で、drift は情報として記録されるだけである。**この区別は HI-8 の配置原則「変わりうるものをBoundaryへ置かない」を、canaryが機構として実装したものだった。** repo固有の具体例を含む本注釈は「変わりうるもの」であり、`OS.md` 側が正しい置き場所である。
+**この注釈をここに置く理由**: 2026-08-10、同じ内容を `CONSTRAINTS.md` §3 へ直接書き込んだところ、C0 provenance canary が STALE を返した。当時 `CONSTRAINTS.md` は production_material として champion-baseline に焼かれており、変更にはベースライン全体の再宣言を要したためである。**この区別は HI-8 の配置原則「変わりうるものをBoundaryへ置かない」を、canaryが機構として実装したものだった。** repo固有の具体例を含む本注釈は「変わりうるもの」であり、`OS.md` 側が正しい置き場所である。
 
-条文そのもの（R1の定義文）を変える場合は、champion-baseline の再宣言を伴うHuman判断とする。
+**2026-08-14 の変更（D-011）**: `CONSTRAINTS.md` は production_material から外れた。pin対象はBrowser-Toy Route契約を持つ `CONSTRAINTS_BROWSER_TOY_ROUTE.md` へ移り、`CONSTRAINTS.md` の編集は C0 を STALE にしない。**上の配置原則は変わらない**——変わったのは、現Missionの最優先Sourceが凍結Routeの provenance に縛られていた結合だけである。
 
 **AI側の頻出失敗**（本Factoryで実測されたもの）: ①実行可能性を理由に早すぎる棄却をする ②構造的ボトルネックを即時の最優先へ誤変換する ③データの不在からの推論を観測として断定する。
 
@@ -461,7 +461,7 @@ North Star / Major Desire / Hard Boundary / 戦略 / **戦略の探索範囲**�
 正本を全部読まない。着手前に「今回何を決めるか」を1文にし、`CLAUDE.md` §3 でその問いの正本を引く。この1文はHumanの指示と `CURRENT_STATE.md` §7-0 だけで書く——**何を読むか決めるために正本を横断しない。** §3に無い正本が要るときは実在を確認して必要な文書だけ引き、**到達不能を検出したら索引欠陥として報告する。推測で代替しない。**
 
 1. **上限**: 1タスクの取得は **anchor 5件・計6,000字**。超えたら削る。削れないなら正本が肥大しており、それ自体を欠陥として報告して止まる。
-2. **順序**: `CONSTRAINTS.md` **Part I 全文**（2,109字。**第1位Sourceは節を選ばない**——どのBoundaryが効くかは読む前には分からない。Part IIはHistorical Experiment契約なので対象外）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
+2. **順序**: `CONSTRAINTS.md` **Part I 全文**（＝2026-08-14以降はファイル全文。2,106字。**第1位Sourceは節を選ばない**——どのBoundaryが効くかは読む前には分からない。Browser-Toy Route契約は `CONSTRAINTS_BROWSER_TOY_ROUTE.md` へ分離済みで、Historical Experiment契約なので対象外）→ 問いに対応する正本anchor → `CURRENT_STATE.md` §7-0・§7 → 該当Experimentの台帳。
 3. **過去の棄却は条件付き**: 同一の市場・Route・候補・Experiment・戦術仮説のいずれかが一致する時だけ `KILL` / `NO_ACTION` と再検討triggerを引く。一致しないものは読まない。triggerが未充足なら `NO_ACTION`。
 4. **全文Readは6,000字未満のファイルだけ。20,000字以上は `grep` / anchor のみ**（2026-08-10時点で該当10本。`research/INDEX.md` は109,174字だが497行のため `Read` 1回で全文が返る。`OS.md` `CURRENT_STATE.md` `ROADMAP.md` 自身も該当する）。
 
