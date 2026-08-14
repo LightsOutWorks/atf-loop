@@ -87,6 +87,8 @@ Shaping SignalとTerminal Signalを混同しない。
 
 各Major Desireは独自のWorld Signalを持ち得る（MD-2: Genuine Encounter / Inbound Need、MD-3: Human Handoff逓減等）。Follower数等のShaping SignalをNorth Star達成と混同しない。
 
+**World Prior（他者の商品・作品・行動についてInternet上で観測した外部Evidence）は、上のいずれのWorld Signalでもない。** 仮説の絞り込みには使ってよいが、ExperimentのPASS・判定点・trigger発火・participant数・収益へ混入させない（D-013。手順は `.claude/skills/mine-world-priors/`）。
+
 ---
 
 ## 6. Route is not Identity

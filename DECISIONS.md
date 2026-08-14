@@ -6,6 +6,29 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-013 — Internet-scale World Prior Mining を追加する。World Prior と Direct World Signal を分離する
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract「Internet-scale World Prior MiningをFactoryへ追加する」（2026-08-14 Human裁定）。採択はヒロの本PR merge。
+- **これは新しいMajor Desireではない。** `DESIRES.md` MD-3 が既に持つ「**Human-as-message-bus / AIができる情報収集**の削減」の具体的な実装として扱う。MD-1〜MD-3 とその順位は変更しない。
+- **Decision**:
+  1. **人間へFeedbackを取りに行く前に、Internet上で既に発生している外部Realityから「何が人間に選ばれ・使われ・繰り返され・評価され・購入されているか」をAI自身が観測し、次に試す仮説を絞る。**
+  2. **World Prior と Direct World Signal を厳密に分離する。**
+     - **World Prior** = 他者の商品・作品・行動についてInternet上で観測された外部Evidence。**仮説選択にだけ使える。**
+     - **Direct World Signal** = Factory自身がRealityへ出したものに対して発生した利用・継続利用・request・価格質問・支払い。**Experiment判定はこちらだけが持つ。**
+     - **World PriorをExperimentのPASS / FAIL / 判定点 / trigger発火 / participant数 / Funnel各段 / 収益へ混入させない。** 例: SteamでAI companion gameが大量に売れていても、**E-014 §6 の解除trigger（納品対象外の第三者からの自発的な「自分にも作ってほしい」「いくら？」）が発火したことにはならない。**
+  3. **Internet evidence だけで「売れる」「面白い」「需要がある」と断定しない。** 売上・人気には marketing / brand / IP / distribution / price / タイミング の交絡があるため、**複数種類のSignalを triangulate する**（例: 購入・Sales Rank / player activity / longevity / review score・review text / 動画・配信のattention / comments内の具体的な理由）。**単一指標を万能Score化しない。** 抽出するのは「売れたものの共通点」ではなく、**行動Signalとverbatimから繰り返し現れるMechanism**である。
+  4. **実装は新Skill `.claude/skills/mine-world-priors/SKILL.md` を1本だけ。** on-demand・read-only。**新しいhook / workflow / agent / database / schema / dashboard / crawler / scheduler / permanent corpus は作らない。** 発火は実測された具体問題がある時だけで、**好奇心だけの市場調査はしない**（`OS.md` HI-10）。出力は Question / Observed World Evidence / What appears to work / What appears not to work / Confounders・Unknown / Transferable Hypothesis / Next Action まで圧縮し、**大きなResearch reportを作らない**。
+  5. **既存Skillとの境界を混ぜない**——`reuse-before-build` は解法・Capability・Prior Artを探す。`mine-world-priors` は人間の需要・行動・Tasteについて既に世界で発生した結果を観測する。`record-world-signal` はFactory自身に返った Direct World Signal を台帳へ記録する。
+  6. **hot surfaceは増やさない。** `DESIRES.md` §5 へ **2文だけ**追加した（World PriorはWorld Signalではない旨と、混入禁止先）。`OS.md` は変更しない。詳細は本recordとSkillが持つ。
+- **Why**: 現在、外部Realityの探索・収集・伝達がHumanに集中している。**Humanを低帯域な情報収集器として使うのをやめ、Desire / Taste / Boundary / Direction と本当に必要なDirect Reality Contactへ集中させる**ための変更であり、**HumanをFactoryから外すためではない**（`OS.md` Operating Philosophy 6 Human-up-the-loop / D-003 Decision 4 と同じ向き）。分離条項（Decision 2）を同時に置く理由は、外部Evidenceが judgment 側へ流れ込むと `CONSTRAINTS.md` §6（確認できないことは `UNKNOWN`）と `OS.md` HI-4 F2（Internal Signal先行）を同時に破るためである。
+- **最初のCalibration Case（未実行）**: 制作中のAI相棒ゲーム `ECHO` について、「人がAI / デジタル相棒を育てる体験で、何を面白い・愛着が湧く・続けたいと感じているか」をInternet上の既存Realityから調査する。**調査結果だけでECHOを自動変更しない。まずHumanへ最小Transfer案を返す。**
+  - **到達性の実測（2026-08-14 本セッション一次実測。`curl`）**: 到達可 = `arxiv.org` / `*.wikipedia.org` / `note.com` / `reddit.com`。**到達不可（CONNECT tunnel 403 = agent proxy の allowlist 拒否）= `store.steampowered.com` / `api.steampowered.com` / `steamspy.com` / `steamdb.info` / `youtube.com` / `itch.io` / `apps.apple.com` / `play.google.com`。** したがって**購入・Sales Rank・player activity・review score・動画attentionは現状harnessから取得できず、verbatim中心の調査しか組めない**。**これはtooling制約であって「データが存在しない」ではない**（`OS.md` HI-4 F9）。**許可ドメインの変更はHuman Gate**（`CONSTRAINTS.md` §4）であり、Claude側では変更しない。
+- **Supersedes**: 無し。`CONSTRAINTS.md` 全項 / `OS.md` Layer1・HI-1〜HI-12・Layer2 / `DESIRES.md` North Star・MD-1〜MD-3・§5の既存3階層 / `CURRENT_STATE.md` §7-0 の戦略・ベット・優位・位相 / D-001〜D-012 / E-014契約（hypothesis・PASS・FAIL・VOID・判定点・budget_cap・非目標・§6解除trigger）/ `ROADMAP.md` §0 の事前登録はいずれも変更していない。
+- **Rollback**: 本PRのrevertでSkill 1本と `DESIRES.md` の2文、本recordが戻る。物理削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
 ## D-012 — 長期実証済みの他系統をArchitecture仕様ではなくPriorとして扱う。Factoryは独立に探索し、Realityが判定する
 
 - **Date**: 2026-08-14
