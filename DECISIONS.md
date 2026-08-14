@@ -13,7 +13,7 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 - **決定を可能にしたReality**（推測ではなく実測）:
   1. **Human-confirmed（FACT）**: G1〜G7の生成時、atf-loopのファイル・過去ゲーム・Factory規律を**一切見せていない**。入力は雑なHuman Desire / 指示のみ。**Corpus 7件はFactory文脈なしのClaude出力である。**
   2. そのうち **G1はHuman Desire → Playable Artifact → 外部2名の利用 → 2名とも別日・促しなし再プレイ → P1「売れるね」まで到達**（`experiments/desire-to-game/LEDGER.md`）。
-  3. **一次実測（本セッション）**: Factory経由の `works/` 24作でも WebAudio 22/24・ポインタ入力 24/24・Canvas 2D 24/24 が独立に成立している。土台の一致は**移転ではなく収束**。safe-area の差（0/24 対 7/7）は対象端末というHuman側の入力で説明がつく。
+  3. **一次実測（本セッション・FACT）**: Factory経由の `works/` 24作でも WebAudio 22/24・ポインタ入力 24/24・Canvas 2D 24/24 が独立に成立している。土台の一致は**移転ではなく収束**。なお safe-area（0/24 対 7/7）・localStorage（0/24 対 5/7）の差は**計数がFACTであり、原因は `INFERENCE`**——対象端末というHuman側入力で説明可能だが、生成モデル差・時期差・様式差が同時に効きうるため**因果は未確定**とする。
   4. Factory経由24作の外部信号は **0**（`eval.json` スコア9件すべて `world: null`）。Factory側の累積学習も **移転実績0**（同台帳 Evolution Transfer Log）。
 - **Decision**:
   1. **「良いゲームを生成できる」ことをFactoryの価値主張に置かない。** 単一HTMLの実装品質・スマホ対応・コード生成音・UIといった能力の主要因は、現時点の実測ではClaude本体にある。**これはFactoryの失敗ではなく、モデル側で足りている能力をFactory側で再実装・再発明・管理しない根拠として使う。**
