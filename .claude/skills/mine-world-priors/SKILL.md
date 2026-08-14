@@ -11,14 +11,15 @@ description: "人間へFeedbackを取りに行く前に、Internet上で既に�
 
 ---
 
-## 0. 最重要の分離 — World Prior ≠ Direct World Signal
+## 0. 最重要の分離 — World Prior ≠ Machine Evaluation ≠ Direct World Signal
 
 | | 定義 | 使ってよい所 | 使ってはならない所 |
 |---|---|---|---|
-| **World Prior** | 他者の商品・作品・行動についてInternet上で観測された外部Evidence | **仮説の絞り込み**（次に何を作る / 試すか） | Experiment の PASS / FAIL / 判定点 / trigger発火 / participant数 / Funnel各段 / 収益 |
-| **Direct World Signal** | Factory自身がRealityへ出したものに対して発生した利用・継続利用・request・価格質問・支払い | **Experiment判定のすべて** | — |
+| **World Prior** | 他者の商品・作品・行動についてWorldから得たEvidence | **仮説の絞り込み**（次に何を試すか） | Experiment の PASS / FAIL / 判定点 / trigger発火 / participant数 / Funnel各段 / 収益 |
+| **Machine / Internal Evaluation** | Factory自身が生成したcandidateについて browser test / functional test / static check / critic / simulation 等で得る検証Signal | **variantの淘汰 / 破損検知 / 内部改善** | **外部価値Signalとして扱うこと。** 需要 / WTP / Revenue / 外部価値を要求するGateをこれで代替しない |
+| **Direct World Signal** | Factory自身がRealityへ出したものに対して**外部で実際に起きた**利用・継続利用・request・価格質問・支払い | **Experiment判定のすべて** | — |
 
-**この境界を越えない。** 例: SteamでAI companion gameが大量に売れていても、**E-014 §6 の「納品対象外の第三者から自分にも作ってほしい」triggerが発火したことにはならない。**
+**World Prior ≠ Machine Evaluation ≠ Direct World Signal。** 境界を越えない。例: SteamでAI companion gameが大量に売れていても、**E-014 §6 の「納品対象外の第三者から自分にも作ってほしい」triggerが発火したことにはならない。** 同様に、生成物が自動テストを全て通っても**それは誰かが使った証拠ではない**。
 
 World Priorは「**次に何を作る / 試すか**」を強化するだけ。Factory自身が本当に価値を作れたかを判定するのは Direct Reality だけである（`DESIRES.md` §5 / `CONSTRAINTS.md` §6）。
 
@@ -69,18 +70,18 @@ Observed Problem / Desire
 
 ---
 
-## 3. 到達性（2026-08-14 一次実測。**これはtooling制約であって「データが存在しない」ではない**）
+## 3. 取得経路（環境状態をここへ固定しない）
 
-| 到達 | 対象 |
-|---|---|
-| **可（200）** | `arxiv.org` / `*.wikipedia.org` / `note.com` / `reddit.com` |
-| **不可（CONNECT tunnel 403 = proxy allowlist拒否）** | `store.steampowered.com` / `api.steampowered.com` / `steamspy.com` / `steamdb.info` / `youtube.com` / `itch.io` / `apps.apple.com` / `play.google.com` |
+**到達可能なドメインの一覧をこのSkillへ書かない。** 環境のnetwork policyは変わる。**実行時に確認する。**
 
-**したがって現状では、購入・Sales Rank・player activity・review score・動画attention は harness から直接取得できない。** 取れるのは主に **verbatim と論文・辞書的記述**であり、**行動Signalが欠けた状態で「売れる」を推論しない**（それは §2 の禁止に当たる）。
+1. **必要Signalを決める**（何を知れば次Actionが変わるか。§2）
+2. **実行時に現在利用可能な取得経路を確認する**（read系のtoolを1回試す。proxy由来の拒否は `curl -sS "$HTTPS_PROXY/__agentproxy/status"` に理由が残る）
+3. **利用可能なread経路で取得する**
+4. **必要Signalが本当に取得不能なら `UNKNOWN` / insufficient evidence と明示する。** 取得できなかったことを、その対象が存在しない・価値が無い証拠として扱わない（`OS.md` HI-4 F9）
 
-**許可ドメインの変更はHuman Gate**（`CONSTRAINTS.md` §4）。**自分で設定を変えない。** 不足する場合は、不足しているSignal種別を明示してHumanへ返す（Humanがドメインを開けるか、該当ページを渡すか、その問いを落とすかを決める）。
+**取得できなかったSignal種別は出力に明記する。** 行動Signal（購入・継続・利用）が欠けたままverbatimだけで「売れる」を推論しない——それは §2 の禁止に当たる。
 
-**有料API（xAI等）の使用は支出であり Human Gate。** 無料・公開経路で足りるかを先に確認する。
+**許可ドメイン・認証・proxy設定の変更はHuman Gate**（`CONSTRAINTS.md` §4）。**自分で変更しない。** 不足する場合は、不足しているSignal種別を明示してHumanへ返す。**有料APIの使用は支出であり Human Gate。** 無料・公開経路で足りるかを先に確認する。
 
 ---
 
@@ -99,7 +100,7 @@ Transferable Hypothesis:
 Next Action:
 ```
 
-**「失敗 / 低成果例」を空にしない。** 成功例だけを並べた出力は生存バイアスであり、この形式を満たしていない。
+**成功例だけでなく失敗・低成果Evidenceも探索する**（成功例だけを並べた出力は生存バイアス）。**ただし取得できなかった場合は `UNKNOWN` / insufficient evidence と明示し、推測で埋めない**——`CONSTRAINTS.md` §6（確認できないことは `UNKNOWN`）が優先する。**欄を埋めるために失敗例を捏造しない。**
 
 **調査結果をrepoへ蓄積しない。** 次の判断を実際に変えた分だけを、該当する既存の場所（実験台帳 / D-record / `research/INDEX.md`）へHumanの判断後に残す。**新しいcorpus・DB・索引を作らない**（D-010 Decision 2: 蓄積するのはログ量ではなく、次の意思決定を変えるRealityだけ）。
 
@@ -118,6 +119,8 @@ Next Action:
 ## 6. 禁止事項
 
 - **World Prior を Experiment の PASS / 判定点 / trigger発火 / participant数 / Funnel各段 / 収益へ混入させること**（§0）
+- **Machine / Internal Evaluation（test・critic・simulation の結果）で、需要 / WTP / Revenue / 外部価値を要求するGateを代替すること**（§0）
+- 到達可能ドメインの一覧など、その時点の環境状態を本Skillへ書き込むこと（§3）
 - 実測された問題が無いのに調査を始めること（好奇心駆動）
 - Internet evidence だけで「売れる」「面白い」「需要がある」と断定すること
 - 単一指標を万能Scoreにすること / 「N件一致で採用」のような固定判定規則を作ること
@@ -129,11 +132,3 @@ Next Action:
 - 有料APIをHuman承認なしに使うこと
 
 ---
-
-## 7. 最初のCalibration Case（Human指定・未実行）
-
-**問い**: 人がAI / デジタル相棒を育てる体験で、**何を面白い・愛着が湧く・続けたい**と感じているか。
-
-**用途**: 制作中のAI相棒ゲーム `ECHO` の次revision候補。**調査結果だけでECHOを自動変更しない。まずHumanへ最小Transfer案を返す。**
-
-**現在の制約**: §3のとおり、Steam・動画・ストアの行動Signalは harness から取得不可。**verbatim中心（`reddit.com` 等）＋論文で組める範囲**にとどまり、購入・継続の行動Signalは欠ける。実行前に、その欠損を許容して verbatim だけで始めるか、許可ドメインを開けるか（Human Gate）をHumanが決める。

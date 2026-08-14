@@ -148,7 +148,7 @@ GitHub / OSS / 既存製品 ・ standards / protocols ・ papers / documentation
 
 **自動Skill化はしない。** 見つけた知識から自動でSkillを生成しない。新Skillの作成は、**同型問題が再発し、Realityでの必要性が確認された場合にだけ別途判断する。**「役に立ちそう」はMechanism追加の理由にならない。
 
-抽出後は Step 3 以降へ戻り、**AI / Software-native解とも比較したうえで** Step 6 でRouteを1つ選ぶ。出力は §5 の圧縮形式を使う。
+**Step 3 へは戻らない。** Step 3 は GitHub repository固有の検証（README / LICENSE / commit / release / issue / PR）であり、Biology / Markets / Control Theory / papers 等へはそのまま適用できない。Cross-System側は **そのPriorに適切な一次情報で検証する**（論文なら原論文、規格なら規格本文、市場なら公開された行動データ。二次情報の要約で代替しない — HI-4 F9）。その後は **Factoryの既存Mechanismとの比較 → Smallest Transfer → Step 6 のRoute Selection** へ進む。**AI / Software-native解と必ず並べて比較する。** 出力は §5 の圧縮形式を使う。
 
 ### Step 3. 上位3件までを深く検証する
 広く集めた中から**最大3件**を選び、以下を**一次情報**（リポジトリ本体）から確認する。伝聞・要約記事で埋めない。
