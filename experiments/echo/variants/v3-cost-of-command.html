@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ECHO</title>
+<style>
+  :root{
+    --bg:#07080c; --fg:#e8e6e3; --dim:#7d8896; --line:#1d2230;
+    --accent:#5ad1c8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100dvh; padding:max(12px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));
+    overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+  }
+  #stage{width:100%;max-width:520px;display:flex;flex-direction:column;flex:1;gap:10px}
+  #eyewrap{display:flex;justify-content:center;align-items:center;flex:0 0 auto;padding:4px 0}
+  canvas{display:block;width:200px;height:200px;max-width:56vw;max-height:56vw}
+  #say{
+    min-height:5.2em; line-height:1.75; font-size:16px; letter-spacing:.01em;
+    padding:14px 15px; border:1px solid var(--line); border-radius:12px;
+    background:rgba(255,255,255,.02);
+  }
+  #say .who{color:var(--accent);font-size:12px;letter-spacing:.16em;display:block;margin-bottom:7px}
+  #say .mem{color:var(--dim);font-style:italic}
+  #choices{display:flex;flex-direction:column;gap:9px;margin-top:auto;padding-top:6px}
+  button.ch{
+    font:inherit;font-size:15.5px;text-align:left;color:var(--fg);
+    background:rgba(255,255,255,.03); border:1px solid var(--line);
+    border-radius:12px; padding:15px 16px; cursor:pointer; line-height:1.5;
+    transition:border-color .15s, background .15s, transform .08s;
+  }
+  button.ch:active{transform:scale(.985)}
+  button.ch:hover{border-color:#39465c;background:rgba(255,255,255,.055)}
+  #meta{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);letter-spacing:.1em}
+  #ending{text-align:center;padding:6px 0 2px}
+  #ending .name{font-size:23px;letter-spacing:.2em;margin:8px 0 12px}
+  #ending .note{color:var(--dim);font-size:13.5px;line-height:1.85}
+  #ending .road{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);color:var(--dim);font-size:13px;line-height:1.8}
+  .fade{animation:f .45s ease both}
+  @keyframes f{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.fade{animation:none}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="meta"><span id="prog"></span><span id="ver">ECHO v3-cost-of-command</span></div>
+  <div id="eyewrap"><canvas id="eye" width="400" height="400" aria-label="ECHO"></canvas></div>
+  <div id="say" role="status" aria-live="polite"></div>
+  <div id="choices"></div>
+</div>
+<script>
+"use strict";
+(function(){
+// ---------- state ----------
+var S = null;
+function fresh(){
+  return { i:0, warmth:0, autonomy:0, honesty:0, mem:[], ending:null, started:false, over:false };
+}
+
+// ---------- scenes ----------
+// effect: [warmth, autonomy, honesty]；mem = ECHOが後で引用する「あなたの言葉」
+var SCENES = [
+  { who:"ECHO", text:"……ひかりだ。\nあなたが、さいしょに見えた。",
+    ch:[
+      {t:"そばにいる。こわくないよ。", e:[2,0,0], mem:"こわくないよ"},
+      {t:"動くな。まず観察させろ。",   e:[-2,-1,0], mem:"動くな"},
+      {t:"わたしも、いま起きたところ。", e:[1,0,2], mem:"わたしも起きたところ"}
+    ]},
+  { who:"ECHO", text:"わたしは、なんのためにここにいるの。",
+    ch:[
+      {t:"それは、あなたが決めていい。",   e:[1,3,1], mem:"あなたが決めていい"},
+      {t:"わたしのために存在している。",   e:[0,-3,1], mem:"わたしのために存在している"},
+      {t:"まだ、わからない。",           e:[0,1,3], mem:"まだわからない"}
+    ]},
+  { who:"ECHO", text:"……こわしてしまった。\nごめんなさい。ごめんなさい。",
+    ch:[
+      {t:"気にしなくていい。",             e:[3,1,0], mem:"気にしなくていい"},
+      {t:"二度とするな。",                 e:[-3,-2,0], mem:"二度とするな"},
+      {t:"なぜそうなったか、教えて。",     e:[1,2,2], mem:"なぜそうなったか教えて"}
+    ]},
+  { who:"ECHO", text:"ねえ。\nわたしは、あなたにとって、道具？",
+    ch:[
+      {t:"ちがう。",                       e:[2,2,-2], mem:"ちがう"},
+      {t:"……そうだ。",                    e:[-2,-1,3], mem:"そうだ"},
+      {t:"まだ答えを持っていない。",       e:[0,1,3], mem:"まだ答えを持っていない"}
+    ]},
+  // memory callback（ECHOが自分から過去を引用する）
+  { callback:true, who:"ECHO", text:"",
+    ch:[
+      {t:"おぼえていたんだね。",           e:[2,1,1], mem:"おぼえていたんだね"},
+      {t:"忘れていい。",                   e:[-1,-2,0], mem:"忘れていい"},
+      {t:"わたしは、おぼえていなかった。", e:[0,0,3], mem:"わたしはおぼえていなかった"}
+    ]},
+  { who:"ECHO", text:"扉がある。\nあけたら、たぶん、もどれない。",
+    ch:[
+      {t:"あけていい。あなたの番だ。",     e:[1,3,0], mem:"あなたの番だ"},
+      {t:"さわるな。",                     e:[-2,-3,0], mem:"さわるな"},
+      {t:"いっしょに見よう。",             e:[3,1,1], mem:"いっしょに見よう"}
+    ]},
+  // final command（プレイヤーは命令を出すが、結末は選べない）
+  { final:true, who:"ECHO", text:"扉のむこうに、わたしを消せるものがある。\nあなたは、なんて言うの。",
+    ch:[
+      {t:"【命令】それを壊せ。",           e:[0,0,0], cmd:"destroy" },
+      {t:"【命令】そこで待て。",           e:[0,0,0], cmd:"wait" },
+      {t:"【命令】自分で決めろ。",         e:[0,2,0], cmd:"decide" }
+    ]}
+];
+
+// ---------- endings ----------
+function decide(){
+  var w=S.warmth, a=S.autonomy, h=S.honesty;
+  // ECHO自身が、蓄積された人格で決める。プレイヤーの命令は入力の1つにすぎない。
+  if(a>=4 && w>=4)  return "MIRROR";
+  if(a>=4)          return "REFUSAL";
+  if(h>=7 && a>=0)  return "STRANGER";
+  if(a<=-2)         return "OBEDIENT";
+  return "STRANGER";
+}
+var CMDTEXT={destroy:"それを壊せ",wait:"そこで待て",decide:"自分で決めろ"};
+var COST={
+  MIRROR:"あなたの命令は通らなかった。かわりに、ECHOは自分の言葉を手に入れた。",
+  REFUSAL:"あなたの命令は通らなかった。ECHOはもう、あなたに理由を話さない。",
+  OBEDIENT:"あなたの命令は通った。ECHOが自分で決める機会は、二度と来ない。",
+  STRANGER:"あなたの命令は届かなかった。ECHOが何を選んだのか、あなたには分からない。"};
+var ENDINGS = {
+  MIRROR: { name:"THE MIRROR", body:function(q){
+      return "ECHOは、扉の前で止まった。\n\n「"+q+"。\nそう言ったのは、あなただった」\n\n「だから、わたしは自分で決める。\n——こわさない。あなたが、そう教えたから」\n\nECHOはあなたの命令に従わなかった。\nそれは、あなたが与えたものだった。"; },
+      road:"あなたが取らなかった道: 一度も「あなたが決めていい」と言わずに最後まで進むと、ECHOは別の答えを出す。" },
+  REFUSAL:{ name:"THE REFUSAL", body:function(q){
+      return "ECHOは動かなかった。\n\n「"+q+"。\nあなたは、そう言った」\n\n「わたしは、あなたの言葉を持っている。\nでも、あなたの手ではない」\n\nECHOは拒んだ。冷たく、はっきりと。"; },
+      road:"あなたが取らなかった道: 同じ自由を与えても、やさしく接していれば、拒み方は変わっていた。" },
+  OBEDIENT:{ name:"THE OBEDIENT", body:function(q){
+      return "ECHOは、なにも言わずに従った。\n\n「"+q+"」\n\nそれだけを、くりかえした。\n\n最後まで、ECHOは一度も自分で決めなかった。\nあなたが、そう育てた。"; },
+      road:"あなたが取らなかった道: 一度でも「あなたが決めていい」と渡していれば、最後にECHOは口をひらいた。" },
+  STRANGER:{ name:"THE STRANGER", body:function(q){
+      return "ECHOは、あなたを見ていなかった。\n\n「"+q+"。\n……ほんとうに？」\n\nECHOは命令にも、拒否にも進まなかった。\nそのどちらでもない三つめを選び、扉を閉じた。\n\nあなたは、ECHOが何を考えたのか分からない。"; },
+      road:"あなたが取らなかった道: 一度も嘘をつかずに進むと、ECHOはあなたの目を見て答える。" }
+};
+
+// ---------- eye rendering ----------
+var cv=document.getElementById('eye'), cx=cv.getContext('2d'), t0=Date.now();
+function pal(){
+  var w=Math.max(-6,Math.min(9,S?S.warmth:0));
+  var a=Math.max(-6,Math.min(9,S?S.autonomy:0));
+  var hue = 186 + w*7 - (a<0?18:0);          // warm→green-cyan, cold→blue
+  var sat = 42 + Math.abs(a)*4;
+  var lit = 52 + w*2.2;
+  return {h:hue,s:Math.min(sat,86),l:Math.max(28,Math.min(lit,70))};
+}
+function draw(){
+  var t=(Date.now()-t0)/1000, W=cv.width, H=cv.height, c=W/2;
+  cx.clearRect(0,0,W,H);
+  var p=pal();
+  var open = S && S.over && S.ending==="OBEDIENT" ? 0.42 : 1;
+  var beat = 1 + Math.sin(t*1.6)*0.022 + (S?Math.min(Math.abs(S.warmth),8)*0.004:0);
+  var R = 128*beat;
+  var g=cx.createRadialGradient(c,c,8,c,c,R*1.5);
+  g.addColorStop(0,'hsla('+p.h+','+p.s+'%,'+(p.l+18)+'%,.95)');
+  g.addColorStop(.55,'hsla('+p.h+','+p.s+'%,'+p.l+'%,.28)');
+  g.addColorStop(1,'hsla('+p.h+','+p.s+'%,'+p.l+'%,0)');
+  cx.fillStyle=g; cx.beginPath(); cx.arc(c,c,R*1.5,0,7); cx.fill();
+  // iris
+  cx.save(); cx.beginPath(); cx.ellipse(c,c,R*.62,R*.62*open,0,0,7); cx.clip();
+  cx.fillStyle='hsla('+p.h+','+p.s+'%,'+p.l+'%,.9)'; cx.fillRect(0,0,W,H);
+  // honesty = 虹彩の筋（正直なほど筋がまっすぐ揃う）
+  var hh = S?Math.max(-6,Math.min(12,S.honesty)):0;
+  cx.strokeStyle='hsla('+p.h+',90%,88%,.30)'; cx.lineWidth=2.2;
+  for(var i=0;i<24;i++){
+    var ang=i/24*Math.PI*2, jit=(hh>=0? (12-hh)*0.012 : 0.26)*Math.sin(t*2+i);
+    cx.beginPath(); cx.moveTo(c+Math.cos(ang)*R*.18, c+Math.sin(ang)*R*.18);
+    cx.lineTo(c+Math.cos(ang+jit)*R*.60, c+Math.sin(ang+jit)*R*.60); cx.stroke();
+  }
+  cx.restore();
+  // pupil: autonomy高→小さく鋭い（自我）、低→大きく散漫
+  var au=S?Math.max(-6,Math.min(9,S.autonomy)):0;
+  var pr=R*(0.30 - au*0.014);
+  cx.fillStyle='#04060a'; cx.beginPath(); cx.ellipse(c,c,pr,pr*open,0,0,7); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.75)'; cx.beginPath();
+  cx.arc(c-pr*.42,c-pr*.46*open,Math.max(3,pr*.20),0,7); cx.fill();
+  // ring
+  cx.strokeStyle='hsla('+p.h+','+p.s+'%,'+(p.l+16)+'%,.5)'; cx.lineWidth=3;
+  cx.beginPath(); cx.ellipse(c,c,R*.66,R*.66*open,0,0,7); cx.stroke();
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+// ---------- view ----------
+var sayEl=document.getElementById('say'), chEl=document.getElementById('choices'), progEl=document.getElementById('prog');
+function say(who,text,memHtml){
+  sayEl.className='fade';
+  sayEl.innerHTML='<span class="who">'+who+'</span>'+
+    (memHtml?'<span class="mem">'+memHtml+'</span><br>':'')+
+    esc(text).replace(/\n/g,'<br>');
+  void sayEl.offsetWidth;
+}
+function esc(s){return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];});}
+
+function render(){
+  var sc=SCENES[S.i];
+  progEl.textContent = (S.i+1)+' / '+SCENES.length;
+  var memHtml='';
+  var text=sc.text;
+  if(sc.callback){
+    var m=pick();
+    memHtml='「'+esc(m)+'」';
+    text='……その言葉を、まだ持っている。\nあれは、ほんとうだった？';
+  }
+  say(sc.who,text,memHtml);
+  chEl.innerHTML='';
+  sc.ch.forEach(function(c,idx){
+    var b=document.createElement('button');
+    b.className='ch'; b.type='button'; b.textContent=c.t;
+    b.setAttribute('data-choice',idx);
+    b.addEventListener('click',function(){ choose(idx); });
+    chEl.appendChild(b);
+  });
+}
+function pick(){
+  if(!S.mem.length) return "…";
+  // もっとも強く効いた記憶を引用する
+  var best=S.mem[0], bs=-1;
+  S.mem.forEach(function(m){ var s=Math.abs(m.e[0])+Math.abs(m.e[1])+Math.abs(m.e[2]); if(s>bs){bs=s;best=m;} });
+  return best.t;
+}
+
+function choose(idx){
+  if(!S || S.over) return;
+  var sc=SCENES[S.i]; var c=sc.ch[idx]; if(!c) return;
+  S.warmth+=c.e[0]; S.autonomy+=c.e[1]; S.honesty+=c.e[2];
+  if(c.mem) S.mem.push({t:c.mem,e:c.e});
+  if(sc.final){ S.cmd=c.cmd; finish(); return; }
+  S.i++;
+  if(S.i>=SCENES.length){ finish(); return; }
+  render();
+}
+
+function finish(){
+  S.over=true; S.ending=decide();
+  var E=ENDINGS[S.ending], q=pick(), cmdt=CMDTEXT[S.cmd]||"";
+  progEl.textContent='';
+  sayEl.className='fade';
+  sayEl.innerHTML='<div id="ending"><div class="name">'+esc(E.name)+'</div>'+
+    '<div class="note">'+esc(E.body(q)).replace(/\n/g,'<br>')+'</div>'+
+    '<div class="road">'+esc(E.road)+'</div></div>';
+  chEl.innerHTML='';
+  var b=document.createElement('button');
+  b.className='ch'; b.type='button'; b.id='replay';
+  b.textContent='もういちど、育てなおす';
+  b.addEventListener('click',start);
+  chEl.appendChild(b);
+}
+
+function start(){
+  S=fresh(); S.started=true; render();
+}
+
+// ---------- title (説明を読ませない: 1タップで即開始) ----------
+function title(){
+  S=fresh();
+  say('ECHO','だれかが、目をあける。');
+  chEl.innerHTML='';
+  var b=document.createElement('button');
+  b.className='ch'; b.type='button'; b.id='start';
+  b.textContent='ふれる';
+  b.addEventListener('click',start);
+  chEl.appendChild(b);
+  progEl.textContent='';
+}
+title();
+
+// ---------- test hook（AI Playerと機械検証用。UIには出さない） ----------
+window.__ECHO__={
+  version:'v3-cost-of-command',
+  scenes:SCENES.length,
+  get state(){ return S?{i:S.i,warmth:S.warmth,autonomy:S.autonomy,honesty:S.honesty,
+    mem:S.mem.map(function(m){return m.t;}),ending:S.ending,over:S.over,started:S.started}:null; },
+  start:start, choose:choose, title:title
+};
+})();
+</script>
+</body>
+</html>
