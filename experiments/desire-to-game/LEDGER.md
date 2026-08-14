@@ -151,6 +151,39 @@ E-014承認（2026-08-13 PR #65 merge / merge commit `0dcf7d6`）**より前**�
 >
 > **この評価はFunnel現在値・判定点・Verdictを動かさない。** ヒロの「いい出来」は**変換能力についてのHuman Taste**であり、**段2〜4（利用 / 継続利用 / 価値確認）はG1以外すべて `UNKNOWN` のままである**（`CURRENT_STATE.md` §7 Reality Funnel）。
 
+### G1 — Desire → Reality の到達事例（2026-08-14 Human裁定により記録）
+
+**Human Desireを起点にPlayable Artifactが生成され、価値確認まで到達した最初の事例。** 上のCorpus表 G1/P1・G1/P2 の行が実測の正本であり、本節はその**到達段の要約**だけを持つ。
+
+```
+Human Desire → Artifact → 利用 → 自発的な継続利用 → 価値確認
+```
+
+| 到達段 | 実測 | 等級 |
+|---|---|---|
+| Human Desire起点でPlayable Artifactが生成された | **達** | **Human-confirmed（FACT）**。ただし**expressed_desire（本人の言葉）は未記録 = `UNKNOWN`**。起点がDesireであったことと、その中身が記録されていることは別 |
+| 利用 | **P1・P2 の2名が実際にプレイ** | **Human-confirmed（FACT）** |
+| 自発的な継続利用 | **2名とも別日・促しなし再プレイ**（P2は翌朝） | **Human-confirmed（FACT）** |
+| 価値確認 | **P1本人の発話「売れるね」** | **Human-confirmed（FACT）**。購入意思でも支払いでもない |
+| 売上 | **JPY 0** | **FACT** |
+
+- **これは「売上成功」ではない。** 到達したのは価値確認までである。**Confirmed terminal revenue が 0 である間、Factoryが「成功した」と表現してはならない**（`CONSTRAINTS.md` Part I §6）。本節が記録するのは**段4までの到達**であって、Factoryの成功宣言ではない。
+- **Hiro Taste / Capability評価はWorld Signalと分離済み**（上のHiro Taste追記）。ヒロの「いい出来」「商用アプリ級」は本表のどの行の根拠にもしていない。
+- **eligibility は `UNKNOWN` のままであり、本節はE-014のFunnel現在値・判定点・Verdictを動かさない。** 到達事例であることと、事前登録された実験の判定母集団に入ることは別である。
+
+### 7作品の一次確認から得られた観測（2026-08-14。**観測に留める**）
+
+**Source**: 同日、Claudeが7本のartifactを直接取得し、保存HTML（計841,508 bytes）へ固定文字列検索を実行した一次実測。
+
+- **コード生成音（WebAudio）が 7/7 で存在**
+- **safe-area対応（ノッチ回避）が 7/7 で存在**
+- 以下 localStorage安全ラッパ 5/7、viewport自己修復 5/7、ポインタ入力の統一 5/7、Canvas 2D 5/7 と続く
+- **題材に依存しない土台コードが、題材の異なる複数作品で重複している**（忍者・対戦・なぞなぞ・音ゲー・オートバトラー・きせかえ・暗号のいずれでも同じ土台が独立に書かれている）
+
+**これは「再利用可能性を示す観測」に留める。** 現時点で次のいずれへも昇格しない——**部品索引（COMPONENT_INDEX）/ 恒久Capability / registry / 共通ライブラリ / 自動抽出 / 新しい管理規則**。
+
+**再判定のtrigger（2026-08-14 Human裁定）**: 次に実際に新作を作る必要が発生した際、既存作品から**必要な部品を1つだけ**再利用する。そこで制作時間・品質・再利用性へ効果が出た場合に、恒久索引の要否を初めて再判定する。
+
 ---
 
 ## Evolution Transfer Log（前作の学びが次作へ移ったかの実測。2026-08-14追加）
