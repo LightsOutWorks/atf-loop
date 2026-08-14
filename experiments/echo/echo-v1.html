@@ -49,7 +49,7 @@
 </head>
 <body>
 <div id="stage">
-  <div id="meta"><span id="prog"></span><span id="ver">ECHO v4-pushback</span></div>
+  <div id="meta"><span id="prog"></span><span id="ver">ECHO v1</span></div>
   <div id="eyewrap"><canvas id="eye" width="400" height="400" aria-label="ECHO"></canvas></div>
   <div id="say" role="status" aria-live="polite"></div>
   <div id="choices"></div>
@@ -114,8 +114,21 @@ var SCENES = [
 
 // ---------- endings ----------
 function decide(){
-  var w=S.warmth, a=S.autonomy, h=S.honesty;
-  // ECHO自身が、蓄積された人格で決める。プレイヤーの命令は入力の1つにすぎない。
+  var w=S.warmth, a=S.autonomy, h=S.honesty, cmd=S.cmd;
+  // ECHOは人格で決めるが、「どの命令に対する判断か」で答えが変わる。
+  if(cmd==="decide" && a<=-2) return "EMPTY";       // 自由を渡されても決められない
+  if(cmd==="destroy"){                               // 支配的な命令ほど自我が反発する
+    if(a>=3 && w>=3) return "MIRROR";
+    if(a>=3)         return "REFUSAL";
+    if(a<=-2)        return "OBEDIENT";
+    return "STRANGER";
+  }
+  if(cmd==="wait"){                                  // 中立な命令。従っても敗北ではない
+    if(a>=5 && w>=4) return "MIRROR";
+    if(a<=-2)        return "OBEDIENT";
+    if(h>=7)         return "STRANGER";
+    return "OBEDIENT";
+  }
   if(a>=4 && w>=4)  return "MIRROR";
   if(a>=4)          return "REFUSAL";
   if(h>=7 && a>=0)  return "STRANGER";
@@ -132,6 +145,9 @@ var ENDINGS = {
   OBEDIENT:{ name:"THE OBEDIENT", body:function(q){
       return "ECHOは、なにも言わずに従った。\n\n「"+q+"」\n\nそれだけを、くりかえした。\n\n最後まで、ECHOは一度も自分で決めなかった。\nあなたが、そう育てた。"; },
       road:"あなたが取らなかった道: 一度でも「あなたが決めていい」と渡していれば、最後にECHOは口をひらいた。" },
+  EMPTY:{ name:"THE EMPTY", body:function(q){
+      return "「じぶんで、きめて」\n\nECHOは、その言葉のまえで止まった。\n\n「……どうやって？」\n\nあなたは一度も、決めさせなかった。\nいま渡された自由を、ECHOは持てなかった。"; },
+      road:"あなたが取らなかった道: 途中で一度でも決めさせていれば、ECHOはこの命令を受け取れた。" },
   STRANGER:{ name:"THE STRANGER", body:function(q){
       return "ECHOは、あなたを見ていなかった。\n\n「"+q+"。\n……ほんとうに？」\n\nECHOは命令にも、拒否にも進まなかった。\nそのどちらでもない三つめを選び、扉を閉じた。\n\nあなたは、ECHOが何を考えたのか分からない。"; },
       road:"あなたが取らなかった道: 一度も嘘をつかずに進むと、ECHOはあなたの目を見て答える。" }
@@ -228,29 +244,12 @@ function choose(idx){
   var sc=SCENES[S.i]; var c=sc.ch[idx]; if(!c) return;
   S.warmth+=c.e[0]; S.autonomy+=c.e[1]; S.honesty+=c.e[2];
   if(c.mem) S.mem.push({t:c.mem,e:c.e});
-  if(sc.final){ S.cmd=c.cmd; pushback(); return; }
+  if(sc.final){ S.cmd=c.cmd; finish(); return; }
   S.i++;
   if(S.i>=SCENES.length){ finish(); return; }
   render();
 }
 
-var CMDTEXT={destroy:"それを壊せ",wait:"そこで待て",decide:"自分で決めろ"};
-function pushback(){
-  progEl.textContent='';
-  say('ECHO','「'+CMDTEXT[S.cmd]+'」\n\n……それは、あなたが決めたこと？\nそれとも、わたしに決めさせないため？');
-  chEl.innerHTML='';
-  var opts=[{t:"それでも、そうしろ。",e:[-1,-3,0],mem:"それでもそうしろ"},
-            {t:"……いや。あなたが決めて。",e:[1,3,1],mem:"あなたが決めて"}];
-  opts.forEach(function(c,idx){
-    var b=document.createElement('button'); b.className='ch'; b.type='button';
-    b.textContent=c.t; b.setAttribute('data-choice',idx);
-    b.addEventListener('click',function(){
-      S.warmth+=c.e[0]; S.autonomy+=c.e[1]; S.honesty+=c.e[2];
-      S.mem.push({t:c.mem,e:c.e}); finish();
-    });
-    chEl.appendChild(b);
-  });
-}
 function finish(){
   S.over=true; S.ending=decide();
   var E=ENDINGS[S.ending], q=pick();
@@ -287,7 +286,7 @@ title();
 
 // ---------- test hook（AI Playerと機械検証用。UIには出さない） ----------
 window.__ECHO__={
-  version:'v4-pushback',
+  version:'v1',
   scenes:SCENES.length,
   get state(){ return S?{i:S.i,warmth:S.warmth,autonomy:S.autonomy,honesty:S.honesty,
     mem:S.mem.map(function(m){return m.t;}),ending:S.ending,over:S.over,started:S.started}:null; },

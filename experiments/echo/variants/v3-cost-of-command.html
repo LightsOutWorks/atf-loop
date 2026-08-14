@@ -247,7 +247,7 @@ function finish(){
   sayEl.className='fade';
   sayEl.innerHTML='<div id="ending"><div class="name">'+esc(E.name)+'</div>'+
     '<div class="note">'+esc(E.body(q)).replace(/\n/g,'<br>')+'</div>'+
-    '<div class="road">'+esc(E.road)+'</div></div>';
+    '<div class="road">'+esc("「"+cmdt+"」——"+(COST[S.ending]||""))+'<br><br>'+esc(E.road)+'</div></div>';
   chEl.innerHTML='';
   var b=document.createElement('button');
   b.className='ch'; b.type='button'; b.id='replay';
