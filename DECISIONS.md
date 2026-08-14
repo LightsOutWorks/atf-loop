@@ -6,6 +6,48 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-014 — Public Web Observation を原則開放する。読みはAction Riskで扱い、書きはHuman Gateのまま
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract「Public Web Observationを原則開放」（2026-08-14 Human裁定）。**Risk Tierの読みと自律範囲は戦略レベルの前提であり、決定権はHumanが持つ**（`OS.md` HI-11）。採択はヒロの本PR merge。**設定変更そのものは実行していない**（`CONSTRAINTS.md` §4 Human Gate）。
+- **Decision**: `CONSTRAINTS.md` §3 へ **1段落だけ**追加する。**公開Webを読むことは R0 として広く自律**とし、**ドメインごとにHumanの許可を求める方式をDefaultにしない**。**Worldへ書く・状態を変える行為は従来どおり R3 / R4 の Human Gate**（外部状態を変えるHTTP method / 第三者communication / purchase・payment / authenticated access / credential・permission・proxy設定の変更 / production deploy / private network access / 未知binary・scriptの無条件実行）。**観測の自由化は権限の全面解放ではない。** `bypassPermissions` 等による無条件の全権限開放は行わない。
+- **Why**: 現在、外部Realityの探索・情報収集・**個別domain許可**がHumanに集中している。目的は**Claudeに何でもさせることではなく、Public Realityを見る能力をHuman approvalから切り離すこと**である。
+- **層の切り分け（本セッション一次実測。事実ベース）**:
+  1. **403は Claude Code設定でもrepoでもなく、組織のegress gateway層で発生している。** `curl -sS "$HTTPS_PROXY/__agentproxy/status"` の `recentRelayFailures` に `{"kind":"connect_rejected","detail":"gateway answered 403 to CONNECT (policy denial or upstream failure)","host":"store.steampowered.com:443"}` を実測。`/root/.ccr/README.md` も「403 / 407 = 組織のegress policyによる拒否。retryもroute aroundもせず報告せよ」と明記。
+  2. **`.claude/settings.json` にはdomain allowlistが無い**（`model` と hook 1本のみ）。**repo内のどのファイルを変えても解決しない。**
+  3. 一次資料（`https://code.claude.com/docs/en/cloud-environments`）によれば、cloud environmentの **Network access は None / Trusted / Full / Custom の4段**。現在は **Custom**（2026-08-10にHumanがCustomへ拡張した記録が `CURRENT_STATE.md` にある）。**GitHub操作とMCP connector通信はこのallowlistを通らず、access levelから独立**（GitHub proxyのpush protection・repository scope・GraphQL制限は維持される）。
+  4. **network policyはhost単位であり、method単位ではない。** したがって **「readは許可 / writeは禁止」をnetwork層で強制することは原理的にできない**——その分離は本decisionが `CONSTRAINTS.md` §3 へ置く**Factory側の規律でしか実現しない**。両方が揃って初めて裁定どおりになる。
+  5. **private network は現状 proxy を通らない**（`no_proxy` に `localhost` / `10.0.0.0/8` / `172.16.0.0/12` / `192.168.0.0/16` / `169.254.0.0/16` が入っており直接接続になる）。**network policyを変えてもprivate網の到達性は変わらない**ため、ここも規律側でしか止まらない。
+- **Humanへ提示する設定変更（1案。未実行）**: cloud environment の **Network access を `Custom` → `Full`（Any domain）へ変更する**。対象は**リポジトリではなくenvironment設定**（Claude Code on the web の環境ダイアログ）。**Risk**: 全ドメインが到達可能になり、network層ではwrite endpointも区別されない（規律側で止める前提）。private網の到達性は不変。GitHub認証経路は独立のため影響なし。**Rollback**: Network access を `Custom` へ戻し、変更前のAllowed domainsリストを再投入する（**変更前にリストを控えておくことがrollbackの前提**）。**不要なpermissionは開けない**——`bypassPermissions` やtool権限の全開放は本案に含まない。
+- **Supersedes**: 無し。`CONSTRAINTS.md` §1 Hard Boundary / §2 Budget / §4 Human Gates / §5 Data Boundary / §6 検証の誠実性、`OS.md` Layer1・HI-1〜HI-12、`DESIRES.md`、`CURRENT_STATE.md` §7-0、D-001〜D-013 はいずれも変更していない。**R3 / R4 のHuman Gateは維持。**
+- **Rollback**: 本PRのrevertで `CONSTRAINTS.md` の当該1段落と本recordが戻る。設定変更を伴わないため単一revertで完結する。
+
+---
+
+## D-013 — Internet-scale World Prior Mining を追加する。World Prior と Direct World Signal を分離する
+
+- **Date**: 2026-08-14
+- **Authority**: ヒロのTask Contract「Internet-scale World Prior MiningをFactoryへ追加する」（2026-08-14 Human裁定）。採択はヒロの本PR merge。
+- **これは新しいMajor Desireではない。** `DESIRES.md` MD-3 が既に持つ「**Human-as-message-bus / AIができる情報収集**の削減」の具体的な実装として扱う。MD-1〜MD-3 とその順位は変更しない。
+- **Decision**:
+  1. **人間へFeedbackを取りに行く前に、Internet上で既に発生している外部Realityから「何が人間に選ばれ・使われ・繰り返され・評価され・購入されているか」をAI自身が観測し、次に試す仮説を絞る。**
+  2. **World Prior ≠ Machine / Internal Evaluation ≠ Direct World Signal** を厳密に分離する。**この3分類専用のschema・score・新Skillは作らない**（定義を置くだけ）。
+     - **World Prior** = 他者の商品・作品・行動についてWorldから得たEvidence。**仮説選択に使う。** 他者のRealityであるため、**Factory自身の Experiment PASS / trigger発火 / participant数 / 収益には使わない。**
+     - **Machine / Internal Evaluation** = Factory自身が生成したcandidateについて browser test / functional test / static check / critic / simulation 等で得る検証Signal。**technical verification / variant selection / regression detection / autonomous-loop completion 等、機械的に検証可能な判定には使ってよい。** ただし**外部価値 / 需要 / Human Taste / 利用 / 継続利用 / WTP / 価格質問 / Revenue など、Direct Realityを要求するGateの代替には絶対に使わない。**
+     - **Direct World Signal** = Factory自身の成果物に**外部で実際に返った**Reality（利用・継続利用・request・価格質問・支払い）。**external-Reality-dependent criteria を持つ判定はこれが持つ**（「Experiment判定のすべて」ではない——機械で検証しきれる判定まで抱え込ませない）。
+     - 例: SteamでAI companion gameが大量に売れていても、**E-014 §6 の解除trigger（納品対象外の第三者からの自発的な「自分にも作ってほしい」「いくら？」）が発火したことにはならない。** 同様に、**生成物が自動テストを全て通っても誰かが使った証拠にはならない**——テストが答えるのは「壊れていないか」であって「求められているか」ではない。**逆に、動作・回帰・variant間の優劣・loop完了はMachine Evaluationが持ち、Direct Realityへ回さない。**
+  3. **Internet evidence だけで「売れる」「面白い」「需要がある」と断定しない。** 売上・人気には marketing / brand / IP / distribution / price / タイミング の交絡があるため、**複数種類のSignalを triangulate する**（例: 購入・Sales Rank / player activity / longevity / review score・review text / 動画・配信のattention / comments内の具体的な理由）。**単一指標を万能Score化しない。** 抽出するのは「売れたものの共通点」ではなく、**行動Signalとverbatimから繰り返し現れるMechanism**である。
+  4. **実装は新Skill `.claude/skills/mine-world-priors/SKILL.md` を1本だけ。** on-demand・read-only。**新しいhook / workflow / agent / database / schema / dashboard / crawler / scheduler / permanent corpus は作らない。** 発火は実測された具体問題がある時だけで、**好奇心だけの市場調査はしない**（`OS.md` HI-10）。出力は Question / Observed World Evidence / What appears to work / What appears not to work / Confounders・Unknown / Transferable Hypothesis / Next Action まで圧縮し、**大きなResearch reportを作らない**。
+  5. **既存Skillとの境界を混ぜない**——`reuse-before-build` は解法・Capability・Prior Artを探す。`mine-world-priors` は人間の需要・行動・Tasteについて既に世界で発生した結果を観測する。`record-world-signal` はFactory自身に返った Direct World Signal を台帳へ記録する。
+  6. **hot surfaceは増やさない。** `DESIRES.md` §5 へ **2文だけ**追加した（World PriorはWorld Signalではない旨と、混入禁止先）。`OS.md` は変更しない。詳細は本recordとSkillが持つ。
+- **Why**: 現在、外部Realityの探索・収集・伝達がHumanに集中している。**Humanを低帯域な情報収集器として使うのをやめ、Desire / Taste / Boundary / Direction と本当に必要なDirect Reality Contactへ集中させる**ための変更であり、**HumanをFactoryから外すためではない**（`OS.md` Operating Philosophy 6 Human-up-the-loop / D-003 Decision 4 と同じ向き）。分離条項（Decision 2）を同時に置く理由は、外部Evidenceが judgment 側へ流れ込むと `CONSTRAINTS.md` §6（確認できないことは `UNKNOWN`）と `OS.md` HI-4 F2（Internal Signal先行）を同時に破るためである。
+- **最初のCalibration Case（未実行）**: 制作中のAI相棒ゲーム `ECHO` について、「人がAI / デジタル相棒を育てる体験で、何を面白い・愛着が湧く・続けたいと感じているか」をInternet上の既存Realityから調査する。**調査結果だけでECHOを自動変更しない。まずHumanへ最小Transfer案を返す。**
+  - **到達性の実測（2026-08-14 本セッション一次実測。`curl`。以下は当該時点の historical evidence であり恒久仕様ではない。Skill本文には書かない — 環境状態をhardcodeしないため）**: 到達可 = `arxiv.org` / `*.wikipedia.org` / `note.com` / `reddit.com`。**到達不可（`CONNECT tunnel 403`）= `store.steampowered.com` / `api.steampowered.com` / `steamspy.com` / `steamdb.info` / `youtube.com` / `itch.io` / `apps.apple.com` / `play.google.com`。** したがって当該時点では**購入・Sales Rank・player activity・review score・動画attentionが取得できず、verbatim中心の調査しか組めなかった**。**これはtooling制約であって「データが存在しない」ではない**（`OS.md` HI-4 F9）。**Skill側は到達可能ドメインを持たず、実行時に確認して不能なら `UNKNOWN` とする**（D-014でこの制約自体の解消をHumanへ提示している）。
+- **Supersedes**: 無し。`CONSTRAINTS.md` 全項 / `OS.md` Layer1・HI-1〜HI-12・Layer2 / `DESIRES.md` North Star・MD-1〜MD-3・§5の既存3階層 / `CURRENT_STATE.md` §7-0 の戦略・ベット・優位・位相 / D-001〜D-012 / E-014契約（hypothesis・PASS・FAIL・VOID・判定点・budget_cap・非目標・§6解除trigger）/ `ROADMAP.md` §0 の事前登録はいずれも変更していない。
+- **Rollback**: 本PRのrevertでSkill 1本と `DESIRES.md` の2文、本recordが戻る。物理削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
 ## D-012 — 長期実証済みの他系統をArchitecture仕様ではなくPriorとして扱う。Factoryは独立に探索し、Realityが判定する
 
 - **Date**: 2026-08-14

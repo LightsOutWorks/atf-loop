@@ -33,6 +33,8 @@
 | R3 | external communication / shared-state change / staging | **Human Commit** |
 | R4 | production / payment / deletion / permission / credential / irreversible action | **explicit Human Commit** |
 
+**Public Web Observation**（2026-08-14 / D-014）: **公開Webのreadは R0 として広く自律**（公開ページ閲覧 / GET・HEAD / 公開API / 公開HTML・JSON・metadata・review・ranking・statistics の観測）。**ドメインごとに許可を求める方式をDefaultにしない。** **書き・状態変更は従来どおり R3 / R4 の Human Gate**——外部状態を変えるHTTP method（POST / PUT / PATCH / DELETE等）/ 第三者communication（DM・reply・comment・投稿・form submit・email）/ purchase・payment・subscription / credentialを伴うauthenticated access / credential・permission・proxy設定の変更 / production deploy / private network（localhost・private LAN・metadata endpoint）access / 未知binary・scriptの無条件実行。**観測の自由化は権限の全面解放ではない。**
+
 ## 4. Human Gates（Humanの明示Commitが必要な行為）
 
 - mainへのmerge

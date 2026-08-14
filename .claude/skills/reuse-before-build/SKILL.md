@@ -1,6 +1,6 @@
 ---
 name: reuse-before-build
-description: "新しいアプリ・Webサイト・サービス・SaaS・自動化・Bot・外部連携・開発ツール・CLI・dashboard・プロトタイプ・MVP、または既存プロダクト内の大型独立機能を『新しく作る』依頼を受けた時に使うSkill。まず着手してよいかを判定し（NO_ACTION Action Gate）、通過した場合だけGitHub上の既存OSSを一次情報で調査して、REUSE → BUY → ADAPT → COMPOSE → DELEGATE → BUILD の順にRouteを選ぶ。発火する依頼の例: 「〜を作りたい」「〜を作って」「〜を自作したい」「新しく立ち上げたい」「build an app」「create a website / service / bot / integration / CLI / dashboard」「automate X」「set up a new tool」「from scratch」。発火しない依頼: 小さなbug修正 / 定常保守（依存更新・lint・rename・設定調整）/ 既存コード内の軽微な編集・追記 / 同じ目的と制約を扱った調査結果が既にある場合 / Humanが外部調査を明示的に禁止した場合 / Humanが実装方針・使うライブラリを既に決めていて再検討を求めていない場合。成果物はコードではなく判断であり、実装・clone・install・外部コードの実行はHuman承認後にしか行わない。"
+description: "新しいアプリ・Webサイト・サービス・SaaS・自動化・Bot・外部連携・開発ツール・CLI・dashboard・プロトタイプ・MVP、または既存プロダクト内の大型独立機能を『新しく作る』依頼を受けた時に使うSkill。まず着手してよいかを判定し（NO_ACTION Action Gate）、通過した場合だけGitHub上の既存OSSを一次情報で調査して、REUSE → BUY → ADAPT → COMPOSE → DELEGATE → BUILD の順にRouteを選ぶ。発火する依頼の例: 「〜を作りたい」「〜を作って」「〜を自作したい」「新しく立ち上げたい」「build an app」「create a website / service / bot / integration / CLI / dashboard」「automate X」「set up a new tool」「from scratch」。発火しない依頼: 小さなbug修正 / 定常保守（依存更新・lint・rename・設定調整）/ 既存コード内の軽微な編集・追記 / 同じ目的と制約を扱った調査結果が既にある場合 / Humanが外部調査を明示的に禁止した場合 / Humanが実装方針・使うライブラリを既に決めていて再検討を求めていない場合。成果物はコードではなく判断であり、実装・clone・install・外部コードの実行はHuman承認後にしか行わない。実測された具体問題があり、GitHub上の実装だけでは解が見つからない場合は、Cross-System Prior Branch（§4 Step 2-b）で探索対象をSoftware外の長期実証済み系統まで広げる。"
 ---
 
 # Reuse Before Build
@@ -119,6 +119,36 @@ GitHub MCPの例:
 `gh` の例: `gh search repos "<query>" --sort updated --limit 30`, `gh repo view <owner>/<repo>`, `gh api repos/<owner>/<repo>`
 
 **終了条件は件数ではない。比較が成立するまで探す。** 具体的には、(a) 有力候補の性格が割れている（同型のものばかりではない）、(b) 次の検索軸を足しても既出の候補しか出てこない、の両方が成り立った時点で探索を止める。**件数ノルマは置かない**——「あと数件」を埋めるための検索はしない。逆に、1件目で決めない・1つの検索軸だけで済ませないことは守る。
+
+### Step 2-b. Cross-System Prior Branch（実測された問題がある時だけ）
+
+**GitHubを検索するように、世界を検索する。** Step 2 のSoftware探索で解が見つからない、または問題が実装様式ではなく**構造**である場合にだけ、探索対象をSoftware外へ広げる。**原則の正本は `DECISIONS.md` D-012。ここは実行経路だけを持ち、再説明しない。**
+
+**発火条件**: Factoryの運用または `CURRENT_STATE.md` で**具体的な問題が実測されている**こと。**「面白そうだから脳を調べる」「将来使えそうだから市場を調べる」は禁止**（好奇心駆動のResearchはHI-10が実行理由として認めない）。発火順序は必ず次であり、**問題が無ければ §2 の `NO_ACTION` で止まる**。
+
+```
+実測された具体問題 → Action Gate（§2）→ 媒体非依存の問題へ抽象化 → Relevant Prior探索
+```
+
+**探索対象は問題に応じて選ぶ。以下は候補例であってチェックリストではない。毎回全部を見ない。**
+
+GitHub / OSS / 既存製品 ・ standards / protocols ・ papers / documentation / APIs ・ Evolution / Ecology ・ Control Theory / Cybernetics ・ Markets / Economics ・ Immune Systems ・ Distributed Systems ・ Information Theory / Compression ・ Collective Intelligence ・ Brain / Cognitive ・ AI / Software-native
+
+**深掘りは最大3件まで**（Step 3 と同じ規律）。各Priorから抜き出すのは、そのシステム丸ごとではなく**効いている最小の transferable mechanism** である。
+
+**Cross-System Convergence**: 複数の独立系統が同じ抽象問題へ似た解で収束している場合、**強いPrior Signal**として扱う（例: brain forgetting / ecological extinction / immune tolerance / software garbage collection が「価値のない構造を永続保持すると系が劣化する」へ収束）。**ただし採用条件ではない。Reality > Cross-System Prior > Internal elegance。**
+
+**丸ごと模倣しない。** 見つけたシステムをそのままFactoryへ持ち込まない。必ず次の順で確認する。
+
+1. そのシステムは**何の問題**を解いているか
+2. **効いている最小Mechanism**は何か
+3. **Factoryの既存Mechanismで既に解けていないか**
+
+**既存で解けているなら REUSE existing / NO_CHANGE を優先する。**
+
+**自動Skill化はしない。** 見つけた知識から自動でSkillを生成しない。新Skillの作成は、**同型問題が再発し、Realityでの必要性が確認された場合にだけ別途判断する。**「役に立ちそう」はMechanism追加の理由にならない。
+
+**Step 3 へは戻らない。** Step 3 は GitHub repository固有の検証（README / LICENSE / commit / release / issue / PR）であり、Biology / Markets / Control Theory / papers 等へはそのまま適用できない。Cross-System側は **そのPriorに適切な一次情報で検証する**（論文なら原論文、規格なら規格本文、市場なら公開された行動データ。二次情報の要約で代替しない — HI-4 F9）。その後は **Factoryの既存Mechanismとの比較 → Smallest Transfer → Step 6 のRoute Selection** へ進む。**AI / Software-native解と必ず並べて比較する。** 出力は §5 の圧縮形式を使う。
 
 ### Step 3. 上位3件までを深く検証する
 広く集めた中から**最大3件**を選び、以下を**一次情報**（リポジトリ本体）から確認する。伝聞・要約記事で埋めない。
@@ -254,6 +284,23 @@ NO_ACTION — 今は着手しない
 
 **「承認待ちの次の一手」は1つに絞る。** 選択肢を並べてHumanに設計させない。
 
+### Cross-System Prior Branchが発火した場合（§4 Step 2-b）
+
+**大きな調査レポートを作らない。** 原則この形へ圧縮する。**必要以上の候補数・比較表・文献一覧を作らない。**
+
+```
+Observed Problem:
+Abstract Problem:
+Relevant Priors:
+- ...
+- ...
+Convergent Mechanism:
+Existing Factory Equivalent:
+Smallest Transfer:
+Smallest Reality Test:
+Verdict: REUSE / ADAPT / COMPOSE / BUILD / NO_ACTION
+```
+
 ---
 
 ## 6. 禁止事項
@@ -269,3 +316,6 @@ NO_ACTION — 今は着手しない
 - 候補を1件だけ見て結論を出すこと
 - **件数を埋めるためだけの検索をすること**（比較に効かない候補で数を作らない）
 - 承認を待たずに「ついでに」ファイルを作ること
+- **実測された問題が無いのにCross-System探索を始めること**（好奇心駆動のResearchはHI-10が実行理由として認めない）
+- **見つけたシステムを丸ごと導入すること**（最小Mechanismへ分解せずにinstall・全部入れ）
+- **見つけた知識から自動でSkillを生成すること**（同型問題の再発とRealityでの必要性の確認が先）
