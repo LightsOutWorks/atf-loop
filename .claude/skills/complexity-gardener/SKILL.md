@@ -15,7 +15,10 @@ description: Factoryが現在地を理解しRealityへ次のActionを返すま�
 
 ## 観測する7つ
 
-1. **Current Task Surface** — 参照タスク「E-014の次の一手を決める」を `OS.md` HI-12 の順序で読んだ時の合計字数。基準は **6,000字**（HI-12。**新しい上限を作らない**。これはHard Boundaryではなく、Evidenceで将来変更可能な運用基準である）
+1. **Current Task Surface** — **`CURRENT_STATE.md` が示す現在TARGETを判断するために、実際に取得する最小anchorの総量。** 基準は **6,000字**（HI-12。**新しい上限を作らない**。Hard BoundaryではなくEvidenceで変更可能な運用基準である）
+   - **Reality記録の総量ではない。** Realityを蓄積することと、現在の判断のためにReality全件を取得することは別である。**実験台帳の全文を毎回読む前提を作らない**
+   - **anchorはその時のTARGETから決める。特定の実験をこのSkillへhardcodeしない**（下の測り方は2026-08-14時点の calibration case であって恒久定義ではない）
+   - **必要anchorを特定できず全文Readが要る場合、それはReality量の問題ではなく `retrieval defect` である。** 当該文書を `SLIM` 候補として報告する。**新しいindex / schema / summary ledgerは作らない**
 2. **Boot Surface** — 新規sessionが現在地を得るまでに読む字数。**Historical本文を読まずに済んでいるか**を優先して見る
 3. **Layering Depth** — 現在値1つを得るために通過する層数（`不変更で保持` / `正本はこの追記側` / `訂正追記`）
 4. **Duplicate Governance** — 同一規則が複数の正本 / Skill / hook / workflow に重複していないか。**wording差によるdriftも見る**
@@ -27,19 +30,35 @@ description: Factoryが現在地を理解しRealityへ次のActionを返すま�
 
 Historical artifactが大量に存在すること自体は問題にしない。`works/` や `research/raw/` の**バイト数を理由に削除提案をしない**。問題にするのは **hot path（上の1・2）への混入**だけである。
 
+**Reality履歴の本体は Cold Memory として保持する** — 実験台帳の過去行 / Retrospective Seed Corpus / verbatim reaction / raw evidence。**削除も要約も提案しない**（要約は情報損失であり、`OS.md` HI-4 F5 の取得記録保持と衝突する）。Coldが厚いことは健全であり、**問題はColdをhotとして毎回読ませている retrieval 側にある**。
+
 ## 測り方
 
 ```bash
-# 1. Current Task Surface（HI-12 順序。字数は Python len。wc -m はPOSIXロケールでバイト数を返すので使わない）
+# 1. Current Task Surface
+#    手順: ①CURRENT_STATE §7 で現在TARGETを読む ②そのTARGETを判断するために実際に
+#    要るanchorだけを列挙する ③その合計を測る。台帳やcontractの全文を入れない。
+#    下の ANCHORS は 2026-08-14 の calibration case（TARGET = E-014 §6 trigger の発火）。
+#    TARGETが変われば書き換える。ここに実験名を固定しない。
+#    字数は Python len。wc -m はPOSIXロケールでバイト数を返すので使わない。
 python3 - <<'EOF'
-c=open('CURRENT_STATE.md',encoding='utf-8').read()
-s7=c[c.index('## 7. '):c.index('## 8. ')]
-parts={'CONSTRAINTS.md':open('CONSTRAINTS.md',encoding='utf-8').read(),
-       'CURRENT_STATE.md §7':s7,
-       'experiments/desire-to-game/LEDGER.md':open('experiments/desire-to-game/LEDGER.md',encoding='utf-8').read()}
-t=0
-for k,v in parts.items(): t+=len(v); print(f"{k:44s} {len(v):7d}")
-print(f"{'合計':44s} {t:7d}  / 基準 6000")
+def sec(p, start, end=None):
+    s = open(p, encoding='utf-8').read()
+    i = s.index(start)
+    return len(s[i:s.index(end, i+1)] if end else s[i:])
+ANCHORS = [
+  ('CONSTRAINTS.md 全文（HI-12 順序①）',
+   len(open('CONSTRAINTS.md', encoding='utf-8').read())),
+  ('CURRENT_STATE.md §7-0・§7（戦略と現在TARGET）',
+   sec('CURRENT_STATE.md', '## 7. Structural Bottleneck', '## 8. Routing Facts')),
+  ('EVAL_DESIRE_TO_GAME §6（現在TARGETの定義）',
+   sec('direction/EVAL_DESIRE_TO_GAME_2026-08.md', '## 6. 商品仮説のHOLD', '## 7. 正本との緊張点')),
+  ('LEDGER「G1 第三者Exposure — 実行メモ」（次Actionの手順・分岐・禁止）',
+   sec('experiments/desire-to-game/LEDGER.md', '### G1 第三者Exposure — 実行メモ', '### 7作品の一次確認から')),
+]
+t = 0
+for k, v in ANCHORS: t += v; print(f"{k:56s} {v:6d}")
+print(f"{'合計（最小anchor）':56s} {t:6d}  / 基準 6000")
 EOF
 
 # 3. Layering Depth（検出語を持つ本Skill自身とraw archiveは除く）
