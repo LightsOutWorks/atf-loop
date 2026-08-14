@@ -224,3 +224,58 @@ Human-confirmed のもののみ数える。未報告は `UNKNOWN` のまま扱�
 - 返信が発生したら: reply verbatim記録 → 3タグ分類（HOW / TIME / WHAT-gap）→ 次の最小質問を1つだけ生成 → **送信はHuman Gate**
 - 返信0のまま Day 3 を終えた場合、`SCALE` 判定は成立しない（xAI追加チャージの条件付き承認は発火しない）
   - > **訂正追記（2026-08-11 03:40 JST / Human amendment。原文は上のまま保持）**: 前段は**撤回**する。`SCALE` の必須条件から返信を外したため、**返信0でも `SCALE` は成立しうる**（判定は「Day 3 Final Verdict — Human amendment」節による）。また **`SCALE` と xAI追加チャージの連動そのものを解除**したため、`SCALE` が成立してもチャージは発火しない。チャージは独立した `HOLD` であり、解除条件5件は同節に記載。
+
+---
+
+## Final Verdict — `VOID`（記録 2026-08-14。追記のみ。上のDay 1 / Day 2記録は一切書き換えていない）
+
+**評価時点**: **2026-08-11 23:59 JST**（事前登録どおり。「Day 3 Final Verdict — Human amendment」§判定手順が定めた時点であり、結果を見てから動かしていない）。
+
+### 取得できたReality
+
+**Day 1（2026-08-09）のみ。** Human-confirmedの実測は次の4項目に尽きる。
+
+| 項目 | 値 | 等級 |
+|---|---|---|
+| 配達 | 4 | Human-confirmed（2026-08-09 22:45 JST） |
+| SENT | 4 | Human-confirmed（同上） |
+| REPLY | 0 | Human-confirmed（同上） |
+| Day 1実費 | **USD 0.1631** | response実測（`cost_in_usd_ticks`） |
+
+**Day 2 / Day 3 は、実行されたとも、されなかったとも断定しない。** trigger発火・候補生成・配達・送信・実費・join keyのいずれについても、**Human-confirmedの記録も再現可能なartifactも存在しない**ため検証不能である。trigger設定自体が非公開Claude Codeセッション内のprivate session stateであり、repositoryから独立検証できない（`CURRENT_STATE.md` §9 Evidence Index「Daily Encounter Queue trigger設定」= repo-unverified）。**予定時刻の経過を実行の証拠として扱わない**（本台帳 運用規則2 / `CONSTRAINTS.md` Part I §6）。
+
+### Verdict
+
+> **`VOID`** — 供給そのものの成立を検証できなかった（記録欠損により検証不能）。
+
+判定は「Day 3 Final Verdict — Human amendment」§Verdict表の `VOID` 行（*供給そのものが成立しなかった（trigger未発火 / 生成0件 / 記録欠損で検証不能）*）にそのまま該当する。Step 2 の5件（品質バー / join key欠損なし / 重複・Boundary違反・cap超過0 / `VOID` と `FAIL` の非混同 / 帰属可能性）は、**Day 2・Day 3分の入力が `UNKNOWN` であるため評価に入れない。** Day 1分だけを取り出して合否を作らない。
+
+**`FAIL` ではない。`KILL` でもない。**
+
+- Boundary違反・cap超過・品質バーを下げて枠を埋めた事実は、**観測されていない**（Day 1は7候補中3件をKILLして4件のみ配達）。`KILL` の条件に該当しない。
+- 供給が成立したかを検証できていない以上、供給・抽出条件・仮説のいずれについても不合格を出せない。
+
+### この結果から学習しないこと（`CONSTRAINTS.md` Part I §6: `VOID` を `FAIL` として学習しない）
+
+1. **需要について学習しない。** REPLY 0 は市場需要の反証ではない。実測返信率 1/21 ≈ 4.8%（`Derived`）を真値と仮定しても n=12 で返信0となる確率は約56%であり、n=4 では更に高い。反証には n ≈ 33 が要る（`Derived`。「Day 3 Final Verdict — 事前登録」§解釈規律1〜3。amendmentにより**そのまま有効**）。
+2. **返信率について学習しない。** 1/21 の95%CI（Wilson）は約1%〜23%であり、値は決まっていない。
+3. **候補の品質について学習しない。** Day 1の4件は本文照合済み・重複0で配達されたが、Day 2 / Day 3の品質は観測が存在しない。存在しない観測から品質の低下も維持も導かない。
+4. **抽出条件を変更しない。** 変更判断の事前登録trigger（`experiments/batch-1/LEDGER.md` Reply Log 003）は本Verdictでは充足しない。
+
+### E-013の終了
+
+- **E-013はここで終了する。** status = `HISTORICAL — result: VOID`（`experiments/INDEX.md`）。
+- **Day 4以降の自動継続は無い。** 恒久recurring scheduleは設定していない（3日限定設計。`CURRENT_STATE.md` §7）。
+- **xAI追加チャージは発生しない。** USD 10 チャージは独立 `HOLD` のままであり（「Day 3 Final Verdict — Human amendment」§USD 10 チャージ）、`VOID` はその解除条件5件のいずれも満たさない。auto top-up は OFF。
+- 累計実費のうち**確認できるのは Day 1 の USD 0.1631 のみ**。Day 2 / Day 3 実費は `UNKNOWN` であるため、3日累積実費は「**USD 0.1631 以上・上限 USD 0.50 を超えたという観測は無い**」としか書けない。**「cap内に収まった」と断定しない。**
+
+### 再試行の条件（再登録する場合）
+
+再試行は E-013 の継続ではなく、**新しい事前登録**として起こす。最低条件:
+
+1. **private session state依存を外す。** trigger発火・候補生成・配達の各時点が、repositoryまたは再取得可能なartifactから独立検証できること。実行主体が非公開セッションであること自体が本 `VOID` の直接原因である。
+2. 各日の実費が response実測（`cost_in_usd_ticks`）として台帳へ着地すること。
+3. 未報告時の既定が `UNKNOWN` であることを維持し、予定時刻の経過を実行の証拠にしないこと。
+4. 供給量（n）と、その n で何を判定できるか・できないかを事前に書くこと（n=12 が返信率について何も判定できない検出力であったことは、既に本台帳に記録済み）。
+
+**本 `VOID` は E-013 の設計思想（join keyを送信時点で確定記録する）の反証ではない。** 反証されたのは**実行経路の検証可能性**であり、修復対象はそこである（`OS.md` Layer2「探索と固定」E-6: VOIDは戦略の失敗を意味しない。検証方法を修復して再登録する）。
