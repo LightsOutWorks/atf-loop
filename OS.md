@@ -44,7 +44,7 @@ Amended v1.2 — 2026-08-09(D-004: Human Interface — Operator Priors節を追�
 Amended v1.3 — 2026-08-10(D-006: HI-10 Action Default（`NO_ACTION`）とHI-11 権限分界を追加。HI-2の「既定はやる」の適用範囲を着手後のHandoffへ限定。Layer2「探索と固定」Bへ成立条件10〜12を追加。HI-4 F5へObserved / Derivedの区別を追加。Layer1の既存原則は変更していない)
 Amended v1.4 — 2026-08-10(D-007: Layer2「探索と固定」Aへ探索範囲の交差条件を1段落追加。HI-10 条件5とHI-11 Humanリストは行内参照のみ。新設した節は無く、Layer1・HI-10の7条件・HI-11の分界は変更していない)
 Amended v1.5 — 2026-08-10(D-008: HI-12 取得規律を追加。上限・順序・棄却の条件・字数境界の4つだけを持ち、既存規則を再掲しない。Layer1・HI-10・HI-11・Layer2は変更していない)
-Amended v1.6 — 2026-08-14(D-011: HI-4 R1注釈の C0 結合をpin移動後の事実へ訂正。HI-12 の `CONSTRAINTS.md` 字数と Part II の所在を更新。規律本体は変更していない ／ D-012: Layer2へ「Architecture候補の探索 — Cross-System Priors」を1節追加。Layer1・HI-1〜HI-12・Layer2の既存節は変更していない)
+Amended v1.6 — 2026-08-14(D-011: HI-4 R1注釈の C0 結合をpin移動後の事実へ訂正。HI-12 の `CONSTRAINTS.md` 字数と Part II の所在を更新。規律本体は変更していない ／ D-012: Layer2へ「Architecture候補の探索 — Cross-System Priors」を1節追加。原則のみを持ち、参照系統の索引・具体例・実務上の問い・先回り禁止例は `DECISIONS.md` D-012 が持つ。Layer1・HI-1〜HI-12・Layer2の既存節は変更していない)
 
 Status: **LOCKED**
 Layer1 frozen until evidence exists / Layer2 evidence-driven evolution / Layer3 continuous implementation
@@ -508,55 +508,9 @@ Human Desire → Objective（人間） → Selection（Factory） → Execution�
 
 ### Architecture候補の探索 — Cross-System Priors（2026-08-14 / D-012）
 
-> **長期実証済みのシステムからPriorを盗む。どれも設計図にはしない。**
+**Architecture問題が実測された時だけ**、問題を媒体非依存に抽象化し、関連する長期実証済み系統と AI / Software-native 解を **Prior** として参照する。**複数の独立系統への収束は強いPriorだが、採用条件ではない。** 特定分野を設計図にしない。**Reality > Cross-System Prior > Internal elegance。** 問題が無ければ `NO_ACTION`（HI-10）。
 
-Reality Selectionを長く通過してきた系統は「解法ライブラリ」として参照してよい。**設計図としては使わない。** 或る分野に或る仕組みが存在することは、それ自体では導入理由にならない（HI-4 F1 Capability先行と同型）。**Prior / Factory = Independent Search / Reality = Judge。優先順位は常に Reality > Cross-System Prior > Internal elegance。**
-
-```
-Factory Problem → Abstract Problem → Cross-System Priors → AI-native Alternatives
-  → Smallest Test → Reality Selection → Retain / Prune
-```
-
-1. **Factory自身から問題を観測する。** Realityまたは実運用から出ていない問題を、他分野を理由に先回りして解かない
-2. **媒体非依存の抽象問題へ言い換える。** 「脳の○○が要る」ではなく「有限の認知資源でRelevant informationへ高速に到達する必要がある」の形にする
-3. **関係する系統からだけ解法を集める**（下表。**毎回全分野を調べない**）。**どれもDefaultにせず、AI・Software-nativeと新規異種の候補を常に1つずつ残す**
-4. **最小コストで違いが観測できる実装だけRealityへ出す**（§5 Goal First）
-5. **RealityでSelectionする。** 別解が勝ったら既存の知恵を捨てる（§12 No Teacher / Operating Philosophy 7）
-
-| 系統 | 主に借りるもの |
-|---|---|
-| Evolution / Ecology | Variation / Selection / Retention / Extinction / **Evolvability** / Robustness / Modularity / Niche / Diversity |
-| Control Theory / Cybernetics | **Observability / Controllability** / Feedback と遅れ / Stability / Noise / Adaptive control |
-| Markets / Economics | 分散した私的情報が、中央集約なしに行動・価格・取引へ圧縮されて返ってくること |
-| Immune Systems | Memory / Recognition / **Tolerance / Response threshold** / Overreaction avoidance |
-| Distributed Systems | Fault tolerance / Local failure / Idempotency / Retry / State isolation / **Graceful degradation** / 同期強度の選択 |
-| Information Theory / Compression | 記録量ではなく**次の判断を変える情報**を持つこと |
-| Collective Intelligence / Swarm | Decentralization / Local interaction / Shared environment / Stigmergy / Self-organization |
-| Brain / Cognitive | Attention / Forgetting / 記憶の分離 / Selective retrieval / Sparse activation / Consolidation / Credit assignment |
-| AI / Software-native | 正確な記憶・大量の並列化・Architecture自体の変更・完全な履歴保持・能力単位の交換・外部Tool利用 |
-
-**Cross-System Convergence を強いPriorとして扱う。** 制約も媒体も異なる複数の系統が同じ抽象問題へ似た解を採っている場合、単一分野の模倣より強い。例: forgetting / tolerance / extinction / garbage collection / sunset は「**価値を失った構造を永続保持しない**」への独立収束である。**ただしScoreにしない。「N分野が一致したら採用」のような固定判定規則を作らない。Reality判定の代わりにはならない。**
-
-**分野名ではなく、問いとして持つもの**:
-
-- **「今もっとも性能が高いか」だけでなく「次に安全に変異できるか」。** 現在性能だけを最大化して、将来変更できない構造にしない
-- **その状態を観測できているか。Factory側からその変数を動かせるか。** 観測不能・操作不能な対象を内部推論だけで最適化しない（到達性の現在値は `CURRENT_STATE.md` §7）
-- **一部が壊れても全体が止まらないか。** 全stateの常時完全同期を前提にしない。**ただし支払い・permission・公開・credential・破壊的操作は既存のHuman Gateと強い一貫性を維持する**（`CONSTRAINTS.md` §4）
-- **Agent同士を大量に会話させる必要が本当にあるか。** 一方がartifact / state changeを残し、他方がその結果を見るだけで成立するなら、直接通信を増やさない
-
-**分野固有の制約まで模倣しない。** Biology（エネルギー / 身体 / 繁殖 / 寿命 / 変更コスト）/ Markets（貨幣 / 誘因 / 所有）/ Distributed systems（レイテンシ / 機械故障）/ Immune（生物学的生存）/ Organizations（人間の誘因 / 政治）は、Factoryに無い制約を含む。導入前に**一般的な知能・適応問題への解か / その系統固有の制約への妥協か**を必ず分ける。
-
-**独立収束はSignalである。** Factory側の実測から独立に必要になった構造が、後から他系統にも見つかった場合、コピーではなく**異なる媒体が同じ問題へ収束した可能性**として扱う。**その場合に限り**「同じ問題について他系統にFactoryが未発見の解があるか」を追加探索してよい。
-
-**因果順序を逆転させない。** 既に採用した機構へ、後から他分野の理由づけを与えない（HI-4 F5 / F9）。
-
-**Factory Architecture自身も §7 Evolution の対象である** — Variation → Reality Test → Selection → Retention / Pruning。最終形は、脳に似た部分・市場に似た部分・進化に似た部分・分散システムに似た部分・**どこにも無いFactory-native構造**が混在してよい。**Factoryはどの既存分野にも所属しない。**
-
-**発火条件**: Factory自身で具体的なArchitecture問題が観測された時のみ。**「面白そうだから調べる」は禁止。** 問題が無ければ `NO_ACTION`（HI-10）。
-
-**再掲しないもの（既存正本が持つ）**: 単発の失敗・1回のHuman修正で恒久ルールを増やさない（Factory版の自己免疫回避）= **HI-4 F6**。蓄積するのはログ量ではなく次の意思決定を変えるReality = **D-010 Decision 2**。市場Signalの階層と内部指標の扱い = **`DESIRES.md` §5 / HI-4 F2 / D-002**。
-
-**先回りで作らないもの**: Brain Architecture framework / Cognitive module一覧 / 記憶分類体系 / 人工海馬・人工前頭前野 / Sleep cycle automation / Neuroscience dashboard / Brain-inspired agent群 / **Genome System / pricing engine / agent swarm / Learning Compression Ratio 等の新KPI / Cross-System判定の恒久checklist・Score** / 新しいcanonical layer / 各分野の用語を使った恒久schema。
+参照系統の一覧と借りるもの・収束の具体例・実務上の問い・分野固有制約の分離・先回りで作らないものは `DECISIONS.md` D-012 が持つ。**本節は原則のみを持ち、詳細を持たない。**
 
 ### 探索と固定（Exploration / Commitment）
 

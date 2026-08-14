@@ -13,11 +13,24 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 - **Decision**: `OS.md` Layer2 へ **「Architecture候補の探索 — Cross-System Priors」1節だけ**を置く。要点は次の7つで、いずれも既存規則の**適用**であり新原則ではない。
   1. **長期実証済みの系統は解法ライブラリとして参照してよいが、設計図としては使わない。** 或る分野に或る仕組みが存在することは、それ自体では導入理由にならない。**Prior / Factory = Independent Search / Reality = Judge。優先順位は常に Reality > Cross-System Prior > Internal elegance。**
   2. **探索順序**: Factory Problem → Abstract Problem → Cross-System Priors → AI-native Alternatives → Smallest Test → Reality Selection → Retain / Prune。**関係する系統だけを必要時に使い、毎回全分野を調べない。どれもDefaultにせず、AI・Software-nativeと新規異種の候補を常に1つずつ残す。**
-  3. **参照する系統と借りるもの**を1つの表で持つ（Evolution / Ecology・Control Theory / Cybernetics・Markets / Economics・Immune Systems・Distributed Systems・Information Theory / Compression・Collective Intelligence / Swarm・Brain / Cognitive・AI / Software-native）。**表は参照先の索引であって、チェックリストではない。**
+  3. **参照する系統と借りるもの**は次の索引で持つ。**チェックリストではない。関係する系統だけを必要時に引く。**
+
+     | 系統 | 主に借りるもの |
+     |---|---|
+     | Evolution / Ecology | Variation / Selection / Retention / Extinction / **Evolvability** / Robustness / Modularity / Niche / Diversity |
+     | Control Theory / Cybernetics | **Observability / Controllability** / Feedback と遅れ / Stability / Noise / Adaptive control |
+     | Markets / Economics | 分散した私的情報が、中央集約なしに行動・価格・取引へ圧縮されて返ってくること |
+     | Immune Systems | Memory / Recognition / **Tolerance / Response threshold** / Overreaction avoidance |
+     | Distributed Systems | Fault tolerance / Local failure / Idempotency / Retry / State isolation / **Graceful degradation** / 同期強度の選択 |
+     | Information Theory / Compression | 記録量ではなく**次の判断を変える情報**を持つこと |
+     | Collective Intelligence / Swarm | Decentralization / Local interaction / Shared environment / Stigmergy / Self-organization |
+     | Brain / Cognitive | Attention / Forgetting / 記憶の分離 / Selective retrieval / Sparse activation / Consolidation / Credit assignment |
+     | AI / Software-native | 正確な記憶・大量の並列化・Architecture自体の変更・完全な履歴保持・能力単位の交換・外部Tool利用 |
   4. **Cross-System Convergence を強いPriorとして扱う。** 制約も媒体も異なる複数系統が同じ抽象問題へ似た解を採っている場合（例: forgetting / tolerance / extinction / garbage collection / sunset →「価値を失った構造を永続保持しない」）、単一分野の模倣より強い。**ただしScoreにせず、「N分野が一致したら採用」のような固定判定規則を作らない。Reality判定の代わりにはならない。**
   5. **分野名ではなく問いとして持つ4点**: ①「今もっとも性能が高いか」だけでなく**「次に安全に変異できるか」** ②**その状態を観測できているか / Factory側からその変数を動かせるか**（観測不能・操作不能な対象を内部推論だけで最適化しない）③**一部が壊れても全体が止まらないか**（全stateの常時完全同期を前提にしない。**ただし支払い・permission・公開・credential・破壊的操作は既存のHuman Gateと強い一貫性を維持する** — `CONSTRAINTS.md` §4）④**Agent同士を大量に会話させる必要が本当にあるか**（artifact / state change経由で成立するなら直接通信を増やさない）。
   6. **分野固有の制約まで模倣しない。** Biology（エネルギー / 身体 / 繁殖 / 寿命）/ Markets（貨幣 / 誘因 / 所有）/ Distributed systems（レイテンシ / 機械故障）/ Immune（生物学的生存）/ Organizations（人間の誘因 / 政治）はFactoryに無い制約を含む。導入前に**一般的な知能・適応問題への解か / その系統固有の制約への妥協か**を必ず分ける。
   7. **独立収束はSignalであり、因果順序を逆転させない。** Factory側の実測から独立に必要になった構造が後から他系統にも見つかった場合はコピーではなく収束として扱い、**その場合に限り**追加探索してよい。既に採用した機構へ後から他分野の理由づけを与えない。
+  8. **Factory Architecture自身も `OS.md` §7 Evolution の対象である**（Variation → Reality Test → Selection → Retention / Pruning）。最終形は、脳に似た部分・市場に似た部分・進化に似た部分・分散システムに似た部分・**どこにも無いFactory-native構造**が混在してよい。**Factoryはどの既存分野にも所属しない。**
 - **Why**: 本方針の実質的な新規性は**「特定分野へのアンカリングを禁じること」と「Cross-System Convergenceを単一分野より強いPriorとして扱うこと」の2点**である。それ以外は既存正本が既に持っている——**Reality > Prior は §12 No Teacher**、**Variation → Reality Test → Selection は §7 Evolution**、**問題先・提案後の順序は Operating Philosophy 2**、**優位構造への置換は Operating Philosophy 7 / §6 Capability First**、**先回り建造の禁止は HI-10 Non-goals と `ROADMAP.md` §6**、**Need未確認での機構着手は HI-4 F1**、**単発の失敗やHuman修正1件で恒久ルールを増やさない（Factory版の自己免疫回避）は HI-4 F6**、**蓄積するのはログ量ではなく次の意思決定を変えるRealityは D-010 Decision 2**、**市場Signalの階層と内部指標の扱いは `DESIRES.md` §5 / HI-4 F2 / D-002**。したがって新設したのは1節のみで、これらは節内で**参照するだけで再掲していない**。
 - **発火条件**: Factory自身で具体的なArchitecture問題が観測された時のみ。**常時Researchテーマにしない。「面白そうだから脳・免疫・市場を研究する」は禁止**で、問題が無ければ `NO_ACTION`（HI-10）。
 - **設計上の選択（何を追加しなかったか）**: 新しい正本ファイル・管理文書・Skill・Research lane・Agent・評価機構・Capability・schema・恒久語彙・Experiment IDをいずれも作っていない。同節に**先回りで作らないもの**として次を明記した——Brain Architecture framework / Cognitive module一覧 / 記憶分類体系 / 人工海馬・人工前頭前野 / Sleep cycle automation / Neuroscience dashboard / Brain-inspired agent群 / **Genome System / pricing engine / agent swarm / Learning Compression Ratio 等の新KPI / Cross-System判定の恒久checklist・Score** / 新しいcanonical layer / 各分野の用語を使った恒久schema。
