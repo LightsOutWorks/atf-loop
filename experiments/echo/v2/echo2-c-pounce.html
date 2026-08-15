@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ECHO じゃれる</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#ffe0cc;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+    overscroll-behavior:none;touch-action:none;}
+  #c{display:block;width:100%;height:100%;touch-action:none;}
+</style></head><body>
+<canvas id="c"></canvas>
+<script>
+const VARIANT='c-pounce';
+const CFG={
+  size:66, earLen:2.40, earW:0.72, earRest:0.34, earHappy:0.70, earBack:0.90,
+  earK:0.072, earD:0.130, grav:0.62, fric:0.86, accel:0.80, maxv:7.5,
+  hopV:11.0, hopRate:0.030, idleHop:0.048, pokeKick:2.6, eventEvery:5200,
+  voice:{base:700, ty:'triangle', gain:0.9, chirps:3, wobble:false}
+};
+const PAL={sky0:'#fff6ef',sky1:'#ffe0cc',ground:'#f0c9a0',groundTop:'#d9a273',
+  body:'#ffc36e',belly:'#fff2d4',limb:'#f0a94e',inner:'#ff9aa2',eye:'#3d2a1a',mouth:'#d1495b',
+  ball:'#66c2a5',p0:'#8fd694',p1:'#ff9aa2',p2:'#a89af0',p3:'#ffd670'};
+const VAR={
+  init(){ E.hunt=0; E.pounceCd=0; },
+  update(dt,k,now){
+    E.pounceCd-=dt;
+    // 指を「獲物」として追う。近づくと飛びかかる
+    const hunting = ptr.down && !ptr.dragFood;
+    if(hunting){ E.hunt=1;
+      const dx=ptr.x-E.x;
+      if(!ptr.onBody){
+        E.vx += Math.sign(dx)*CFG.accel*1.1*k;
+        if(Math.abs(E.vx)>CFG.maxv)E.vx=Math.sign(E.vx)*CFG.maxv;
+        if(E.y>=GROUND-bodyR()-1 && Math.abs(dx)<160 && E.pounceCd<=0){
+          E.vy=-CFG.hopV; E.vx=Math.sign(dx)*CFG.maxv; E.pounceCd=750; voice('find');
+          E.earLv+=0.35;E.earRv+=0.35; note('飛びかかってきた');
+        }
+      } else { E.vx*=0.80; }
+      E.earLv+=0.020*k; E.earRv+=0.020*k;
+    } else E.hunt=0;
+    if(E.state==='idle'&&!hunting&&E.y>=GROUND-bodyR()-1&&Math.random()<0.010*k){
+      E.vx=rnd(-CFG.maxv,CFG.maxv)*0.8; E.vy=-CFG.hopV*0.5; voice('move'); }
+  },
+  grab(x,y){ E.sqv+=0.6; voice('happy'); },
+  drag(x,y,dx,dy){ E.vx+=dx*0.16; E.vy+=dy*0.10;
+    if(Math.random()<0.06) voice('touch'); },
+  release(x,y,moved,dur){ if(dur>1500){ E.vx+=rnd(-6,6); voice('dislike');
+      S.trust=clamp(S.trust-0.03,-1,1); note('つかまえ続けたら暴れた'); }
+    else if(moved>60){ voice('happy'); S.trust=clamp(S.trust+0.02,-1,1); } },
+  onStroke(){ E.vy=-2.2; },
+  onPoke(){ E.vy=-4.2; E.vx*=1.5; },
+  onEat(l){ if(l>0){E.vy=-5;voice('happy');} },
+  overlay(now,r){ if(E.hunt&&!ptr.onBody){ ctx.save();
+      ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(ptr.x,ptr.y,10+Math.sin(now/120)*3,0,TAU);ctx.stroke();ctx.restore(); } }
+};
+
+const TAU=Math.PI*2, clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const rnd=(a,b)=>a+Math.random()*(b-a), pick=a=>a[(Math.random()*a.length)|0];
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function fit(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR|0;cv.height=H*DPR|0;cv.style.width=W+'px';cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);GROUND=H*0.78;}
+addEventListener('resize',fit);
+let GROUND=0;
+
+/* ---------- SOUND (L-9) ---------- */
+let AC=null, MASTER=null;
+function audioOn(){ if(AC){ if(AC.state==='suspended')AC.resume(); return; }
+  try{AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended')AC.resume();
+  MASTER=AC.createGain();MASTER.gain.value=0.5;MASTER.connect(AC.destination);}catch(e){} }
+function voice(kind){
+  if(!AC) return;
+  const t=AC.currentTime, V=CFG.voice;
+  const spec={
+    touch:{f:V.base*1.0,d:0.10,ty:V.ty,g:0.20,sl:1.06},
+    happy:{f:V.base*1.35,d:0.20,ty:V.ty,g:0.26,sl:1.5},
+    dislike:{f:V.base*0.62,d:0.22,ty:'sawtooth',g:0.18,sl:0.78},
+    move:{f:V.base*0.9,d:0.05,ty:'triangle',g:0.07,sl:1.0},
+    find:{f:V.base*1.6,d:0.26,ty:V.ty,g:0.24,sl:1.9},
+    big:{f:V.base*1.15,d:0.6,ty:V.ty,g:0.3,sl:1.25},
+    call:{f:V.base*1.2,d:0.16,ty:V.ty,g:0.2,sl:1.3}
+  }[kind]; if(!spec) return;
+  const n=V.chirps||1;
+  for(let i=0;i<n;i++){
+    const o=AC.createOscillator(), g=AC.createGain(), st=t+i*(spec.d*0.55);
+    o.type=spec.ty; const grow=1+(S.voiceShift||0);
+    o.frequency.setValueAtTime(spec.f*grow,st);
+    o.frequency.exponentialRampToValueAtTime(Math.max(40,spec.f*grow*spec.sl),st+spec.d);
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(spec.g*V.gain,st+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+spec.d);
+    o.connect(g);g.connect(MASTER);o.start(st);o.stop(st+spec.d+0.05);
+  }
+  if(V.wobble){ const o=AC.createOscillator(),g=AC.createGain();
+    o.type='sine';o.frequency.setValueAtTime(spec.f*0.5,t);
+    g.gain.setValueAtTime(0.06*V.gain,t);g.gain.exponentialRampToValueAtTime(0.0001,t+spec.d*1.4);
+    o.connect(g);g.connect(MASTER);o.start(t);o.stop(t+spec.d*1.5);}
+}
+function thud(v){ if(!AC)return; const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+  o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(50,t+0.12);
+  g.gain.setValueAtTime(Math.min(0.25,0.05+v*0.02),t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+  o.connect(g);g.connect(MASTER);o.start(t);o.stop(t+0.16);}
+
+/* ---------- STATE (数字はUIに一切出さない) ---------- */
+const S={
+  trust:0, energy:1, curiosity:0.5, indep:0,   // indep>0: 自分でやる / <0: player待ち
+  interfered:0, letBe:0, touches:0, fed:0, played:0, helped:0, called:0, answered:0,
+  lastInputAt:0, awayReact:null, voiceShift:0, bodyGrow:0, colorShift:0,
+  likes:{}, log:[], askPhase:0, askDone:null, born:performance.now()
+};
+const FOODS=['leaf','berry','nut'];
+FOODS.forEach(f=>{S.likes[f]=0;});
+const TRUE_LIKE = pick(FOODS), TRUE_HATE = pick(FOODS.filter(f=>f!==TRUE_LIKE));
+function note(t){ S.log.push({t,at:performance.now()}); if(S.log.length>60)S.log.shift(); }
+
+/* ---------- ECHO body ---------- */
+const E={
+  x:0,y:0,vx:0,vy:0, face:1, sq:1, sqv:0,        // squash
+  earL:0,earR:0, earLv:0, earRv:0,               // ear angle springs
+  blink:0, blinkT:1.4, mouth:0, look:{x:0,y:0},
+  state:'idle', st:0, target:null, hold:false, stuck:0, carry:null,
+  hop:0, step:0
+};
+function bodyR(){ return CFG.size*(1+S.bodyGrow*0.22); }
+
+/* ---------- WORLD ---------- */
+const items=[];   // 見つけて持ってきた物 = 物語の物的証拠 (L-8)
+const props=[];   // 落ちている小物
+const foodOnGround=[];
+let ball=null;
+function spawnProps(){ props.length=0;
+  for(let i=0;i<5;i++) props.push({x:rnd(W*0.1,W*0.9), y:GROUND-rnd(0,6), k:(Math.random()*4)|0, taken:false}); }
+
+/* ---------- INPUT ---------- */
+let ptr={down:false,x:0,y:0,px:0,py:0,t0:0,moved:0,onBody:false,dragFood:null,dragEcho:false};
+let lastTap=0, ripples=[];
+function bodyHit(x,y){ const r=bodyR()*1.7; return Math.hypot(x-E.x,y-E.y)<r; }
+function onDown(x,y){
+  audioOn(); S.lastInputAt=performance.now();
+  const f=foodOnGround.find(o=>Math.hypot(x-o.x,y-o.y)<38);
+  const bb=(!f&&ball&&Math.hypot(x-ball.x,y-ball.y)<44)?ball:null;
+  ptr={down:true,x,y,px:x,py:y,t0x:x,t0y:y,t0:performance.now(),moved:0,vx:0,vy:0,
+       onBody:(!f&&!bb&&bodyHit(x,y)),dragFood:f||null,dragBall:bb,dragEcho:false};
+  if(f) f.held=true;
+  if(bb){ bb.held=true; bb.rest=1; bb.vx=0; bb.vy=0; }
+  if(ptr.onBody){ VAR.grab(x,y); }
+}
+function onMove(x,y){
+  if(!ptr.down) return; S.lastInputAt=performance.now();
+  const dx=x-ptr.px, dy=y-ptr.py; ptr.moved+=Math.hypot(dx,dy); ptr.vx=dx; ptr.vy=dy;
+  if(ptr.dragFood){ ptr.dragFood.x=x; ptr.dragFood.y=y; }
+  else if(ptr.dragBall){ ptr.dragBall.x=x; ptr.dragBall.y=y; }
+  else if(ptr.onBody){ VAR.drag(x,y,dx,dy); }
+  ptr.px=x;ptr.py=y;ptr.x=x;ptr.y=y;
+}
+function onUp(x,y){
+  if(!ptr.down) return; const dur=performance.now()-ptr.t0;
+  S.lastInputAt=performance.now();
+  if(ptr.dragFood){ ptr.dragFood.held=false; ptr.dragFood.y=Math.min(ptr.dragFood.y,GROUND-8);
+    offerFood(ptr.dragFood); }
+  else if(ptr.dragBall){ const b=ptr.dragBall; b.held=false; b.rest=0;
+    b.vx=clamp(ptr.vx*1.6,-17,17); b.vy=clamp(ptr.vy*1.6,-19,6);
+    if(Math.abs(b.vx)+Math.abs(b.vy)>2.5){ S.played++; voice('find'); note('ボールを投げた');
+      E.state='chase'; E.st=0; } }
+  else if(ptr.onBody){
+    if(ptr.moved<8 && dur<300) poke(x,y);
+    else if(ptr.moved>=8 && ptr.moved<90) stroke();
+    tryAsk(x); VAR.release(x,y,ptr.moved,dur);
+  } else {
+    if(ptr.moved<12 && dur<400) callEcho(x,y);      // 空きスペースの1タップ = 呼ぶ
+    else { ripples.push({x,y,r:0,a:1}); tryAsk(x); }
+  }
+  ptr.down=false;
+}
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);onDown(e.clientX,e.clientY);});
+cv.addEventListener('pointermove',e=>onMove(e.clientX,e.clientY));
+cv.addEventListener('pointerup',e=>onUp(e.clientX,e.clientY));
+cv.addEventListener('pointercancel',()=>{ptr.down=false;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- L-1 撫でる / つつく / 引っ張る ---------- */
+let strokeAcc=0;
+function stroke(){
+  S.touches++; strokeAcc++; S.trust=clamp(S.trust+0.035,-1,1);
+  E.mouth=0.7; E.earL=lerp(E.earL,CFG.earHappy,0.5); E.earR=lerp(E.earR,CFG.earHappy,0.5);
+  E.sqv-=0.9; voice(strokeAcc%3===0?'happy':'touch'); note('なでられた');
+  VAR.onStroke();
+}
+function poke(x,y){
+  if(help()) return;            // L-6 助ける
+  if(interrupt()) return;       // L-5 邪魔する
+  S.touches++; S.trust=clamp(S.trust-0.012,-1,1);
+  E.earL=-CFG.earBack; E.earR=-CFG.earBack*0.7; E.mouth=-0.6; E.sqv+=1.3;
+  E.vx += (E.x<x?-1:1)*CFG.pokeKick; voice('dislike'); note('つつかれた');
+  VAR.onPoke(x,y);
+}
+
+/* ---------- L-2 呼ぶ ---------- */
+// 純関数。副作用が無いのでMachine Evaluationが軸を独立に振れる（Round 1 Learning 3）。
+function decideCall(trust,indep,rr){ return (0.15 + trust*0.90 - indep*0.45 + (rr-0.5)*0.6) > 0; }
+function callEcho(x,y){
+  S.called++; voice('call'); ripples.push({x,y,r:0,a:1,call:true});
+  E.look.x=x;E.look.y=y;
+  // 耳が先に向く（C-4の核）
+  const dir = x<E.x?-1:1; E.earLv += dir*0.5; E.earRv += dir*0.5;
+  const willCome = decideCall(S.trust,S.indep,Math.random());
+  if(willCome){ S.answered++; E.state='come'; E.st=0; E.target={x,y}; note('呼んだら来た'); }
+  else if(Math.random()<0.5){ E.state='earonly'; E.st=0; note('耳だけ向いた'); }
+  else { note('呼んでも来なかった'); }
+}
+
+/* ---------- L-3 与える ---------- */
+function offerFood(f){
+  const d=Math.hypot(f.x-E.x,f.y-E.y);
+  if(d>bodyR()*3.2) return;
+  const like = f.k===TRUE_LIKE?1 : f.k===TRUE_HATE?-1 : 0;
+  S.fed++; S.likes[f.k]=clamp(S.likes[f.k]+(like||0.15),-2,2);
+  if(like>=0){ S.trust=clamp(S.trust+(like?0.12:0.05),-1,1); S.energy=clamp(S.energy+0.2,0,1.4);
+    E.mouth=1; E.earL=CFG.earHappy;E.earR=CFG.earHappy; voice(like?'happy':'touch');
+    note(like?'すごく好きなものを食べた':'食べた'); f.gone=true; VAR.onEat(like); }
+  else { E.mouth=-1; E.earL=-CFG.earBack;E.earR=-CFG.earBack; voice('dislike');
+    E.vx+=(E.x<f.x?-1:1)*2.2; note('嫌いなものだった'); f.rejected=true; VAR.onEat(-1); }
+}
+
+/* ---------- L-4 遊ぶ ---------- */
+function throwBall(x,y,vx){
+  ball={x,y,vx:clamp(vx*0.35,-14,14),vy:-5,r:13,rest:0};
+  S.played++; voice('find'); note('ボールを投げた');
+  E.state='chase'; E.st=0;
+}
+
+/* ---------- L-5/L-6/L-7/L-8 自発 ---------- */
+let nextEvent=2200;
+function autonomous(dt,now){
+  nextEvent-=dt;
+  if(E.state==='idle' && nextEvent<=0){
+    nextEvent = CFG.eventEvery*rnd(0.7,1.4);
+    const r=Math.random();
+    if(r<0.34){ const p=props.find(p=>!p.taken);
+      if(p){ E.state='fetch'; E.st=0; E.target=p; note('何かを見つけに行った'); } else E.state='mischief';
+    } else if(r<0.58){ E.state='mischief'; E.st=0; note('いたずらを始めた'); }
+    else if(r<0.74){ E.state='stuck'; E.st=0; E.stuck=0; voice('dislike'); note('はまって困っている'); }
+    else if(r<0.88){ E.state='play_alone'; E.st=0; note('ひとりで遊び始めた'); }
+    else { E.state='sleepy'; E.st=0; note('眠そうにしている'); }
+  }
+  // L-7 放っておく
+  const away = now - S.lastInputAt;
+  if(away>9000 && !S.awayReact){ S.awayReact=1; S.letBe++; note('しばらく放っておかれた'); }
+  if(away<400 && S.awayReact===1){ S.awayReact=null;
+    if(S.trust>0.3){ E.state='come';E.target={x:ptr.x||W/2,y:GROUND}; voice('happy'); note('戻ったら寄ってきた'); }
+    else if(S.trust<-0.1){ E.earL=-CFG.earBack;E.earR=-CFG.earBack; voice('dislike'); note('戻っても拗ねていた'); }
+  }
+}
+function interrupt(){ // L-5 邪魔する
+  if(['fetch','mischief','play_alone','sleepy'].includes(E.state)){
+    S.interfered++; S.indep=clamp(S.indep-0.06,-1,1);
+    E.state='idle'; E.earL=-CFG.earBack*0.7;E.earR=-CFG.earBack*0.7; voice('dislike');
+    note('自分でやっていたのを止められた'); return true;
+  }
+  return false;
+}
+function help(){ // L-6 助ける
+  if(E.state==='stuck'){ S.helped++; S.trust=clamp(S.trust+0.09,-1,1); S.indep=clamp(S.indep-0.04,-1,1);
+    E.state='idle'; E.mouth=0.9; voice('happy'); note('助けてもらった'); return true; }
+  return false;
+}
+
+/* ---------- L-10 最後のお願い（身振り） ---------- */
+function tryAsk(x){
+  if(S.askPhase!==1||!askZone||ptr.moved<40) return;
+  if(Math.sign(askZone.x-ptr.t0x)*(x-ptr.t0x)>34) resolveAsk();
+}
+let askZone=null;
+function maybeAsk(now){
+  if(S.askPhase) return;
+  const engaged = S.touches>=10 && (S.fed+S.played+S.helped+S.called)>=6 && (now-S.born)>75000;
+  if(engaged){ S.askPhase=1;
+    const m=bodyR()*1.6;   // 体は育つと大きくなる。壁に埋まる位置へ置かない。
+    askZone={x: E.x<W/2 ? Math.min(W-m, W*0.86) : Math.max(m, W*0.14), y:GROUND-70, r:52, glow:0};
+    voice('big'); note('お願いの時が来た'); }
+}
+// 純関数。ECHOが性格・関係・経験から自分で決める（Brief §3-8）。
+function decideAsk(st,r1,r2){
+  if(Math.abs(st.indep)>0.35 && r1<0.55) return 'detour';
+  const willing = st.trust*1.1 - st.indep*0.55 + st.helped*0.05 - st.interfered*0.02 + (r2-0.5)*0.4;
+  return willing>0 ? 'go' : 'refuse';
+}
+function resolveAsk(){
+  S.askPhase=2;
+  S.askDone=decideAsk(S,Math.random(),Math.random());
+  E.state = S.askDone==='detour'?'ask_detour' : S.askDone==='go'?'ask_go' : 'ask_refuse';
+  E.st=0; voice(S.askDone==='refuse'?'dislike':'big');
+}
+
+
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    r=Math.min(r,w/2,h/2); this.beginPath();
+    this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);
+    this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this;};
+}
+/* ---------- UPDATE ---------- */
+let last=performance.now();
+function update(now){
+  const dt=Math.min(50,now-last); last=now; const k=dt/16.67;
+  // ear springs (C-4: 耳が第一表情)
+  const restL=CFG.earRest + (E.state==='sleepy'?-0.5:0) + Math.sin(now/900)*0.04;
+  const restR=CFG.earRest + (E.state==='sleepy'?-0.55:0) + Math.sin(now/820+1)*0.04;
+  E.earLv += (restL-E.earL)*CFG.earK*k - E.earLv*CFG.earD*k;
+  E.earRv += (restR-E.earR)*CFG.earK*k - E.earRv*CFG.earD*k;
+  E.earLv += -E.vx*0.004*k; E.earRv += -E.vx*0.004*k;
+  E.earL+=E.earLv*k; E.earR+=E.earRv*k;
+  // squash spring
+  E.sqv += (1-E.sq)*0.28*k - E.sqv*0.16*k; E.sq+=E.sqv*0.1*k;
+  E.sq=clamp(E.sq,0.55,1.5);
+  // blink
+  E.blinkT-=dt/1000; if(E.blinkT<0){E.blink=1;E.blinkT=rnd(1.6,4.2);}
+  E.blink=Math.max(0,E.blink-dt/90);
+  E.mouth=lerp(E.mouth,0,0.05*k);
+
+  VAR.update(dt,k,now);
+
+  // physics
+  E.vy += CFG.grav*k; E.x+=E.vx*k; E.y+=E.vy*k;
+  const g=GROUND-bodyR();
+  if(E.y>g){ if(E.vy>3.2){thud(E.vy);E.sqv+=E.vy*0.05;} E.y=g;E.vy=0; E.vx*=CFG.fric; }
+  E.vx*=0.985;
+  if(E.x<bodyR()){E.x=bodyR();E.vx=Math.abs(E.vx)*0.5;}
+  if(E.x>W-bodyR()){E.x=W-bodyR();E.vx=-Math.abs(E.vx)*0.5;}
+  if(Math.abs(E.vx)>0.4) E.face = E.vx>0?1:-1;
+  E.step += Math.abs(E.vx)*0.06*k;
+
+  // states
+  E.st+=dt;
+  if(E.state==='come'||E.state==='chase'||E.state==='fetch'){
+    const t = E.state==='chase'&&ball?ball:(E.target||{x:E.x,y:E.y});
+    const dx=t.x-E.x; E.vx += Math.sign(dx)*CFG.accel*k*(E.state==='chase'?1.25:1);
+    if(Math.abs(E.vx)>CFG.maxv)E.vx=Math.sign(E.vx)*CFG.maxv;
+    if(E.y>=g-0.5 && Math.abs(dx)>bodyR()*1.2 && Math.random()<CFG.hopRate*k){E.vy=-CFG.hopV;voice('move');}
+    if(Math.abs(dx)<bodyR()*1.1){
+      if(E.state==='chase'&&ball){ ball=null; E.carry='ball'; E.mouth=1; voice('happy'); note('ボールを捕まえた');
+        E.state=(S.indep>0.15&&Math.random()<0.5)?'keep':'bring'; E.st=0; E.target={x:W/2,y:GROUND}; }
+      else if(E.state==='fetch'&&E.target){ E.target.taken=true; E.carry=E.target.k; voice('find');
+        note('何かを見つけた'); E.state='bring'; E.st=0; E.target={x:W*0.5+rnd(-60,60),y:GROUND}; }
+      else { E.state='idle'; E.st=0; E.mouth=0.6; }
+    }
+    if(E.st>7000) E.state='idle';
+  }
+  else if(E.state==='bring'){
+    const dx=(E.target.x)-E.x; E.vx+=Math.sign(dx)*CFG.accel*k;
+    if(Math.abs(E.vx)>CFG.maxv)E.vx=Math.sign(E.vx)*CFG.maxv;
+    if(Math.abs(dx)<24||E.st>5000){ items.push({x:E.x+rnd(-14,14),y:GROUND-9,k:E.carry==='ball'?9:E.carry,born:now});
+      if(E.carry==='ball') ball={x:E.x,y:GROUND-13,vx:0,vy:0,r:13,rest:1};
+      E.carry=null;E.state='idle';E.st=0;E.mouth=1;voice('happy');S.indep=clamp(S.indep+0.03,-1,1);note('持ってきた'); }
+  }
+  else if(E.state==='keep'){ if(E.st>2600){ items.push({x:E.x,y:GROUND-9,k:9,born:now}); E.carry=null;
+      E.state='idle';E.st=0; S.indep=clamp(S.indep+0.06,-1,1); note('独り占めした'); } }
+  else if(E.state==='mischief'){
+    if(E.st%700<20){E.vx+=rnd(-CFG.maxv,CFG.maxv)*0.5;}
+    if(E.st>2800){ const p=props.find(p=>!p.taken&&Math.abs(p.x-E.x)<70);
+      if(p){p.taken=true;p.broken=true;items.push({x:p.x,y:GROUND-9,k:p.k,broken:true,born:now});voice('find');}
+      S.indep=clamp(S.indep+0.05,-1,1); E.state='idle';E.st=0; note('いたずらをやり切った'); }
+  }
+  else if(E.state==='play_alone'){
+    if(E.y>=g-0.5&&Math.random()<0.05*k){E.vy=-CFG.hopV*0.8;E.vx=rnd(-3,3);voice('move');}
+    if(E.st>4200){S.indep=clamp(S.indep+0.04,-1,1);E.state='idle';E.st=0;note('ひとり遊びを終えた');}
+  }
+  else if(E.state==='stuck'){ E.stuck+=dt; E.vx*=0.8;
+    if(E.st%800<20)voice('dislike');
+    if(E.stuck>9000){ E.state='idle';E.st=0;S.indep=clamp(S.indep+0.08,-1,1);note('自力で抜け出した'); } }
+  else if(E.state==='earonly'){ E.vx*=0.9; if(E.st>1200){E.state='idle';E.st=0;} }
+  else if(E.state==='sleepy'){ E.vx*=0.9; if(E.st>3600){E.state='idle';E.st=0;} }
+  else if(E.state==='ask_go'){ const dx=askZone.x-E.x; E.vx+=Math.sign(dx)*CFG.accel*1.4*k;
+    if(Math.abs(E.vx)>CFG.maxv*1.2)E.vx=Math.sign(E.vx)*CFG.maxv*1.2;
+    if(E.y>=GROUND-bodyR()-0.5&&Math.abs(dx)>40&&Math.random()<0.03*k){E.vy=-CFG.hopV*0.8;voice('move');}
+    if(Math.abs(dx)<Math.max(36,bodyR()*0.55)){E.vx*=0.7; E.arrive=(E.arrive||0)+dt;
+      if(E.arrive>900&&S.askPhase<3){S.askPhase=3;voice('big');} } }
+  else if(E.state==='ask_refuse'){ E.vx*=0.9; if(E.st>900&&S.askPhase<3){S.askPhase=3;
+      E.earL=-CFG.earBack;E.earR=-CFG.earBack;} }
+  else if(E.state==='ask_detour'){ if(E.st%900<20)E.vx+=rnd(-3,3);
+      if(E.st>2200&&S.askPhase<3){S.askPhase=3;voice('find');
+        items.push({x:E.x,y:GROUND-9,k:(Math.random()*4)|0,born:now});} }
+  else { // idle
+    if(E.y>=g-0.5 && Math.random()<CFG.idleHop*k){ E.vx=rnd(-1.6,1.6); if(Math.random()<0.4){E.vy=-CFG.hopV*0.55;voice('move');} }
+  }
+
+  // 育ちは体に出る (L-8 / Brief 3-4)
+  S.bodyGrow = clamp((S.fed*0.05 + S.touches*0.012),0,1);
+  S.voiceShift = clamp(S.trust*0.16 + S.indep*0.06,-0.3,0.4);
+  S.colorShift = clamp(S.trust*0.5 + (S.likes[TRUE_LIKE]||0)*0.12,-1,1);
+  S.curiosity = clamp(0.5 + S.indep*0.4,0,1);
+
+  // ball
+  if(ball&&!ball.rest){ ball.vy+=0.55*k; ball.x+=ball.vx*k; ball.y+=ball.vy*k;
+    if(ball.y>GROUND-ball.r){ball.y=GROUND-ball.r;ball.vy*=-0.45;ball.vx*=0.8;if(Math.abs(ball.vy)<1.2)ball.rest=1;}
+    if(ball.x<ball.r||ball.x>W-ball.r)ball.vx*=-0.7; }
+  if(ball&&ball.held){ball.rest=1;}
+  foodOnGround.forEach(f=>{ if(!f.held&&f.y<GROUND-8){f.vy=(f.vy||0)+0.5*k;f.y=Math.min(GROUND-8,f.y+f.vy*k);} });
+  for(let i=foodOnGround.length-1;i>=0;i--){const f=foodOnGround[i];
+    if(f.gone){foodOnGround.splice(i,1); setTimeout(()=>spawnFood(f.k),1600);}
+    else if(f.rejected){f.rejected=0;f.x=clamp(f.x+rnd(-40,40),30,W-30);} }
+  ripples.forEach(r=>{r.r+=2.4*k;r.a-=0.02*k;});
+  for(let i=ripples.length-1;i>=0;i--) if(ripples[i].a<=0) ripples.splice(i,1);
+
+  autonomous(dt,now); maybeAsk(now);
+  if(S.askPhase===1&&askZone) askZone.glow=(Math.sin(now/380)+1)/2;
+  // 見た目の方向
+  if(!ptr.down){ E.look.x=lerp(E.look.x,E.x+E.face*40,0.05); E.look.y=lerp(E.look.y,E.y-10,0.05); }
+  else { E.look.x=lerp(E.look.x,ptr.x,0.25); E.look.y=lerp(E.look.y,ptr.y,0.25); }
+}
+
+/* ---------- DRAW ---------- */
+function bg(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,PAL.sky0);g.addColorStop(1,PAL.sky1);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=PAL.ground;ctx.fillRect(0,GROUND,W,H-GROUND);
+  ctx.fillStyle=PAL.groundTop;ctx.fillRect(0,GROUND,W,3);
+}
+function drawProp(p){
+  ctx.save();ctx.translate(p.x,p.y);
+  const c=[PAL.p0,PAL.p1,PAL.p2,PAL.p3][p.k%4];
+  ctx.fillStyle=c;
+  if(p.k%4===0){ ctx.beginPath();ctx.ellipse(0,-6,9,6.5,0.2,0,TAU);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.ellipse(-3,-8,3.5,2.2,0.2,0,TAU);ctx.fill(); }
+  else if(p.k%4===1){ for(let i=0;i<5;i++){const a=i/5*TAU;
+      ctx.beginPath();ctx.ellipse(Math.cos(a)*6,-8+Math.sin(a)*6,4.6,3.4,a,0,TAU);ctx.fill();}
+    ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.arc(0,-8,3.2,0,TAU);ctx.fill(); }
+  else if(p.k%4===2){ ctx.beginPath();ctx.moveTo(0,0);
+      ctx.quadraticCurveTo(-11,-6,-6,-15);ctx.quadraticCurveTo(0,-19,6,-15);
+      ctx.quadraticCurveTo(11,-6,0,0);ctx.closePath();ctx.fill(); }
+  else { ctx.beginPath();ctx.ellipse(0,-5,10,5.5,-0.25,0,TAU);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(-8,-2);ctx.lineTo(8,-8);ctx.stroke(); }
+  ctx.restore();
+}
+function drawFood(f){
+  ctx.save();ctx.translate(f.x,f.y);
+  if(f.k==='leaf'){ctx.fillStyle='#7fc47a';ctx.beginPath();ctx.ellipse(0,0,13,7,-0.5,0,TAU);ctx.fill();
+    ctx.strokeStyle='#4f8a4c';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-10,5);ctx.lineTo(10,-5);ctx.stroke();}
+  else if(f.k==='berry'){ctx.fillStyle='#e0607e';ctx.beginPath();ctx.arc(-4,0,7,0,TAU);ctx.arc(4,1,6,0,TAU);ctx.fill();
+    ctx.fillStyle='#8fc47a';ctx.fillRect(-1,-11,2,6);}
+  else {ctx.fillStyle='#c99a5e';ctx.beginPath();ctx.ellipse(0,0,8,10,0,0,TAU);ctx.fill();
+    ctx.fillStyle='#a97a3e';ctx.beginPath();ctx.ellipse(0,3,8,5,0,0,TAU);ctx.fill();}
+  ctx.restore();
+}
+function ear(side){
+  const a=(side<0?E.earL:E.earR);
+  const r=bodyR();
+  ctx.save();
+  ctx.translate(side*r*0.42, -r*0.70);
+  ctx.rotate(side*0.26 + a*0.85);   // splay は左右対称、感情の傾きは両耳同方向
+  const L=r*CFG.earLen, Wd=r*CFG.earW;
+  ctx.fillStyle=PAL.body;
+  ctx.beginPath();
+  ctx.moveTo(-Wd*0.5,0);
+  ctx.quadraticCurveTo(-Wd*0.62,-L*0.55, -Wd*0.18,-L);
+  ctx.quadraticCurveTo(Wd*0.30,-L*1.02, Wd*0.5,-L*0.5);
+  ctx.quadraticCurveTo(Wd*0.62,-L*0.1, Wd*0.5,0);
+  ctx.closePath();ctx.fill();
+  ctx.fillStyle=PAL.inner;
+  ctx.beginPath();
+  ctx.moveTo(-Wd*0.22,-L*0.12);
+  ctx.quadraticCurveTo(-Wd*0.30,-L*0.5, -Wd*0.05,-L*0.80);
+  ctx.quadraticCurveTo(Wd*0.20,-L*0.78, Wd*0.26,-L*0.4);
+  ctx.quadraticCurveTo(Wd*0.30,-L*0.1, Wd*0.22,-L*0.05);
+  ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+function drawEcho(now){
+  const r=bodyR(), sq=E.sq, sw=1/sq;
+  ctx.save(); ctx.translate(E.x,E.y);
+  // shadow
+  ctx.save();ctx.translate(0,GROUND-E.y);ctx.fillStyle='rgba(0,0,0,.14)';
+  ctx.beginPath();ctx.ellipse(0,0,r*0.95,r*0.24,0,0,TAU);ctx.fill();ctx.restore();
+  ctx.scale(E.face,1);
+  ctx.scale(sw,sq);
+  // tail
+  ctx.save();ctx.translate(0,r*0.2);ctx.rotate(Math.sin(now/240)*0.22*(0.6+S.trust*0.5));ctx.translate(0,-r*0.2);
+  ctx.fillStyle=PAL.body;
+  ctx.beginPath();ctx.arc(-r*0.92,r*0.42,r*0.26,0,TAU);ctx.fill();
+  ctx.fillStyle=PAL.belly;
+  ctx.beginPath();ctx.arc(-r*0.96,r*0.38,r*0.15,0,TAU);ctx.fill();ctx.restore();
+  ear(-1); ear(1);
+  // legs
+  const sp=Math.sin(E.step)*0.5, gr=(GROUND-E.y-r)>2?0.4:0;
+  ctx.fillStyle=PAL.limb;
+  [[-0.34,sp],[0.30,-sp]].forEach(([lx,ph])=>{
+    ctx.save();ctx.translate(r*lx,r*0.72);ctx.rotate(ph*0.7-gr);
+    ctx.beginPath();ctx.roundRect(-r*0.15,0,r*0.30,r*0.42,r*0.14);ctx.fill();
+    ctx.beginPath();ctx.ellipse(0,r*0.42,r*0.19,r*0.11,0,0,TAU);ctx.fill();ctx.restore();});
+  // body
+  ctx.fillStyle=PAL.body;
+  ctx.beginPath();ctx.ellipse(0,0,r*0.92,r*0.86,0,0,TAU);ctx.fill();
+  ctx.fillStyle=PAL.belly;
+  ctx.beginPath();ctx.ellipse(0,r*0.24,r*0.55,r*0.44,0,0,TAU);ctx.fill();
+  // arms
+  ctx.fillStyle=PAL.limb;
+  [[-0.80,0.3],[0.80,-0.3]].forEach(([ax,ph])=>{
+    ctx.save();ctx.translate(r*ax,r*0.06);ctx.rotate(ph*0.5+Math.sin(E.step+ax)*0.25);
+    ctx.beginPath();ctx.roundRect(-r*0.13,0,r*0.26,r*0.36,r*0.12);ctx.fill();ctx.restore();});
+  // eyes
+  const lx=clamp((E.look.x-E.x)*E.face/160,-1,1)*r*0.10;
+  const ly=clamp((E.look.y-E.y)/160,-1,1)*r*0.08;
+  const eo=r*0.31, ey=-r*0.09, es=r*0.205*(1-E.blink*0.92);
+  ctx.fillStyle=PAL.eye;
+  [-eo,eo].forEach(x=>{ctx.beginPath();ctx.ellipse(x+lx,ey+ly,r*0.205,es,0,0,TAU);ctx.fill();});
+  if(E.blink<0.3){ ctx.fillStyle='#fff';
+    [-eo,eo].forEach(x=>{ctx.beginPath();ctx.arc(x+lx+r*0.07,ey+ly-r*0.07,r*0.062,0,TAU);ctx.fill();});}
+  ctx.fillStyle=PAL.cheek||'rgba(255,150,150,.28)';
+  [-r*0.52,r*0.52].forEach(x=>{ctx.beginPath();ctx.ellipse(x+lx*0.4,r*0.10,r*0.145,r*0.095,0,0,TAU);ctx.fill();});
+  // mouth
+  ctx.strokeStyle=PAL.eye;ctx.lineWidth=Math.max(2,r*0.055);ctx.lineCap='round';
+  ctx.beginPath();
+  const m=E.mouth+0.22, my=r*0.235;   // 無表情でもわずかに笑っている
+  ctx.moveTo(-r*0.13,my); ctx.quadraticCurveTo(0,my+m*r*0.20, r*0.13,my);
+  ctx.stroke();
+  if(m>0.6){ctx.fillStyle=PAL.mouth;ctx.beginPath();ctx.ellipse(0,my+r*0.06,r*0.11,r*0.09*m,0,0,TAU);ctx.fill();}
+  // carry
+  if(E.carry!=null){ ctx.save();ctx.translate(0,-r*0.05);
+    if(E.carry==='ball'){ctx.fillStyle=PAL.ball;ctx.beginPath();ctx.arc(r*0.72,0,r*0.30,0,TAU);ctx.fill();}
+    else {ctx.fillStyle=[PAL.p0,PAL.p1,PAL.p2,PAL.p3][E.carry%4];ctx.beginPath();ctx.arc(r*0.72,0,r*0.26,0,TAU);ctx.fill();}
+    ctx.restore(); }
+  ctx.restore();
+  VAR.overlay(now,r);
+}
+function draw(now){
+  bg();
+  ripples.forEach(rp=>{ctx.strokeStyle=`rgba(255,255,255,${rp.a*0.55})`;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(rp.x,rp.y,rp.r,0,TAU);ctx.stroke();});
+  props.filter(p=>!p.taken).forEach(drawProp);
+  items.forEach(it=>{ctx.save();ctx.translate(it.x,it.y);ctx.globalAlpha=it.broken?0.7:1;
+    if(it.k===9){ctx.fillStyle=PAL.ball;ctx.beginPath();ctx.arc(0,-8,10,0,TAU);ctx.fill();}
+    else{ctx.fillStyle=[PAL.p0,PAL.p1,PAL.p2,PAL.p3][it.k%4];ctx.beginPath();ctx.arc(0,-7,8,0,TAU);ctx.fill();}
+    ctx.restore();});
+  if(askZone&&S.askPhase>=1){ ctx.save();
+    const a=S.askPhase===1?(0.30+askZone.glow*0.4):0.22;
+    ctx.fillStyle=`rgba(255,236,160,${a})`;ctx.beginPath();ctx.arc(askZone.x,askZone.y,askZone.r,0,TAU);ctx.fill();
+    ctx.strokeStyle=`rgba(255,236,160,${a+0.3})`;ctx.lineWidth=3;ctx.stroke();ctx.restore(); }
+  if(ball){ctx.fillStyle=PAL.ball;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,TAU);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.arc(ball.x-4,ball.y-4,4,0,TAU);ctx.fill();}
+  foodOnGround.forEach(drawFood);
+  drawEcho(now);
+}
+function loop(now){ update(now); draw(now); requestAnimationFrame(loop); }
+
+function spawnFood(k){ foodOnGround.push({x:rnd(W*0.12,W*0.88),y:GROUND-8,k,held:false}); }
+function boot(){
+  fit(); E.x=W/2; E.y=GROUND-CFG.size; spawnProps();
+  FOODS.forEach(spawnFood);
+  ball={x:W*0.22,y:GROUND-13,vx:0,vy:0,r:14,rest:1};   // 最初から地面にある = 掴めることが見て分かる
+  VAR.init();
+  requestAnimationFrame(loop);
+}
+/* Machine Evaluation 用のhook（UIには出ない。数字はplayerに見せない） */
+window.__ECHO2__={
+  get state(){return {v:VARIANT,x:E.x,y:E.y,st:E.state,trust:S.trust,indep:S.indep,
+    touches:S.touches,fed:S.fed,played:S.played,helped:S.helped,called:S.called,answered:S.answered,
+    interfered:S.interfered,letBe:S.letBe,earL:E.earL,earR:E.earR,bodyGrow:S.bodyGrow,
+    askPhase:S.askPhase,askDone:S.askDone,items:items.length,log:S.log.map(l=>l.t),
+    audio:!!AC, voiceBase:CFG.voice.base, size:CFG.size};},
+  variant:VARIANT, cfg:()=>CFG,
+  pure:{decideCall,decideAsk},
+  api:{stroke,poke,callEcho,offerFood,throwBall,interrupt,help,resolveAsk,
+       forceState:s=>{E.state=s;E.st=0;if(s==='fetch')E.target=props.find(p=>!p.taken)||{x:W/2,y:GROUND};},
+       foods:()=>foodOnGround, forceAsk:()=>{S.touches=99;S.fed=9;S.born=performance.now()-999999;maybeAsk(performance.now());},
+       down:onDown,move:onMove,up:onUp}
+};
+boot();
+
+</script></body></html>

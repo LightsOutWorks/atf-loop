@@ -166,3 +166,21 @@ Round 1 §9-1「選択が結末に効いているかは実際に遊ばないと�
 Humanが **Human Experience Brief** を与えた（`EXPERIENCE_BRIEF.md` = 再設計の正本）。手順は「いきなり実装しない → Briefからキャラクター方向性5案・Core Interaction / Loop候補5〜10案をWorld Priorで探索 → **Human Taste Gateで停止**」。探索の出力は `REDESIGN_CANDIDATES.md`。
 
 判定階層の訂正（Machine Evaluationのvariant selectionはChampion資格を与えない）は **D-015**。
+
+---
+
+## 12. Human Taste Gate #1 — 通過（2026-08-15）
+
+Briefから探索したキャラクター5案・Core Loop 10案をHumanへ提示し、Humanが選んだ。
+
+| 問い | Humanの回答 |
+|---|---|
+| キャラクター方向性 | **C-4「耳が異常に大きい二足の小獣」** |
+| Core Interaction / Core Loop | **L-1〜L-10 すべて** |
+| Briefに無い必須条件 | **現状なし** |
+
+したがって次段の対象は **C-4 ただ1方向 / 10 Loopすべてを含む**。不採用のC-1 / C-2 / C-3 / C-5 は削除せず `REDESIGN_CANDIDATES.md` に保存する（Human Tasteが4本のPrototypeを全て外した場合の次候補）。
+
+**Round 1との手順上の違い**: Round 1は **AIが1案へ確定してから作った**。今回は **Humanが方向を選んでから作る**。`大量Concept → 少数Prototype → Human Taste → 深く作る`（D-015 Decision 4）。
+
+探索と設計は `v2/CONCEPT_C4.md`、機械検査は `v2/MACHINE_CHECK.md`。
