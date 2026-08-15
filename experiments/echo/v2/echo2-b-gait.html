@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ECHO あるく</title>
 <style>
-  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#cfe0e8;
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#dcebf1;
     -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
     overscroll-behavior:none;touch-action:none;}
   #c{display:block;width:100%;height:100%;touch-action:none;}
@@ -12,14 +12,15 @@
 <script>
 const VARIANT='b-gait';
 const CFG={
-  size:72, earLen:2.05, earW:0.86, earRest:0.04, earHappy:0.52, earBack:0.75,
+  size:82, earLen:0.86, earW:0.36, earRest:0.04, earHappy:0.52, earBack:0.75,
   earK:0.038, earD:0.105, grav:0.60, fric:0.72, accel:0.34, maxv:3.2,
   hopV:7.0, hopRate:0.010, idleHop:0.024, pokeKick:1.4, eventEvery:6200,
   voice:{base:300, ty:'triangle', gain:1.0, chirps:1, wobble:true}
 };
-const PAL={sky0:'#eaf2f6',sky1:'#cfe0e8',ground:'#b9c9b2',groundTop:'#93a88d',
-  body:'#e8e2d4',belly:'#fbf7ee',limb:'#d3ccbb',inner:'#e8a9a0',eye:'#3b3a35',mouth:'#b5675f',
-  ball:'#f0a35e',p0:'#8fb98a',p1:'#d99a9a',p2:'#9aa8d9',p3:'#e3c86a'};
+const PAL={sky0:'#eef5f8',sky1:'#dcebf1',ground:'#cfe3e6',groundTop:'#b2ccd2',
+  body:'#ffffff',belly:'#ffffff',limb:'#ffffff',inner:'#f4b3ae',eye:'#413f3a',mouth:'#c07068',
+  line:'#514f48',cheek:'#f8b6b0',
+  ball:'#f3ad6d',p0:'#9fcb99',p1:'#e5a9a9',p2:'#a9b6e0',p3:'#ecd489'};
 const VAR={
   init(){ E.walkT=0; E.pause=0; },
   update(dt,k,now){
@@ -116,7 +117,7 @@ const E={
   hop:0, step:0
 };
 function bodyR(){ return CFG.size*(1+S.bodyGrow*0.22); }
-function footY(){ return bodyR()*1.19; }   // 中心から足裏まで（二頭身）
+function footY(){ return bodyR()*1.10; }   // 中心から足裏まで（二頭身）
 
 /* ---------- WORLD ---------- */
 const items=[];   // 見つけて持ってきた物 = 物語の物的証拠 (L-8)
@@ -462,84 +463,93 @@ function drawFood(f){
     ctx.fillStyle='#a97a3e';ctx.beginPath();ctx.ellipse(0,3,8,5,0,0,TAU);ctx.fill();}
   ctx.restore();
 }
-function ear(side,HY,HR){
+function ear(side,HR){
+  // 細く柔らかい耳。輪郭線あり。体を支配しない長さ。
   const a=(side<0?E.earL:E.earR), r=bodyR();
   ctx.save();
-  ctx.translate(side*HR*0.40, HY-HR*0.62);
-  ctx.rotate(side*0.26 + a*0.85);   // splay は左右対称、感情の傾きは両耳同方向
+  ctx.translate(side*HR*0.34, -HR*0.80);
+  ctx.rotate(side*0.20 + a*0.80);
   const L=r*CFG.earLen, Wd=r*CFG.earW;
-  ctx.fillStyle=PAL.body;
   ctx.beginPath();
-  ctx.moveTo(-Wd*0.5,0);
-  ctx.quadraticCurveTo(-Wd*0.62,-L*0.55, -Wd*0.18,-L);
-  ctx.quadraticCurveTo(Wd*0.30,-L*1.02, Wd*0.5,-L*0.5);
-  ctx.quadraticCurveTo(Wd*0.62,-L*0.1, Wd*0.5,0);
-  ctx.closePath();ctx.fill();
-  ctx.fillStyle=PAL.inner;
+  ctx.moveTo(-Wd*0.5, Wd*0.25);
+  ctx.quadraticCurveTo(-Wd*0.62,-L*0.60, -Wd*0.05,-L);
+  ctx.quadraticCurveTo(Wd*0.52,-L*0.92,  Wd*0.46,-L*0.34);
+  ctx.quadraticCurveTo(Wd*0.42,-L*0.04,  Wd*0.5, Wd*0.25);
+  ctx.closePath();
+  ctx.fillStyle=PAL.body; ctx.fill(); ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(-Wd*0.22,-L*0.12);
-  ctx.quadraticCurveTo(-Wd*0.30,-L*0.5, -Wd*0.05,-L*0.80);
-  ctx.quadraticCurveTo(Wd*0.20,-L*0.78, Wd*0.26,-L*0.4);
-  ctx.quadraticCurveTo(Wd*0.30,-L*0.1, Wd*0.22,-L*0.05);
-  ctx.closePath();ctx.fill();
+  ctx.moveTo(-Wd*0.18,-L*0.10);
+  ctx.quadraticCurveTo(-Wd*0.28,-L*0.55, Wd*0.02,-L*0.80);
+  ctx.quadraticCurveTo(Wd*0.26,-L*0.72,  Wd*0.22,-L*0.30);
+  ctx.quadraticCurveTo(Wd*0.20,-L*0.08,  Wd*0.14,-L*0.05);
+  ctx.closePath();
+  ctx.fillStyle=PAL.inner; ctx.fill();
   ctx.restore();
 }
+function stub(x,y,w,h,rot){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0);
+  ctx.beginPath(); ctx.ellipse(0,0,w,h,0,0,TAU);
+  ctx.fillStyle=PAL.body; ctx.fill(); ctx.stroke(); ctx.restore();
+}
 function drawEcho(now){
-  // ベビースキーマ（ローレンツ1943）: ①頭が大きい ②脳頭蓋が大きい（額を広く）
-  // ③目が大きく丸い ④目鼻口が頭の低い位置 ⑤四肢が短い。頭:体 ≒ 1:1 の二頭身。
+  // 一つの丸い塊 + 細い輪郭線 + ほぼ白の体 + 小さな黒い目 + ほお + 小さな突起。
+  // 頭と胴は分けない。顔は塊の下寄り（ベビースキーマ④）。
   const r=bodyR(), sq=E.sq, sw=1/sq;
-  const HY=-r*0.54, HR=r*0.80;      // 頭と胴を離して二つの塊に見せる
-  const BY= r*0.60, BW=r*0.56, BH=r*0.45;
+  const R=r*0.90;
   ctx.save(); ctx.translate(E.x,E.y);
-  ctx.save();ctx.translate(0,GROUND-E.y);ctx.fillStyle='rgba(0,0,0,.13)';
-  ctx.beginPath();ctx.ellipse(0,0,r*0.80,r*0.19,0,0,TAU);ctx.fill();ctx.restore();
+  ctx.save();ctx.translate(0,GROUND-E.y);ctx.fillStyle='rgba(0,0,0,.10)';
+  ctx.beginPath();ctx.ellipse(0,0,R*0.80,R*0.17,0,0,TAU);ctx.fill();ctx.restore();
   ctx.scale(E.face,1); if(E.tilt) ctx.rotate(E.tilt); ctx.scale(sw,sq);
 
-  ctx.save();ctx.translate(0,BY);ctx.rotate(Math.sin(now/240)*0.22*(0.6+S.trust*0.5));ctx.translate(0,-BY);
-  ctx.fillStyle=PAL.body;ctx.beginPath();ctx.arc(-BW*1.02,BY-r*0.02,r*0.19,0,TAU);ctx.fill();
-  ctx.fillStyle=PAL.belly;ctx.beginPath();ctx.arc(-BW*1.08,BY-r*0.05,r*0.105,0,TAU);ctx.fill();ctx.restore();
+  ctx.strokeStyle=PAL.line; ctx.lineWidth=Math.max(1.6,r*0.050);
+  ctx.lineJoin='round'; ctx.lineCap='round';
 
-  ear(-1,HY,HR); ear(1,HY,HR);
+  // しっぽ（塊の後ろ）
+  ctx.save();ctx.rotate(Math.sin(now/240)*0.20*(0.6+S.trust*0.5));
+  stub(-R*0.94, R*0.46, R*0.175, R*0.155, 0); ctx.restore();
 
-  const sp=Math.sin(E.step)*0.5, air=(GROUND-E.y-footY())>2?0.35:0;
-  ctx.fillStyle=PAL.limb;
-  [[-0.345,sp],[0.345,-sp]].forEach(([lx,ph])=>{
-    ctx.save();ctx.translate(r*lx,BY+BH*0.62);ctx.rotate(ph*0.55-air);
-    ctx.beginPath();ctx.roundRect(-r*0.135,0,r*0.27,r*0.19,r*0.115);ctx.fill();
-    ctx.beginPath();ctx.ellipse(0,r*0.21,r*0.17,r*0.10,0,0,TAU);ctx.fill();ctx.restore();});
+  ear(-1,R); ear(1,R);
 
-  ctx.fillStyle=PAL.body;
-  ctx.beginPath();ctx.ellipse(0,BY,BW,BH,0,0,TAU);ctx.fill();
-  ctx.fillStyle=PAL.belly;
-  ctx.beginPath();ctx.ellipse(0,BY+r*0.05,BW*0.62,BH*0.62,0,0,TAU);ctx.fill();
+  // 足（塊の下から少しだけ出る）
+  const sp=Math.sin(E.step)*0.35, air=(GROUND-E.y-footY())>2?0.30:0;
+  stub(-R*0.40, R*0.92+sp*R*0.07, R*0.215, R*0.155, -air*0.6);
+  stub( R*0.40, R*0.92-sp*R*0.07, R*0.215, R*0.155,  air*0.6);
+  // 手（横からしっかり出る）
+  const aw=Math.sin(E.step*1.2)*0.24;
+  stub(-R*1.00, R*0.30, R*0.155, R*0.205, -0.30+aw);
+  stub( R*1.00, R*0.30, R*0.155, R*0.205,  0.30-aw);
 
-  ctx.fillStyle=PAL.limb;
-  [[-1.0,0.3],[1.0,-0.3]].forEach(([ax,ph])=>{
-    ctx.save();ctx.translate(BW*ax,BY-r*0.07);ctx.rotate(ph*0.5+Math.sin(E.step+ax)*0.28);
-    ctx.beginPath();ctx.roundRect(-r*0.10,0,r*0.20,r*0.23,r*0.10);ctx.fill();ctx.restore();});
+  // 本体（ひとつの塊）
+  ctx.beginPath(); ctx.ellipse(0,0,R,R*0.94,0,0,TAU);
+  ctx.fillStyle=PAL.body; ctx.fill(); ctx.stroke();
 
-  ctx.fillStyle=PAL.body;
-  ctx.beginPath();ctx.ellipse(0,HY,HR,HR*0.94,0,0,TAU);ctx.fill();
-
-  const fy = HY + HR*0.34;                       // ← ④ 顔を頭の下側へ
-  const lx=clamp((E.look.x-E.x)*E.face/160,-1,1)*HR*0.10;
-  const ly=clamp((E.look.y-E.y)/220,-1,1)*HR*0.06;
-  const eo=HR*0.36, es=HR*0.255*(1-E.blink*0.92);
-  ctx.fillStyle=PAL.cheek||'rgba(255,150,150,.30)';
-  [-HR*0.63,HR*0.63].forEach(x=>{ctx.beginPath();ctx.ellipse(x+lx*0.4,fy+HR*0.17,HR*0.155,HR*0.10,0,0,TAU);ctx.fill();});
+  // 顔（塊の下寄り。額を広く空ける）
+  const fy = R*0.26;
+  const lx=clamp((E.look.x-E.x)*E.face/180,-1,1)*R*0.055;
+  const ly=clamp((E.look.y-E.y)/260,-1,1)*R*0.035;
+  ctx.fillStyle=PAL.cheek;
+  [-R*0.56,R*0.56].forEach(x=>{ctx.beginPath();ctx.ellipse(x+lx*0.3,fy+R*0.07,R*0.155,R*0.095,0,0,TAU);ctx.fill();});
+  const eo=R*0.29, es=R*0.155*(1-E.blink*0.90);
   ctx.fillStyle=PAL.eye;
-  [-eo,eo].forEach(x=>{ctx.beginPath();ctx.ellipse(x+lx,fy+ly,HR*0.235,es,0,0,TAU);ctx.fill();});
-  if(E.blink<0.3){ ctx.fillStyle='#fff';
-    [-eo,eo].forEach(x=>{ctx.beginPath();ctx.arc(x+lx+HR*0.085,fy+ly-HR*0.09,HR*0.075,0,TAU);ctx.fill();});}
-  const m=E.mouth+0.22, my=fy+HR*0.37;
-  ctx.strokeStyle=PAL.eye;ctx.lineWidth=Math.max(2,HR*0.06);ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(-HR*0.15,my);ctx.quadraticCurveTo(0,my+m*HR*0.22,HR*0.15,my);ctx.stroke();
-  if(m>0.7){ctx.fillStyle=PAL.mouth;ctx.beginPath();ctx.ellipse(0,my+HR*0.07,HR*0.12,HR*0.10*m,0,0,TAU);ctx.fill();}
+  [-eo,eo].forEach(x=>{ctx.beginPath();ctx.ellipse(x+lx,fy+ly,R*0.112,es,0,0,TAU);ctx.fill();});
+  // 口はごく小さい
+  const m=E.mouth, my=fy+R*0.235;
+  ctx.strokeStyle=PAL.eye; ctx.lineWidth=Math.max(1.6,R*0.042);
+  ctx.beginPath();
+  if(m<-0.35){ ctx.moveTo(-R*0.075,my+R*0.03); ctx.quadraticCurveTo(0,my-R*0.045,R*0.075,my+R*0.03); }
+  else { ctx.moveTo(-R*0.085,my-R*0.012);
+         ctx.quadraticCurveTo(-R*0.042,my+R*0.055+m*R*0.03, 0,my);
+         ctx.quadraticCurveTo( R*0.042,my+R*0.055+m*R*0.03, R*0.085,my-R*0.012); }
+  ctx.stroke();
+  if(m>0.75){ ctx.fillStyle=PAL.mouth; ctx.beginPath();
+    ctx.ellipse(0,my+R*0.055,R*0.075,R*0.065,0,0,TAU); ctx.fill(); }
 
-  if(E.carry!=null){ ctx.save();ctx.translate(0,BY-r*0.02);
-    if(E.carry==='ball'){ctx.fillStyle=PAL.ball;ctx.beginPath();ctx.arc(BW*1.25,0,r*0.24,0,TAU);ctx.fill();}
-    else {ctx.fillStyle=[PAL.p0,PAL.p1,PAL.p2,PAL.p3][E.carry%4];ctx.beginPath();ctx.arc(BW*1.25,0,r*0.20,0,TAU);ctx.fill();}
-    ctx.restore(); }
+  if(E.carry!=null){ ctx.save();ctx.translate(0,R*0.30);
+    ctx.strokeStyle=PAL.line; ctx.lineWidth=Math.max(1.6,r*0.050);
+    ctx.beginPath();
+    if(E.carry==='ball'){ ctx.arc(R*1.02,0,R*0.22,0,TAU); ctx.fillStyle=PAL.ball; }
+    else { ctx.arc(R*1.02,0,R*0.18,0,TAU); ctx.fillStyle=[PAL.p0,PAL.p1,PAL.p2,PAL.p3][E.carry%4]; }
+    ctx.fill(); ctx.stroke(); ctx.restore(); }
   ctx.restore();
   VAR.overlay(now,r);
 }
