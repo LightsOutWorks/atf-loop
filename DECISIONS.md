@@ -15,7 +15,12 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
   1. **`echo-v1.html` の Game Champion 資格を解除する。** ファイルは削除せず **Technical Prototype / Historical Champion** として保存する（`echo-v0.html` も従来どおり保持）。**このままDistributionしない。小手先のRound 2 patchも開始しない。**
   2. **判定階層へ Human Taste Gate を明示する。** 役割は **Human = Desire + Taste / AI（Factory）= Search + Design候補 + Build + Test + Variation / Real Players = Reality**。
   3. **D-013 Decision 2 の "variant selection" の射程を訂正する。** Machine Evaluationは**同一Brief内でのvariant間の技術的優劣**を判定してよい。しかし **Champion（＝作品として成立しているという資格）を与えることはできない。** Machine Evaluationが判定してよいのは **①壊れていない ②操作できる ③意図したMechanicが存在する ④variant差分が実際に入っている** の4つまでである。**D-013は取り消さない——射程を1段狭めるだけ**であり、technical verification / regression detection / autonomous-loop completion は従来どおりMachine Evaluationが持つ。
-  4. **制作手順を変更する。** Human Taste が関わる作品では、**いきなり実装しない。** ①Humanの Experience Brief を正本として置く → ②Briefからキャラクター方向性・Core Interaction / Loop 候補を World Prior で**複数案**探索する → ③**AIだけで1案へ確定せず Human Taste Gate で停止する** → ④Humanが選んだ後に実装する。**この手順のために新しいschema・台帳・dashboard・scheduler・Skillは作らない**（既存の `mine-world-priors` と実験ディレクトリで足りる）。
+  4. **制作手順を変更する。** Human Taste が関わる作品では、**いきなり実装しない。**
+     > **`大量Concept → 少数Prototype → Human Taste → 深く作る`**
+
+     ①Humanの Experience Brief を正本として置く → ②Briefからキャラクター方向性・Core Interaction / Loop 候補を World Prior で**複数案**探索する → ③**AIだけで1案へ確定せず Human Taste Gate で停止する** → ④Humanが選んだ方向についてのみ大量variationを探索する → ⑤少数Prototype → Human Taste → 深く作る。**最初から完成品を大量に作らない。** **この手順のために新しいschema・台帳・dashboard・analytics・platform・scheduler・Skillは作らない**（既存の `mine-world-priors` と実験ディレクトリで足りる）。
+  5. **反証されたものと維持するものを分ける。** Machine Evaluationで確認した **「Hookが機構として成立している」は維持する**（Round 1の命令感度 実測29%→70%）。反証されたのはHookの成立ではなく**その周りの体験**である。したがってRound 1の `LEARNING.md` §2 の World Prior 採用Mechanism（M1〜M3）と §9 の Learning 1〜5 も取り消さない。
+  6. **キャラクター実装への名指しの指摘を記録する。** 「**中央の目のようなECHO**は機能上の **state visualization** にはなっているが、『触りたい』『かわいい』『こいつを育てたい』という感情を起こせていない」。以後、**抽象的な記号や目だけのキャラクターを作らない**——表情・身体・仕草によって感情を読み取れること、既存キャラクターのコピーでないことを、キャラクター候補の必須条件とする（`EXPERIENCE_BRIEF.md` §3-1 / `REDESIGN_CANDIDATES.md` §5）。
 - **Why**: Round 1でMachine Evaluationが出した答えは**全て正しかった**——命令感度は実測29%→70%へ上がり、regressionは無く、独立盲検Evaluatorも同じ順位へ独立到達した。**そのうえで作品として失格だった。** 5本のvariantはいずれも `decide()` 周辺だけの差分であり、**Humanが実際に拒否した層（触り心地・動き・音・かわいさ・テキスト依存）は5本とも同一**だった。
   > **機械は、全candidateが共有している欠陥を見つけられない。比較は差分の中でしか働かない。**
   反証されたのは実装ではなく**評価基準そのもの**であるため、`OS.md` §12 No Teacher に従い評価基準を書き換える。これは `DESIRES.md` §5 が既に持っていた禁止（Machine EvaluationをHuman Tasteの代替にしない）の**具体的な破れ方の記録**であり、新しい原則の追加ではない。
