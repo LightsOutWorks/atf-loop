@@ -87,7 +87,7 @@ Shaping SignalとTerminal Signalを混同しない。
 
 各Major Desireは独自のWorld Signalを持ち得る（MD-2: Genuine Encounter / Inbound Need、MD-3: Human Handoff逓減等）。Follower数等のShaping SignalをNorth Star達成と混同しない。
 
-**World Prior**（他者の商品・作品・行動についてWorldから得た外部Evidence）と **Machine / Internal Evaluation**（Factory自身の生成物に対する test / critic / simulation の結果）は、**上のいずれのWorld Signalでもない。** World Priorは**仮説選択**に使い、他者のRealityであるためFactory自身のExperiment PASS / trigger発火 / participant数 / 収益には使わない。Machine Evaluationは **technical verification / variant selection / regression detection / autonomous-loop completion 等、機械的に検証可能な判定には使ってよい**——ただし**外部価値・需要・Human Taste・利用・継続利用・WTP・価格質問・Revenue など Direct Realityを要求するGateの代替には使わない**。**external-Reality-dependent criteria を持つ判定は Direct World Signal が持つ**（D-013。手順は `.claude/skills/mine-world-priors/`）。
+**World Prior**（他者の商品・作品・行動についてWorldから得た外部Evidence）と **Machine / Internal Evaluation**（Factory自身の生成物に対する test / critic / simulation の結果）は、**上のいずれのWorld Signalでもない。** World Priorは**仮説選択**に使い、他者のRealityであるためFactory自身のExperiment PASS / trigger発火 / participant数 / 収益には使わない。Machine Evaluationは **technical verification / variant selection / regression detection / autonomous-loop completion 等、機械的に検証可能な判定には使ってよい**——ただし**外部価値・需要・Human Taste・利用・継続利用・WTP・価格質問・Revenue など Direct Realityを要求するGateの代替には使わない**。**external-Reality-dependent criteria を持つ判定は Direct World Signal が持つ**（D-013。手順は `.claude/skills/mine-world-priors/`）。**variant間の優劣判定はMachine Evaluationが持つが、Champion（＝作品として成立しているという資格）は与えられない**——それは **Human Taste Gate** が持つ（D-015。実測反証: `experiments/echo/LEARNING.md` §11）。
 
 ---
 

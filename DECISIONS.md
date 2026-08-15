@@ -6,6 +6,24 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-015 — Human Taste Gate を判定階層へ置く。Machine Evaluationのvariant selectionはChampion資格を与えない
+
+- **Date**: 2026-08-15
+- **Authority**: ヒロのTask Contract「Human Reality / Human Taste 判定」（2026-08-15 Human裁定）。**Tasteの決定権はHumanが持つ**（`OS.md` HI-11）。採択はヒロの本PR merge。
+- **反証事実（FACT）**: E-015 Round 1 champion `echo-v1.html` をHuman本人が初見・説明なしで実プレイした結果、**「びっくりするほどつまらなかった」**。**Technical Prototypeとしては成功、GameとしてはREJECT。** verbatimと欠陥列挙は `experiments/echo/LEARNING.md` §11。
+- **Decision**:
+  1. **`echo-v1.html` の Game Champion 資格を解除する。** ファイルは削除せず **Technical Prototype / Historical Champion** として保存する（`echo-v0.html` も従来どおり保持）。**このままDistributionしない。小手先のRound 2 patchも開始しない。**
+  2. **判定階層へ Human Taste Gate を明示する。** 役割は **Human = Desire + Taste / AI（Factory）= Search + Design候補 + Build + Test + Variation / Real Players = Reality**。
+  3. **D-013 Decision 2 の "variant selection" の射程を訂正する。** Machine Evaluationは**同一Brief内でのvariant間の技術的優劣**を判定してよい。しかし **Champion（＝作品として成立しているという資格）を与えることはできない。** Machine Evaluationが判定してよいのは **①壊れていない ②操作できる ③意図したMechanicが存在する ④variant差分が実際に入っている** の4つまでである。**D-013は取り消さない——射程を1段狭めるだけ**であり、technical verification / regression detection / autonomous-loop completion は従来どおりMachine Evaluationが持つ。
+  4. **制作手順を変更する。** Human Taste が関わる作品では、**いきなり実装しない。** ①Humanの Experience Brief を正本として置く → ②Briefからキャラクター方向性・Core Interaction / Loop 候補を World Prior で**複数案**探索する → ③**AIだけで1案へ確定せず Human Taste Gate で停止する** → ④Humanが選んだ後に実装する。**この手順のために新しいschema・台帳・dashboard・scheduler・Skillは作らない**（既存の `mine-world-priors` と実験ディレクトリで足りる）。
+- **Why**: Round 1でMachine Evaluationが出した答えは**全て正しかった**——命令感度は実測29%→70%へ上がり、regressionは無く、独立盲検Evaluatorも同じ順位へ独立到達した。**そのうえで作品として失格だった。** 5本のvariantはいずれも `decide()` 周辺だけの差分であり、**Humanが実際に拒否した層（触り心地・動き・音・かわいさ・テキスト依存）は5本とも同一**だった。
+  > **機械は、全candidateが共有している欠陥を見つけられない。比較は差分の中でしか働かない。**
+  反証されたのは実装ではなく**評価基準そのもの**であるため、`OS.md` §12 No Teacher に従い評価基準を書き換える。これは `DESIRES.md` §5 が既に持っていた禁止（Machine EvaluationをHuman Tasteの代替にしない）の**具体的な破れ方の記録**であり、新しい原則の追加ではない。
+- **Supersedes**: **D-013 を部分訂正**（Decision 2 の "variant selection" の射程。**取り消しではない**）。`CONSTRAINTS.md` 全項 / `OS.md` Layer1・HI-1〜HI-12 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7-0 / D-001〜D-012・D-014 / E-014契約はいずれも変更していない。**E-015のRound 1記録（`LEARNING.md` §1〜§10）は削除・改変しない**——§11として訂正追記する（`CONSTRAINTS.md` §6）。
+- **Rollback**: 本PRのrevertで `LEARNING.md` §11・`EXPERIENCE_BRIEF.md`・`REDESIGN_CANDIDATES.md`・`DESIRES.md` の1文・台帳のstatus行・本recordが戻る。物理削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
 ## D-014 — Public Web Observation を原則開放する。読みはAction Riskで扱い、書きはHuman Gateのまま
 
 - **Date**: 2026-08-14

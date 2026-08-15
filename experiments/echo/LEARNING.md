@@ -114,3 +114,53 @@ AI Player（`play.cjs`、実ブラウザ・mobile viewport・3つの接し方 ×
 - **実機のタッチ操作感。** Playwrightのクリック模擬のみで、実デバイスは未検証。
 
 **World Prior も Machine Evaluation も、これらの `UNKNOWN` を埋めない**（D-013）。
+
+---
+
+## 11. Human Taste Gate — 結果: **FAIL**（2026-08-15）
+
+§10の筆頭 `UNKNOWN`（「人間がECHOを面白いと感じるか」）が、Human本人の初見プレイで埋まった。
+
+**取得条件**: Human（ヒロ）本人が、championを初見・**説明も攻略も期待する反応の提示もなし**で、自力でブラウザから実プレイ。事前に決めたとおり、観測対象は Observed のみとした。
+
+### 11-1. Human verbatim（FACT。解釈せずそのまま保存する）
+
+> **「びっくりするほどつまらなかった」**
+
+- 選択肢が極端で自由度がない
+- ほぼすべてテキストベース
+- キャラクターにほとんど動きがない
+- 音がない
+- 選択肢を選んで最後にテキストを見るだけ
+- 育ててもキャラクター自体が大きく変化している感じがない
+- キャラクターがかわいくなく、愛着が湧かない
+
+> **「育成ゲームでは、育てる対象そのものを好きになれることが必須条件」**
+
+### 11-2. 判定（Human裁定）
+
+> **Technical Prototypeとしては成功。GameとしてはREJECT。**
+
+`echo-v1.html` の **Game Championの資格は解除する。** ファイルは削除せず、**Technical Prototype / Historical Champion** として保存する（`echo-v0.html` も従来どおり保持）。**このままDistributionしない。小手先のRound 2 patchも開始しない。**
+
+### 11-3. 何が反証されたか
+
+**実装ではなく、評価基準が反証された**（`OS.md` §12 No Teacher）。
+
+Round 1でMachine Evaluationが答えたのは「壊れていないか」「意図した機構が動いているか」「variant間でどれが指標を上げたか」までだった。それは**全部正しかった**——命令感度は 29% → 70% へ実際に上がり、regressionも無く、独立盲検Evaluatorも同じ順位へ独立到達した。**そのうえでゲームとして失格だった。**
+
+> **variant間の優劣判定が正しくても、集合全体が失格でありうる。** 5本のvariantはいずれも `decide()` 周辺だけの差分であり、**Humanが実際に拒否した層（触り心地・動き・音・かわいさ・テキスト依存）は5本とも同一**だった。**機械は、全candidateが共有している欠陥を見つけられない。** 比較は差分の中でしか働かない。
+
+Round 1 §9-1「選択が結末に効いているかは実際に遊ばないと分からない」は、より上位の形で成立し直した——**「遊べるゲームかどうかは、人間が遊ばないと分からない」。**
+
+### 11-4. Round 1の何が残るか
+
+- **§2 World Priorの採用Mechanism（M1〜M3）は反証されていない。** Humanが拒否したのは実装の層であって、「選択が後で返る」「結末に名前がある」等の機構ではない。ただし**それらだけではゲームにならない**ことは実測された。
+- **§9のLearning 1〜5は全て生きている**（計器・静かな生成失敗・World Priorの失敗Evidenceの当たり）。
+- **自律ループ機構そのものは動いた。** ゼロ生成 → 実ブラウザプレイ → 弱点特定 → 仮説 → variant → 盲検評価 → 淘汰 は Human介入なしで1周した。**この能力は反証されていない。**
+
+### 11-5. 次
+
+Humanが **Human Experience Brief** を与えた（`EXPERIENCE_BRIEF.md` = 再設計の正本）。手順は「いきなり実装しない → Briefからキャラクター方向性5案・Core Interaction / Loop候補5〜10案をWorld Priorで探索 → **Human Taste Gateで停止**」。探索の出力は `REDESIGN_CANDIDATES.md`。
+
+判定階層の訂正（Machine Evaluationのvariant selectionはChampion資格を与えない）は **D-015**。
