@@ -23,8 +23,19 @@
 |---|---|---|
 | Universe（目安1000人。Micro Gaming ≈600 / Family ≈300 / Exploration ≈100） | `UNIVERSE.csv` | 作成中（バッチ収集・進捗は下記ログ） |
 | Rank方法論・上位候補の自然言語理由 | `RANK_METHODOLOGY.md` | 作成中 |
-| 上位30人の深掘り・personalization hook・推奨Contact Route・初回メッセージ案 | `TOP30_DOSSIERS.md` | Universe収集後に着手 |
+| 上位30人の深掘り・personalization hook・推奨Contact Route・初回メッセージ案 | `TOP30_DOSSIERS.md` | **完了**（Opus 4.8委譲・本体で内容検証済み。2026-08-15） |
 | Stage B観測ログ（送信後。Human Gate後にのみ記入開始） | `STAGE_B_OBSERVATION_LOG.csv` | 列のみ確定済み・記入は実送信後 |
+
+## 送信前チェックリスト（Human向け。`TOP30_DOSSIERS.md`末尾の集計を転記）
+
+実送信（Stage B・Human Gate）の前に、以下を個別に確認すること。**Claudeは調査・起草のみで、確認・送信は行っていない。**
+
+1. **導線未確定4件** — SIM-03 / FAMILY-03 / FAMILY-04 / EXPLORE2-06。公開の問い合わせ導線（email/フォーム/DM）がCSV上で確認できていない。導線を特定するまで送信対象に含めない。
+2. **事務所・窓口URL未確認2件** — SIM-01（Studio Coup）/ FAMILY-08（吉本興業）。所属は確認済みだが、企業向け問い合わせフォームの具体URLは未確認。公式サイトで窓口を特定してから送る。
+3. **アカウント運用者の確認が必要2件** — FAMILY6-10 / FAMILY6-02。DM候補アカウントの運用者が保護者本人であることをプロフィール記載等で確認してから送る（未成年本人アカウントへ誤送しない）。
+4. **経路の再確認1件** — WEIRD-01。Rank時点で「contact経路の再確認が必要」と判定済み。送信前にX等でDM開放・業務窓口の状態を再確認する。
+5. **同一人物への複数経路同時送信はしない**（契約・元Task Contract共通の禁止事項）。`TOP30_DOSSIERS.md`が各人に指定した単一の推奨Contact Routeのみを使う。
+6. **`〈送信者名〉`プレースホルダーの確定**は送信者自身のアイデンティティ使用であり、`CONSTRAINTS.md` §4のHuman Gate対象。Claudeは埋めていない。
 
 ## Universe収集バッチ進捗ログ（Human-confirmed実装作業のみを記録。予定は書かない）
 
