@@ -6,6 +6,31 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-015 — Major Bet変更: Creator-Led AI Game Publisher / Creator Game Opportunity Orchestration LayerをGame Route再活性化として採用する
+
+- **Date**: 2026-08-15
+- **Authority**: ヒロのTask Contract「日本のゲーム系Creator 1000人Universe作成＋上位30人の個別営業案」＋ Targeting Update＋ 明示Major Bet Commit（本セッション内、AskUserQuestionへの回答として全文受領。会話ログが一次記録）。`OS.md` HI-11「戦略またはMajor Betの変更」はHumanのみが決定できる事項であり、本D-recordはその決定を正本へ転記するのみでClaudeが決定した事実はない。**採択はヒロの本PR merge**（`CONSTRAINTS.md` §4 Human Gate: mainへのmerge）。
+- **背景（矛盾の検出）**: 2026-08-15、着手前の正本照合（`OS.md` HI-12）で次の矛盾を検出し、`CLAUDE.md` §2に従い一度停止してHumanへ提示した。①`OS.md` Current Identity「Game等は明示的な現在承認済み決定で再活性化されない限りHistorical Experiment」に対し、当該Task ContractはD-record無しにGame Routeの再活性化を要求していた。②`CURRENT_STATE.md` §7-0（D-007）現在のベット「自分たちが先駆者になる道を取らない。既に収益を生んでいて日本にまだ来ていない事業を選ぶ。ゼロから作らない」に対し、Creator-Led AI Game Publisherは前例のない自社発の事業であり逆方向だった。③`CURRENT_STATE.md` §7「E-014 §6 triggerの発火前に、有償化設計・価格設計・収益構造の追加調査を開始しない」に対し、当該Task Contractは収益シェア型の新事業設計そのものだった。ヒロはAskUserQuestionに対し「YES。Major Betとして明示的にCommitします」と回答し、下記Decisionの内容（範囲限定つき）を全文で指定した。
+- **Decision**:
+  1. **Creator-Led AI Game Publisher（＝Creator Game Opportunity Orchestration Layer）を新しいMajor Betとして採用し、Game Routeを再活性化する。** これは新しいMajor Desireではない。既存MD-1（Economic Engine）の下で試す新しいベットとして扱う（`DESIRES.md` MD-1〜MD-3の順位・本数は変更しない）。
+  2. **上位戦略の中身**: 目標はAI Game Makerを作ることでも自前Game Platformを作ることでもない。Audienceを持つCreatorの「こんなゲームを作りたい」というGame Opportunityの上流を握り、案件ごとに世界最高のAI・制作能力・Distribution・Audience・Monetizationを組み合わせるOrchestration Layerになる。長期的にOWNしたいものは、Creatorとの Game Mandate / First-call Relationship・Creator × Desire × Taste・Creator × Audience × Game Outcome History・Underwriting / Capital Allocation Intelligence・Winning Creator Roster・Winning IP Portfolio。下位の制作技術そのものは原則モートに数えない。
+  3. **役割分担**: Creator = Desire + Taste + Audience。Platform/AI = Research + Search + Build + Test + Distribution + Optimization。Players = Reality。Publisher = Underwriting / Capital Allocation。
+  4. **初期Wedge**: 主戦場をMega/MidからMicro Creatorへ変更する（2026-08-15 Targeting Update）。目安: Micro Gaming Creator ≈600 / Parent-led Family Creator ≈300 / Exploration ≈100。Follower数だけで順位を決めない。最近の実視聴・固定Audience・本人のTaste・Contactability・本人または家族専用Gameがそのまま動画企画になるかを重視する。ヒロ本人をCreator #1としてGame制作能力をdogfoodしつつ、Creator #2獲得へ進む。
+  5. **Family Creator特有の制約（Hard要件・撤回しない）**: 営業対象は成人の親・保護者・managementのみ。**未成年本人への営業・非公開連絡先探索は禁止。** 「子供が出演している」と「子供向けGame」を混同せず、対象AudienceはEvidenceがない限り推測しない。「家族が作りたいGameを実際に作る過程そのものがContentになるか」を重要なFitとして評価する。
+- **Supersedes（明示的に上書きする範囲。それ以外は不変）**:
+  1. `CURRENT_STATE.md` §7-0（D-007）現在のベット「既に収益を生んでいて、日本にまだ来ていない事業の中から選ぶ」の**「日本未上陸」を必須条件とする部分**を、本ベットについて解除する。**旧ベットの探索範囲は他候補には引き続き有効**——本D-recordはCreator-Led AI Game Publisherという1本のベットについてのみ、この条件を外す。
+  2. `CURRENT_STATE.md` §7（Current Operational Priority由来）の「E-014 §6 triggerの発火前に、有償化設計・価格設計・収益構造の追加調査を開始しない」という待機条件を、**Creator-Led AI Game Publisher Routeに限り**適用しない。E-014自体（Desire to Game Reality Test）は本D-recordの対象外であり、契約・Funnel現在値・判定点は無変更のまま並走する。E-014のtriggerをこのRouteの進行条件にしない。
+- **明示的に撤回しないもの（Human裁定のまま維持）**:
+  1. **「ゼロから作らない」原則は撤回しない。むしろ本ベットではより強く適用する。** 自社で作るのはモートになる上位Layer（Orchestration / Creator Relationship / Underwriting Intelligence）だけとし、下位Layerは世界最高の既存手段をREUSEする（AI→Claude/OpenAI等既存最良モデル、Game Engine→既存最高手段、Player集客→Creator Audience、Game Distribution→CrazyGames/Steam/itch/YouTube/Roblox等、Payment/analytics/hosting→既存サービス、Influencer reach→Creator自身のAudience）。世界最高を自社で再発明しない。`.claude/skills/reuse-before-build/SKILL.md` のRoute順（REUSE → BUY → ADAPT → COMPOSE → DELEGATE → BUILD）は本ベット下でも適用する。
+  2. **Human Gate不変**: DM / email / contact form等、第三者への実送信は引き続き `CONSTRAINTS.md` Part I §4のHuman Gate。今回Claudeが行ってよいのは調査・Universe作成・Ranking・営業案作成までであり、外部送信は一切行わない。
+  3. **今回作らないもの（Non-goals・恒常）**: CRM SaaS / 自動DM bot / scraping infrastructure / mass mailing system / dashboard / Creator Platform / autonomous outreach agent / contact databaseの恒久機構。成果物はCSV / Markdown等の最小成果物に留める。
+  4. `DESIRES.md` MD-1〜MD-3の順位・本数・North Starは無変更。`CONSTRAINTS.md` Part I（Hard Boundary / Budget JPY 50,000 / Risk Tier / Human Gate / Data Boundary / 検証の誠実性）は無変更。
+- **事前登録契約**: 本ベットの個別Reality Experimentとしての仮説・変更変数・PASS/FAIL/VOID/STALE条件・budget_cap・rollback・KILL条件は `direction/EVAL_CREATOR_LED_GAME_PUBLISHER_2026-08.md` §5（E-016）が持つ。本D-recordは契約の中身を再掲しない。
+- **Why**: ヒロの明示Major Bet Commit（本文全文は上記Authority欄が指す会話ログ）。理由の要旨はヒロ自身の言葉——「日本未上陸」を必須条件から外し、収益構造・競合・Game制作・外部営業準備の調査に**今すぐ**着手できるようにするため。旧ベットのtrigger待機条件がGame Routeの進行を不必要に止めていたと判断した。
+- **Rollback**: 本PRのrevertで、本record・`CURRENT_STATE.md` §7-0の該当差分・`experiments/INDEX.md` E-016行・`direction/EVAL_CREATOR_LED_GAME_PUBLISHER_2026-08.md`・`experiments/creator-universe-jp/`配下が単一revertで戻る。外部送信を伴わないため、rollbackは設定変更を要さない。旧ベット（「日本未上陸」必須条件）は本D-recordのrevertで自動的に復元される。
+
+---
+
 ## D-014 — Public Web Observation を原則開放する。読みはAction Riskで扱い、書きはHuman Gateのまま
 
 - **Date**: 2026-08-14
