@@ -13,6 +13,7 @@ argument-hint: "[draft|check] [実験の概要 または 契約ファイルパ�
 - **このスキルは「実験を始めてよいか」を判断しない。** 着手判断は `OS.md` HI-10（`NO_ACTION` 既定・7条件）とHI-11（権限分界）の管轄であり、スキルの外にある。**このスキルの存在を、新しい実験を始める理由にしない。**
 - **正本を複製しない。** 検査項目・判定語彙・Boundary・Budget規律の正本は下記の文書が持つ。本ファイルと正本が矛盾したら**常に正本が勝ち**、矛盾の存在自体を欠陥として報告する。
 - 承認はHumanのPR mergeである。このスキルが作るのは**契約案**であり、承認済み契約ではない。
+- **Human Gateは終端状態ではない。** merge後にHumanしか実行できない行為が残る場合、PR本文へ `ATF_HANDOFF` を必ず置き、**誰が・次に何を1つだけ実行し・何が返ればAI側を再開できるか**を固定する。`承認済み・未実施` を最終状態として放置しない。
 
 ## 実行時に読む正本（この順で。`OS.md` HI-12 取得規律に従う）
 
@@ -29,7 +30,27 @@ argument-hint: "[draft|check] [実験の概要 または 契約ファイルパ�
 2. 台帳の列（world_signalの記録形式）を契約と同時に確定する（E-014契約の着手条件「1件目の納品前に列を確定する」と同じ理由——構造化は観測開始前にしかできない）。
 3. 起草した契約へ、下記checkを自分で実行し、所見を潰してから出す。
 4. `experiments/INDEX.md` への行追加は status **PROPOSED** で起草する。ACTIVE化はmerge後の別作業であり、このスキルは行わない。
-5. branch → commit → **draft PR** を作成して停止する。PR本文に「merge = 本契約が事前登録するHuman Gateの通過」と明記する。
+5. branch → commit → **draft PR** を作成して停止する。PR本文に「merge = 本契約が事前登録するHuman Gateの通過」と明記し、下記 `ATF_HANDOFF` blockを必ず付ける。
+
+## merge後handoff — liveness contract（必須）
+
+PR本文の末尾に次のmachine-readable blockを置く。1フィールド1行。自由文をblock外へ補足してもよいが、この3行だけで次の行動が分からなければ不合格。
+
+```text
+<!-- ATF_HANDOFF
+owner: HUMAN
+action: <Humanが次に実行する1つの具体的行為>
+resume_when: <何が観測・報告されたらAI側を再開できるか>
+-->
+```
+
+規律:
+
+- `owner` は **`HUMAN` または `NONE` のみ**。現在はmerge後にAIを自動wakeする実行経路が無いため、**`AI` をpost-merge dependencyとして書かない**。AI側で必要な作業はmerge前に終える。どうしてもmerge後でなければ成立しない場合は、その未解決の実行経路を欠陥としてHumanへ返す。
+- `action` は**1つの実行可能な行為**にする。「Human Gate」「未実施」「確認する」「続きをやる」のような状態・目的語だけは禁止。例: `D1へ目的説明と同意確認を行い、SELF_ANALYSIS_PROTOCOL v1.0を実施する`。
+- `resume_when` は**AIが次へ進める観測条件**にする。時刻だけではなく、何が返れば再開できるかを書く。
+- mergeが真の終端で、次のReality Actionが存在しない場合だけ `owner: NONE` を使う。この場合 `action: NO_ACTION` / `resume_when: NONE` とする。
+- `.github/workflows/human-handoff-liveness.yml` はmainへのmergeを検知し、`owner: HUMAN` なら同じPRへrepository ownerをmentionして `NEXT ACTION` を自動コメントする。Human Gateの記述があるのにblockが欠落・不正なら、その欠落自体をコメントしてfailする。**外部モデル・第三者通信・支出・deployは行わない。**
 
 ## check — 契約案の検査
 
