@@ -114,3 +114,105 @@ AI Player（`play.cjs`、実ブラウザ・mobile viewport・3つの接し方 ×
 - **実機のタッチ操作感。** Playwrightのクリック模擬のみで、実デバイスは未検証。
 
 **World Prior も Machine Evaluation も、これらの `UNKNOWN` を埋めない**（D-013）。
+
+---
+
+## 11. Human Taste Gate — 結果: **FAIL**（2026-08-15）
+
+§10の筆頭 `UNKNOWN`（「人間がECHOを面白いと感じるか」）が、Human本人の初見プレイで埋まった。
+
+**取得条件**: Human（ヒロ）本人が、championを初見・**説明も攻略も期待する反応の提示もなし**で、自力でブラウザから実プレイ。事前に決めたとおり、観測対象は Observed のみとした。
+
+### 11-1. Human verbatim（FACT。解釈せずそのまま保存する）
+
+> **「びっくりするほどつまらなかった」**
+
+- 選択肢が極端で自由度がない
+- ほぼすべてテキストベース
+- キャラクターにほとんど動きがない
+- 音がない
+- 選択肢を選んで最後にテキストを見るだけ
+- 育ててもキャラクター自体が大きく変化している感じがない
+- キャラクターがかわいくなく、愛着が湧かない
+
+> **「育成ゲームでは、育てる対象そのものを好きになれることが必須条件」**
+
+**キャラクター実装への名指しの指摘**: 現在の**中央の目のようなECHO**は、機能上の **state visualization** にはなっているが、**「触りたい」「かわいい」「こいつを育てたい」という感情を起こせていない。**
+
+### 11-2. 判定（Human裁定）
+
+> **Technical Prototypeとしては成功。GameとしてはREJECT。**
+
+`echo-v1.html` の **Game Championの資格は解除する。** ファイルは削除せず、**Technical Prototype / Historical Champion** として保存する（`echo-v0.html` も従来どおり保持）。**このままDistributionしない。小手先のRound 2 patchも開始しない。**
+
+### 11-3. 何が反証されたか
+
+**実装ではなく、評価基準が反証された**（`OS.md` §12 No Teacher）。
+
+Round 1でMachine Evaluationが答えたのは「壊れていないか」「意図した機構が動いているか」「variant間でどれが指標を上げたか」までだった。それは**全部正しかった**——命令感度は 29% → 70% へ実際に上がり、regressionも無く、独立盲検Evaluatorも同じ順位へ独立到達した。**そのうえでゲームとして失格だった。**
+
+> **variant間の優劣判定が正しくても、集合全体が失格でありうる。** 5本のvariantはいずれも `decide()` 周辺だけの差分であり、**Humanが実際に拒否した層（触り心地・動き・音・かわいさ・テキスト依存）は5本とも同一**だった。**機械は、全candidateが共有している欠陥を見つけられない。** 比較は差分の中でしか働かない。
+
+Round 1 §9-1「選択が結末に効いているかは実際に遊ばないと分からない」は、より上位の形で成立し直した——**「遊べるゲームかどうかは、人間が遊ばないと分からない」。**
+
+### 11-4. Round 1の何が残るか
+
+- **§2 World Priorの採用Mechanism（M1〜M3）は反証されていない。** Humanが拒否したのは実装の層であって、「選択が後で返る」「結末に名前がある」等の機構ではない。ただし**それらだけではゲームにならない**ことは実測された。
+- **§9のLearning 1〜5は全て生きている**（計器・静かな生成失敗・World Priorの失敗Evidenceの当たり）。
+- **自律ループ機構そのものは動いた。** ゼロ生成 → 実ブラウザプレイ → 弱点特定 → 仮説 → variant → 盲検評価 → 淘汰 は Human介入なしで1周した。**この能力は反証されていない。**
+
+### 11-5. 次
+
+Humanが **Human Experience Brief** を与えた（`EXPERIENCE_BRIEF.md` = 再設計の正本）。手順は「いきなり実装しない → Briefからキャラクター方向性5案・Core Interaction / Loop候補5〜10案をWorld Priorで探索 → **Human Taste Gateで停止**」。探索の出力は `REDESIGN_CANDIDATES.md`。
+
+判定階層の訂正（Machine Evaluationのvariant selectionはChampion資格を与えない）は **D-015**。
+
+---
+
+## 12. Human Taste Gate #1 — 通過（2026-08-15）
+
+Briefから探索したキャラクター5案・Core Loop 10案をHumanへ提示し、Humanが選んだ。
+
+| 問い | Humanの回答 |
+|---|---|
+| キャラクター方向性 | **C-4「耳が異常に大きい二足の小獣」** |
+| Core Interaction / Core Loop | **L-1〜L-10 すべて** |
+| Briefに無い必須条件 | **現状なし** |
+
+したがって次段の対象は **C-4 ただ1方向 / 10 Loopすべてを含む**。不採用のC-1 / C-2 / C-3 / C-5 は削除せず `REDESIGN_CANDIDATES.md` に保存する（Human Tasteが4本のPrototypeを全て外した場合の次候補）。
+
+**Round 1との手順上の違い**: Round 1は **AIが1案へ確定してから作った**。今回は **Humanが方向を選んでから作る**。`大量Concept → 少数Prototype → Human Taste → 深く作る`（D-015 Decision 4）。
+
+探索と設計は `v2/CONCEPT_C4.md`、機械検査は `v2/MACHINE_CHECK.md`。
+
+
+---
+
+## 13. FREEZE（2026-08-15）
+
+**Human裁定: 「ダメすぎるから一旦ふりーずで」。E-015 を凍結する。**
+
+### 何が起きたか（FACT）
+
+| 回 | 出したもの | Human判定 |
+|---|---|---|
+| Gate #1 | `echo-v1.html`（Round 1 champion） | **REJECT**「びっくりするほどつまらなかった」 |
+| Gate #2 | キャラ5案 / Loop 10案 | **通過**（C-4 / L-1〜L-10 を採択） |
+| Gate #3 | Prototype 4本（初版） | 参照画像とともに **「だめね」** |
+| Gate #3' | 描画文法7件を直した4本 | **「ダメすぎる」→ FREEZE** |
+
+### この段の Learning
+
+1. **キャラクターのTasteに、AIはPriorの反復では収束できなかった。実測2回連続でFAIL。** World Prior を厚くしても（Steam 20作品 → 日本のキャラクター文化 → 参照画像から描画文法7件）、Humanの「かわいい」には届かなかった。**不足していたのは情報ではない。**
+2. **機械が測れる4項目（壊れていない / 操作できる / 意図したMechanicが存在する / variant差分が入っている）は、2回とも全部PASSしていた。** 機械の指標は、Tasteとまったく相関しなかった——D-015の射程制限は正しかったが、**「機械が測れる範囲で最善を尽くす」ことがTasteの前進を意味しない**ことまでは書けていなかった。
+3. **手順としての失敗**: 私は低い完成度の候補を出しては「これで合っているか」を繰り返し聞き、**判定の負担をHumanへ何度も戻した。** Brief §6 の `大量Concept → 少数Prototype → Human Taste` は、**Prototypeが一定の水準に達していることを前提にしている。** 水準に達していないものをGateへ運ぶと、Gateは「選ぶ」場ではなく「否定する」場になる。
+4. **凍結は失敗の記録であって、機構の反証ではない。** 自律ループ（生成→実ブラウザ検査→variant→淘汰）と10 Loopの実装は動いている。反証されたのは**AI単独でキャラクター造形のTasteへ到達できるという想定**である。
+
+### 凍結の範囲
+
+- **停止**: キャラクター造形の反復 / Prototypeの追加 / Round 2 / 実装確定 / 配布・公開。
+- **保存**（削除しない）: `echo-v0.html` `echo-v1.html`（Technical Prototype / Historical Champion）、`v2/echo2-*.html` 4本、`v2/play2.cjs`、全記録文書。公開済みartifactはprivateのまま残す。
+- **Game Championは引き続き存在しない。**
+- **解除はHumanの明示指示のみ。** Claudeの側から再開提案・改善案の追加提示をしない（`OS.md` HI-10 行動の既定 = `NO_ACTION`）。
+
+**Reality Funnel はこのゲームについて全段 `UNKNOWN` / 外部ユーザー 0 のまま。** WTP・需要・継続利用は一切測っていない。
