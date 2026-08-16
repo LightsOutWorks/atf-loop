@@ -241,17 +241,20 @@ GitHub API実測でopenは**2件**（いずれもdraft、base `main`）。
 
 **現在のTARGETは段5の売上そのものではなく、§6 triggerの発火である。** trigger発火前に、有償化設計・価格設計・収益構造の追加調査を開始しない。発火後は §6 に従い、その時点で売上への最短Routeを再判定する。**G2〜G7の `UNKNOWN` を埋めることは現在の最優先ではない**——積極的に配らないが完全封印でもなく、新しい第三者のDesireが既存ゲームと一致した場合のみREUSE候補として使う（観測手順は台帳の「G1 第三者Exposure — 実行メモ」。新しいExperiment IDを作らない）。
 
+**例外（D-015 / 2026-08-15 Human Major Bet Commit）**: 上記のtrigger待機条件は **Creator-Led AI Game Publisher Route（E-016）に限り適用しない**。E-014契約・Funnel現在値・判定点・§6解除trigger自体はこの節の記述どおり無変更で並走する。E-016の戦略・戦術・budget_cap・Human Gateは §7-0 と `direction/EVAL_CREATOR_LED_GAME_PUBLISHER_2026-08.md` §5 が持つ。
+
 **`ROADMAP.md` §0 の事前登録は動かさない**——律速「会話の本数」と2026-11-10の失敗判定は、結果を見てから基準を変えないため不変更（`CONSTRAINTS.md` §6）。本ファネルはこれと併置し、どちらが先に動くかを実測させる。
 
-### 7-0. 現在の戦略 / 現在のベット（D-007 / Human裁定。正本はここ）
+### 7-0. 現在の戦略 / 現在のベット（D-007・D-015 / Human裁定。正本はここ）
 
 **Human-confirmed / repo-unverified**——実装済みの事実ではなく、現時点で採用されている方向である。層の順序（世界観 → 戦略 → 戦略と戦術の間 → 戦術）の規律は `OS.md` HI-9 が持ち、本節は中身だけを持つ。
 
-- **現在の戦略（＝資源の配分）**: **トークンと時間を「筋のいい一点を見つけること」に集中投下する。** 筋の悪いもので進めて溶かすより、考え尽くして「これだ」となってから力を入れるほうが北極星に速く近づく。**ゼロから作らない。**
-- **現在のベット（＝戦略と戦術の間）**: 自分たちが先駆者になる道を取らない。**既に収益を生んでいて、日本にまだ来ていない事業**の中から、筋がよく日本で勝てるものを見つける。**その人がどうやって収益しているのかまで解剖した上で**、これまで作ってきたものを乗せて最もシナジーが出る一点を選ぶ。**決めたら全ベットする。**
+- **現在の戦略（＝資源の配分）**: **トークンと時間を「筋のいい一点を見つけること」に集中投下する。** 筋の悪いもので進めて溶かすより、考え尽くして「これだ」となってから力を入れるほうが北極星に速く近づく。**ゼロから作らない**——ただし2026-08-15（D-015）以降、この原則は「自社は前例のない事業をゼロから起こさない」ではなく「**自社で作るのはモートになる上位Layerだけ。下位Layerは世界最高の既存手段を再発明しない**」へ運用を精緻化する（詳細はD-015 / 下記ベット参照）。
+- **現在のベット①（Committed / D-015 2026-08-15）— Creator-Led AI Game Publisher（Creator Game Opportunity Orchestration Layer）**: Audienceを持つCreatorの「こんなゲームを作りたい」というGame Opportunityの上流を握り、案件ごとに世界最高のAI・制作能力・Distribution・Audience・Monetizationを組み合わせるOrchestration Layerになる。目的はAI Game Makerや自前Game Platformの構築ではない。役割分担: Creator = Desire + Taste + Audience／Platform = Research + Search + Build + Test + Distribution + Optimization／Players = Reality／Publisher = Underwriting + Capital Allocation。長期的にOWNしたいのはCreatorとのMandate関係・Creator×Desire×Taste・Creator×Audience×Game Outcome History・Underwriting Intelligence・Winning Creator Roster・Winning IP Portfolioであり、下位の制作技術そのものはモートに数えない。初期WedgeはMicro Creator主戦場（Micro Gaming ≈600 / Parent-led Family ≈300 / Exploration ≈100）。Family Creatorは成人の親・保護者・managementのみ営業対象、未成年本人への営業・非公開連絡先探索は禁止。ヒロ本人をCreator #1としてdogfoodし、Creator #2獲得へ進む。**本ベットについてのみ「既に収益を生んでいて日本にまだ来ていない事業」（＝日本未上陸）を必須条件から外す**（旧ベット②の同条件は他候補に対しては無変更）。事前登録契約: `direction/EVAL_CREATOR_LED_GAME_PUBLISHER_2026-08.md` §5（E-016）。
+- **現在のベット②（Exploration・他候補に適用。D-007原文）**: 自分たちが先駆者になる道を取らない。**既に収益を生んでいて、日本にまだ来ていない事業**の中から、筋がよく日本で勝てるものを見つける。**その人がどうやって収益しているのかまで解剖した上で**、これまで作ってきたものを乗せて最もシナジーが出る一点を選ぶ。**決めたら全ベットする。**（ベット①以外の新規候補探索には引き続きこの条件を適用する）
 - **現在の優位（＝探索範囲の第3条件。呼称: Human Experience / Earned Edge）**: **「人の判断・欲求・迷いを引き出し、本人の言葉として返しながら、相手の現実を尊重し、進む・進まない・手放すを含む意思決定を前に進める力」。** 優位の中身を記述している裏づけは `direction/DESIRE_TO_REALITY_SERVICE_DESIGN.md` §1〜§2 のみ（等級の訂正はD-007）。repo内の実装は `experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md`。在重力営業の原典はリポジトリ外にあり取り込まない（`CONSTRAINTS.md` §5）。D-005の禁止語はここに含めない。
 - **これは絞り込み条件であって Hard Boundary ではない。** Reality Evidenceが強い候補は範囲外でも1つのCommitとしてHumanへ上げてよい（`OS.md` HI-11）。**本業から得た判断能力を優位として使うことと、本業の関係を接触母集団に使うことは別**であり、後者は禁止のまま。
-- **現在の位相 = 探索期（Exploration）。** 固定実行への移行条件・固定中に変えてよい範囲・早期解除条件は `OS.md` Layer2「探索と固定」が持つ。
+- **現在の位相 = ベット①（Creator-Led AI Game Publisher）について固定実行（Commitment）。** それ以外の候補領域は引き続き探索期（Exploration）。固定実行への移行条件B1〜12（`OS.md` Layer2「探索と固定」）の充足記録・判定点・固定中に変更してよい範囲・早期解除条件はD-015および`direction/EVAL_CREATOR_LED_GAME_PUBLISHER_2026-08.md`が持つ。
 - **Factoryの価値主張は「生成能力」に置かない**（D-010）。最有力候補は **Reality-learning（Factory私有の複利prior）**。**仮説であり実測0**（移転実績0）。生成モート未検出は不在の証明ではない。
 
 **行動の既定は `NO_ACTION`**（`OS.md` HI-10）。上の戦略に接続できることは実行の必要条件のひとつであって十分条件ではない。**Strategy Committed後の戦術はClaudeがOwnerであり、Humanへ選択肢を返さない**（HI-11）。
