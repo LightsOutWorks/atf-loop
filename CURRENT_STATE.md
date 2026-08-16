@@ -136,13 +136,15 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-14 JST**
+Observed at: **2026-08-16 JST**
 
 Default branch: `main`
 
-Base SHA: `1e59e031470a779571573da9e85adf3d9853357c`
+Base SHA: `3d94c50361890d398835ea8ffe442f2f5d720778`
 
 Evidence scope: 上記SHAのdefault branch / 本セッションの一次実測（`git`・`node scripts/c0-provenance.mjs`・`node scripts/control-plane-canary.mjs`・GitHub API read-only）/ 明示ラベル付きのHuman-reported。
+
+**2026-08-16セッションで一次実測したのは §2-a（新設）と §6（open PR一覧）である。** §1 / §3 / §5 のHuman-reported値（Xフォロワー・note記事数・xAI残高・副業条項）は再確認しておらず、前回観測から**繰り越し**である。繰り越し値を今回の実測として読まない（`OS.md` HI-4 F5）。
 
 **本文は現在値だけを持つ**（2026-08-14 / D-011）。訂正の経緯・棄却した仮説・過去の観測値はgit historyと該当D-record・実験台帳が持ち、本文へ積層させない。会話・予定・提案を実装済みの事実として書かない。確認できないことは `UNKNOWN` とする。文書の責務分担とSource of Truth Priorityは `OS.md` が持つ。
 
@@ -175,6 +177,25 @@ E-005（Large-N Demand Intelligence / verdict `PASS`）・E-008（Environment Pr
 
 **運用の現在値**: Lane A（E-006）の定期self check-inは停止済み（X読取がharnessから不可 — E-008）。Humanがreply / reactionを共有した時のみ再起動する。並行セッションは同一canonical fileを同時編集しない。
 
+### 2-a. Accepted Desire — EXECUTABLE_NEXT_STEP（観測 2026-08-16。規律の正本は `OS.md` HI-13）
+
+**Human Commitを通過し、まだ完了していないもの**の一覧である。**「承認済み・未実施」で1手を持たない行を置いてはならない**（HI-4 F11）。各行の1手は、**その項目自身の事前登録契約または記録済みの `UNKNOWN` から導いたものであり、新しい判断ではない**。`HOLD` / `KILL` / `NO_ACTION` / `HISTORICAL` の項目はAccepted Desireではないため本表に載せない（§2 / §5 / §7-0-a が持つ）。**未mergeのopen PRも載せない**——提案は承認ではない。
+
+| Accepted Desire | 承認 | 次の1アクション | 実行者 | AIが実行できない理由 | 次に確定する状態 |
+|---|---|---|---|---|---|
+| **E-012 Instance 1 実行契約**（在重力自己分析をD1へ適用） | 2026-08-15 PR #86 merge（`3d94c50`） | **D1へ「ワークに60〜90分もらえないか」を1回連絡する**（同意文は `SELF_ANALYSIS_PROTOCOL.md` §357 をそのまま。改変しない） | Human | **Human Gate — 第三者への送信**（`CONSTRAINTS.md` Part I §4） | `experiments/desire-discovery/LEDGER.md` に participant D1 の行が1本立ち、契約 §3 の判定点（本人が設定する検証日）が確定する |
+| **E-006 3通目の判定**（判定時刻 2026-08-13 09:45 JST は経過済み・結果 `UNKNOWN`） | 事前登録済み（Reply Log 003） | **Xの当該スレッドを開き、3通目（2026-08-11 03:14送信）への返信の有無を1行で報告する** | Human | **観測能力の欠落**（Xのスレッド2投目以降がharnessから取得不可 — §7）。**Human Gateではない**——権限ではなく能力の問題であり、解消経路も別（X World Signal Canaryは `HOLD`） | `experiments/batch-1/LEDGER.md` X-@HatoNozomu 行の verdict（`NO_REPLY_TIMEOUT` / 次段のいずれか）が確定する |
+| **E-014 Phase 1**（Phase 1未着手・納品0） | 2026-08-13 PR #65 merge（`0dcf7d6`） | **実在の相手1名から「作ってほしいもの」を1件、本人の言葉で聞き取る** | Human | **Human Gate — 第三者への接触** | `experiments/desire-to-game/LEDGER.md` の判定母集団に、eligibilityが確定した1行目が立つ |
+| **E-011 C-3**（判定は事前登録の「3本×2週間」。C-1 / C-2 のみ投稿済み） | 2026-08-08 / 08-09 の投稿Human Commit | **C-3候補を1本投稿する** | Human | **Human Gate — 第三者への投稿** | 3本目が揃い、canaryの判定窓が確定する（現状は3本目が無く判定不能） |
+| **E-015 ECHO — 外部ユーザー 0** | 2026-08-15 PR #83 merge（`36b16aa`） | **champion `echo-v1.html` を実在の1人に触らせ、1行の感想をもらう** | Human | **Human Gate — 第三者への送信**。加えて、この `UNKNOWN` は Machine Evaluation では原理的に埋まらない（D-013） | `experiments/echo/LEARNING.md` §10 の「外部ユーザーが1人でも触ったか = 0」が動く |
+| **Identity rollout（D-004）— 部分実施** | 2026-08-09 D-004 | **Xヘッダー画像を差し替える**（旧名 `LIGHTS OUT FACTORY` が公開面に残存） | Human | **Human Gate — identity / 公開面の変更** | §1 の未完了列からXヘッダーが消える（残る未完了は note自己紹介 / noteヘッダー） |
+
+**この表からHumanへ出す1アクションは1つだけである**（`OS.md` HI-2 / HI-13）。**選択 = E-012 Instance 1。** 理由は3つ——①未通過Gateが**1つだけ**残った状態で止まっており、その1つを越えれば実施へ入る ②止まっている期間が最も短く、Desireの供給元（実在の第三者）がまだ新しい ③現在の律速（§7）が要求する**新しいWorld Signalを発生させる側**の1手である。**E-006の1手のほうがHuman時間は小さい**（約1分）が、事前登録どおりの経路では `NO_REPLY_TIMEOUT` に落ちる可能性が高く、残る情報量が小さい。**残りの5行は表に置いたままにし、選択肢として並べて返さない**（HI-11）。
+
+**未実施であること自体を `FAIL` として学習しない**——未実施は `UNKNOWN` であって `FAIL` ではない（`CONSTRAINTS.md` Part I §6）。1手が長く実行されない場合に疑うのは、Desireの側ではなく1手の設計の側である（HI-13）。
+
+**open PRは本表に載せない**（提案は承認ではない）。一覧は §6。ただし **#84**（ECHOのHuman Taste Gate FAILとExperience Briefからの再設計候補）がmergeされた場合、本表のE-015行の1手はその内容に従って置き換わる。
+
 ## 3. Proven Sensor Capability — Large-N Demand Intelligence（E-005 / HISTORICAL）
 
 - 2026-08-08実施。xAI API接続・Grok x_search実行に成功。cost ≈ USD 1.815 / 48 collection + 5 verification queries / raw 75・unique 72・Genuine Need ≈60・semantic clusters 7。**Public Real-time Human DesireをXから機械探索するRouteはSensorとしてPASS**（市場全体を理解したとは主張しない）。repo内raw artifactは無い（Human-reported）。
@@ -194,12 +215,15 @@ E-005（Large-N Demand Intelligence / verdict `PASS`）・E-008（Environment Pr
 - **副業条項**（Human-confirmed）: 就業規則上、副業は**要相談だが禁止ではない**。方針は「実収益が発生してから会社へ相談して通す」。相談は**未実施 = `UNKNOWN`**。有償受注の発生時点で本項を更新する。
 - **xAI credit**: initial USD 5.00 / cumulative consumption USD 4.351 / Day 1消費 USD 0.1631 → **推定残高 ≈ USD 0.486**（2026-08-09 Human-confirmed値からの `Derived`）。**auto top-up OFF。追加チャージなし。** USD 10のチャージは**独立した Human Commit として `HOLD`**（未承認）。解除条件5件の正本は `experiments/encounter-queue/LEDGER.md`「Day 3 Final Verdict — Human amendment」。E-013は `VOID` で終了しており、そのcap（daily USD 0.18 / 3-day USD 0.50）は失効した実験のものである。
 
-## 6. Open PRs and Session Ownership（観測 2026-08-14）
+## 6. Open PRs and Session Ownership（観測 2026-08-16）
 
-GitHub API実測でopenは**2件**（いずれもdraft、base `main`）。
+GitHub API実測でopenは**5件**（本セッションのPRを除く。いずれもdraft、base `main`）。**未mergeは承認ではない**——いずれも §2-a のAccepted Desireではない。
 
+- **PR #88** `claude/dinosaur-battle-game-3zjal7` — 単一HTMLゲームを `games/dino-battle` として追加。
+- **PR #87** `claude/fx-winning-system-n4l8af` — PR #86 merge後の台帳を実測へ同期（`CURRENT_STATE.md` §2のE-012行 / `experiments/INDEX.md` のE-012行）。**§2-a のE-012行と同じ事実を扱う。** 本PRは重複を避けて §2 の当該行を変更していないが、merge順はHumanが決める。
+- **PR #85** `claude/japan-game-creator-universe-hlit28` — 新Major Bet候補とE-016の事前登録。**D-015を予約している**（本ファイルの正本たる `DECISIONS.md` は本PRでD-016を採り、番号衝突を避けた）。
+- **PR #84** `claude/factory-optimization-audit-rpvptk` — Human Taste GateのFAIL記録とECHOのExperience Briefからの再設計候補。**merge時は §2-a のE-015行の1手が置き換わる。**
 - **PR #75** `claude/bottleneck-analysis-2ilx5b` — ops/direction: 一次ソース到達性の実測とベット候補①の反証。
-- **PR #76** `claude/digital-gov-mcp-audit-j5ouc7` — CURRENT_STATE §7のxAI残高を訂正追記で是正。**本ファイルの§5と競合する。** merge順はHumanが決める。
 
 ## 7. Structural Bottleneck / Current Operational Priority
 

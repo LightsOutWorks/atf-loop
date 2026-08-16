@@ -6,6 +6,36 @@ Record形式（最小）: id / date / decision / why / supersedes / rollback。
 
 ---
 
+## D-016 — Accepted Desire は EXECUTABLE_NEXT_STEP を持つ。「承認済み・未実施」を終端状態として認めない
+
+- **Date**: 2026-08-16
+- **番号について**: **D-015 は未mergeのopen PR #85 が使用している**ため、番号衝突を避けて本recordは D-016 を採る。#85 がmergeされなかった場合、D-015 は欠番として残る。**この採番は#85の内容に対する賛否ではない**（未mergeの提案は承認ではなく、本recordはそれを審査しない）。
+- **Authority**: ヒロのTask Contract「Accepted Desireには必ず EXECUTABLE_NEXT_STEP を持たせる。merge後、AIが自律実行可能なら即実行。Human Gateなら『ヒロが何をすれば再開するか』を1アクションで表に出して停止。単なる『承認済み・未実施』という終端状態を許さない」（2026-08-16 Human裁定）。**運用規律の追加は `OS.md` の管轄であり、決定権はHumanが持つ**（HI-11）。採択はヒロの本PR merge。
+- **Decision**:
+  1. **`OS.md` へ HI-13 を1節追加する。** Accepted Desire（Human Commitを通過し未完了のDesire・契約・候補）は、**1アクション / 実行者 / AIが実行できない理由 / 次に確定する状態**の4フィールドを持つ。フィールドはこれ以上増やさない。
+  2. **merge後、実行者が `AI`** で `CONSTRAINTS.md` Part I §3 の R0〜R2 に収まりHuman Gateに触れないなら、**同一セッションで即実行する**（HI-2の適用。実行できるものを次セッションへ繰り越さない）。
+  3. **実行者が `Human`** なら、**1アクションだけを表に出して停止する。** 複数Gateが同時に開いている場合は現在の律速に最も近い1つを選び、残りは表に置く。**選択肢として並べて返さない**（HI-11）。
+  4. **`OS.md` HI-4 へ F11「承認の終端化」を1行追加する。** 検出したら1手を確定させるか、HI-5の語彙で `HOLD`（解除trigger必須）/ `KILL` / `NO_ACTION` へ落とす。
+  5. **現在値は `CURRENT_STATE.md` §2-a が持つ**（新設）。`OS.md` は規律のみを持ち現在値を持たない（HI-8の配置規則）。
+  6. **`experiments/INDEX.md` の事前登録フィールドへ `executable_next_step` を追加し、契約の事前登録検査へ項目7を追加する。** 検査項目1〜6と違い、**項目7は実行前だけでなく承認後にも適用される。** 既存の検査項目1〜6の番号は動かさない（既存契約が番号で引用しているため）。
+  7. **新しいファイル・schema・hook・workflow・skill・dashboardを作らない。** 追加したのは既存4文書への節・行・表のみ（`OS.md` §17 / HI-4 F3）。
+- **Why**: **実測された欠陥である。** 承認（main merge）が終端になり、Realityが1つも動かない状態が複数同時に発生していた。
+  1. **E-014**: 2026-08-13 PR #65 mergeで承認。3日後の時点で **Phase 1未着手・納品0**。
+  2. **E-012 Instance 1**: 2026-08-15 PR #86 mergeで承認。翌日時点で**未実施・N=0**。契約 §7 のGate表は merge後も「main merge = 未通過」のままで、承認された事実すらrepoへ反映されていなかった。
+  3. **E-006**: 事前登録した判定時刻 2026-08-13 09:45 JST を経過したが、**判定結果のrepo記録が無く `UNKNOWN`**。
+  4. **open PR #87**（「PR #86 merge後の台帳を実測へ同期する（承認済み・未実施）」）は、この状態を**記録するPR自体が承認待ちで止まっている**という同型の入れ子になっている。
+
+  共通するのは、承認・merge・台帳への転記という**内部の状態遷移をRealityの前進として数え、そこで止まっていた**ことである（HI-4 F2の同型）。`CURRENT_STATE.md` §7 の律速「World Signalを回収し、正しいContact / Needへ帰属し、次のActionへ戻す経路が弱いこと」は、**回収側だけでなく着火側にも欠落がある**——World Signalが返ってこないのは、Signalを発生させる行為が実行されていないためでもある。
+- **本decisionが変えないもの（誤読防止）**:
+  - **HI-10 の Action Default `NO_ACTION` を緩めない。** 禁じるのは**既に承認されたもの**が止まることであり、未承認の作業を始める根拠にはならない。
+  - **Human Gateを1つも自動化しない**（`CONSTRAINTS.md` Part I §4）。「即実行」の対象はHuman Gateに触れない行為だけである。
+  - **急かす装置にしない。** Humanへ出す1アクションは業務外時間で完了する大きさへ圧縮する（HI-8）。**未実施を `FAIL` として学習しない**——未実施は `UNKNOWN` であって `FAIL` ではない（`CONSTRAINTS.md` Part I §6）。1手が長く実行されない場合に疑うのは1手の設計の側である。
+- **本decisionの適用（本PRで実行したAI側の1手）**: `experiments/desire-discovery/INSTANCE_1_CONTRACT.md` の status と §7 Gate表を **merge済みの実測へ同期**し、§7-a に EXECUTABLE_NEXT_STEP を置いた（R2。Decision 2の適用）。**第三者接触・送信・公開・支出はいずれも行っていない。** §2 / §2-a の他5行は実行者が `Human` であり、Decision 3に従い1アクションだけを出して停止する。
+- **Supersedes**: 無し。`CONSTRAINTS.md` 全項 / `OS.md` Layer1・HI-1〜HI-12・Layer2 / `DESIRES.md` North Star・MD-1〜MD-3 / `CURRENT_STATE.md` §7・§7-0・§7-0-a の戦略・ベット・優位・位相・確定済み候補判定 / D-001〜D-014 / E-006・E-011・E-012・E-014・E-015 の各契約（hypothesis・PASS・FAIL・VOID・判定点・budget_cap・非目標・解除trigger）/ `ROADMAP.md` §0 の事前登録は**いずれも変更していない**。`CURRENT_STATE.md` §2-a の各行は、その項目自身の事前登録契約から導いた1手であり、新しい判断を含まない。
+- **Rollback**: 本PRのrevertで `OS.md` の1節と1行、`CURRENT_STATE.md` §2-a、`experiments/INDEX.md` の2行と検査項目7、`INSTANCE_1_CONTRACT.md` の同期と §7-a、`CLAUDE.md` の索引1行、本recordが戻る。物理削除・外部作用・支出を伴わないため単一revertで完結する。
+
+---
+
 ## D-014 — Public Web Observation を原則開放する。読みはAction Riskで扱い、書きはHuman Gateのまま
 
 - **Date**: 2026-08-14

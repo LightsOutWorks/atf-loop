@@ -33,6 +33,7 @@
 | **そもそも着手してよいか**（行動の既定 = `NO_ACTION`・7条件・Non-goals）、**誰が決めるか**（HumanとClaudeの権限分界） | `OS.md`（HI-10 / HI-11） |
 | 何を目指しているか（北極星・Major Desire・その順位） | `DESIRES.md` |
 | 今どうなっているか。現在の戦略・現在のベット・現在の優位（探索範囲）・現在の律速 | `CURRENT_STATE.md`（§7-0 / §7） |
+| 承認済みのDesire・契約が止まっている時、**次に誰が何を1つ実行するか**（EXECUTABLE_NEXT_STEP。「承認済み・未実施」を終端にしない） | 規律 = `OS.md` HI-13 / 現在値 = `CURRENT_STATE.md` §2-a |
 | 過去に何を、なぜ決めたか | `DECISIONS.md` の該当D-record |
 | この候補・仮説は過去に棄却されたか。再検討triggerは何か | `DECISIONS.md` 該当D-record / `research/INDEX.md` の状態列（`反証済み`） |
 | どこまで読むか。上表に無い正本が必要になった場合の扱い | `OS.md` HI-12（取得規律） |
