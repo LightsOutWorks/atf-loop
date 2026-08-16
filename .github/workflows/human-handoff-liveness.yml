@@ -1,0 +1,147 @@
+# human-handoff-liveness.yml — Human Gate後の「承認済み・未実施」で黙って止まる事故を防ぐ最小経路。
+#
+# 役割は1つだけ:
+#   PRがmainへmergeされたら、そのPR本文の ATF_HANDOFF block を読み、
+#   Humanの次の1手を同じPRへ自動コメントしてrepository ownerをmentionする。
+#
+# やらないこと:
+#   - Claude/外部モデルを起動しない
+#   - 第三者へ連絡しない
+#   - 支出・公開・deployをしない
+#   - 新しい台帳・DB・schedulerを持たない
+
+name: human-handoff-liveness
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  wake-human:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    name: merge後のHuman handoffを可視化
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+      REPO_OWNER: ${{ github.repository_owner }}
+    steps:
+      - name: Resolve handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="$GITHUB_REPOSITORY"
+          marker="ATF-HANDOFF-WAKE:${PR_NUMBER}"
+          body="${PR_BODY:-}"
+
+          # rerun時に同じコメントを重複投稿しない。
+          existing="$(
+            gh api --paginate "repos/${repo}/issues/${PR_NUMBER}/comments?per_page=100"               --jq ".[] | select(.body | contains(\"${marker}\")) | .id"               | head -n 1 || true
+          )"
+          if [ -n "$existing" ]; then
+            echo "handoff comment already exists for PR #${PR_NUMBER}; no-op."
+            exit 0
+          fi
+
+          block="$(
+            printf '%s\n' "$body" | awk '
+              /<!--[[:space:]]*ATF_HANDOFF/ { inside=1; next }
+              inside && /-->/ { exit }
+              inside { print }
+            '
+          )"
+
+          has_gate=false
+          if printf '%s\n' "$body" | grep -Eiq 'Human[ _-]?Gate|Human[ _-]?Commit|未実施|merge[[:space:]]*=|merge.*承認'; then
+            has_gate=true
+          fi
+
+          post_comment() {
+            local body_file="$1"
+            local payload="$RUNNER_TEMP/handoff-comment.json"
+            jq -n --arg body "$(cat "$body_file")" '{body: $body}' > "$payload"
+            gh api -X POST "repos/${repo}/issues/${PR_NUMBER}/comments" --input "$payload" >/dev/null
+          }
+
+          if [ -z "$block" ]; then
+            if [ "$has_gate" = "false" ]; then
+              echo "PR #${PR_NUMBER} has no Human Gate signal; no handoff required."
+              exit 0
+            fi
+
+            comment="$RUNNER_TEMP/handoff-missing.md"
+            cat > "$comment" <<EOF
+          @${REPO_OWNER}
+
+          **HANDOFF MISSING**
+
+          PR #${PR_NUMBER} は Human Gate / Human Commit / 未実施を含むのに、merge後の次の1手を示す \`ATF_HANDOFF\` block がありません。
+          この状態では「承認済み・未実施」で停止できます。次の実行可能Actionと再開条件を明示してください。
+
+          <!-- ${marker} -->
+          EOF
+            post_comment "$comment"
+            echo "::error::Human handoff is missing from merged PR #${PR_NUMBER}."
+            exit 1
+          fi
+
+          field() {
+            local name="$1"
+            printf '%s\n' "$block"               | sed -n "s/^[[:space:]]*${name}:[[:space:]]*//p"               | head -n 1
+          }
+
+          handoff_owner="$(field owner)"
+          action="$(field action)"
+          resume_when="$(field resume_when)"
+
+          if [ "$handoff_owner" = "NONE" ]; then
+            if [ "$action" != "NO_ACTION" ] || [ "$resume_when" != "NONE" ]; then
+              echo "::error::owner=NONE requires action=NO_ACTION and resume_when=NONE."
+              exit 1
+            fi
+            echo "PR #${PR_NUMBER} explicitly declares a terminal handoff; no wakeup required."
+            exit 0
+          fi
+
+          if [ "$handoff_owner" != "HUMAN" ] || [ -z "$action" ] || [ -z "$resume_when" ]; then
+            comment="$RUNNER_TEMP/handoff-invalid.md"
+            cat > "$comment" <<EOF
+          @${REPO_OWNER}
+
+          **HANDOFF INVALID**
+
+          PR #${PR_NUMBER} の \`ATF_HANDOFF\` block が不完全です。
+          必須形は \`owner: HUMAN\` + 1つの具体的な \`action\` + 明確な \`resume_when\` です。終端なら \`owner: NONE\` / \`action: NO_ACTION\` / \`resume_when: NONE\` を明示してください。
+
+          <!-- ${marker} -->
+          EOF
+            post_comment "$comment"
+            echo "::error::Invalid ATF_HANDOFF in merged PR #${PR_NUMBER}."
+            exit 1
+          fi
+
+          comment="$RUNNER_TEMP/handoff-next.md"
+          cat > "$comment" <<EOF
+          @${REPO_OWNER}
+
+          **NEXT ACTION**
+
+          - Owner: **HUMAN**
+          - Action: ${action}
+          - Resume when: ${resume_when}
+
+          mergeは承認であって実施ではありません。上の1手が完了するまで、このPRの次段は未実施です。
+
+          <!-- ${marker} -->
+          EOF
+          post_comment "$comment"
+
+          echo "Posted Human handoff for PR #${PR_NUMBER}."
