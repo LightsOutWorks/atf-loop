@@ -1,0 +1,7 @@
+{
+  "title": "きょうりゅうバトル アリーナ",
+  "description": "21しゅるいの恐竜から1体をえらび、タップのタイミングでわざを当てて1対1で戦うバトルゲーム。トーナメント（5連戦）と、すきな恐竜どうしを戦わせるじゆうバトルの2モード。",
+  "primary_input": "tap",
+  "success_condition": "damage_dealt_1",
+  "note": "SEED作品ではない（works/ のE-001 Browser-Toy Production Loopとは無関係。factory.yml / build-catalog.mjs の対象外）。単一HTML・外部通信ゼロ・外部アセットなし・効果音はコード生成。"
+}
