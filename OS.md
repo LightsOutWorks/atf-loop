@@ -44,6 +44,7 @@ Amended v1.2 — 2026-08-09(D-004: Human Interface — Operator Priors節を追�
 Amended v1.3 — 2026-08-10(D-006: HI-10 Action Default（`NO_ACTION`）とHI-11 権限分界を追加。HI-2の「既定はやる」の適用範囲を着手後のHandoffへ限定。Layer2「探索と固定」Bへ成立条件10〜12を追加。HI-4 F5へObserved / Derivedの区別を追加。Layer1の既存原則は変更していない)
 Amended v1.4 — 2026-08-10(D-007: Layer2「探索と固定」Aへ探索範囲の交差条件を1段落追加。HI-10 条件5とHI-11 Humanリストは行内参照のみ。新設した節は無く、Layer1・HI-10の7条件・HI-11の分界は変更していない)
 Amended v1.5 — 2026-08-10(D-008: HI-12 取得規律を追加。上限・順序・棄却の条件・字数境界の4つだけを持ち、既存規則を再掲しない。Layer1・HI-10・HI-11・Layer2は変更していない)
+Amended v1.7 — 2026-08-16(D-016: HI-13 Accepted Desire の EXECUTABLE_NEXT_STEP を追加。HI-4へF11を1行追加。Layer1・HI-1〜HI-12・Layer2は変更していない。HI-10 の Action Default とHuman Gateはいずれも緩めていない)
 Amended v1.6 — 2026-08-14(D-011: HI-4 R1注釈の C0 結合をpin移動後の事実へ訂正。HI-12 の `CONSTRAINTS.md` 字数と Part II の所在を更新。規律本体は変更していない ／ D-012: Layer2へ「Architecture候補の探索 — Cross-System Priors」を1節追加。原則のみを持ち、参照系統の索引・具体例・実務上の問い・先回り禁止例は `DECISIONS.md` D-012 が持つ。Layer1・HI-1〜HI-12・Layer2の既存節は変更していない ／ D-014: HI-12 の `CONSTRAINTS.md` 字数を Public Web Observation 追記後の実測へ同期。規律本体は変更していない)
 
 Status: **LOCKED**
@@ -310,6 +311,7 @@ Humanへ返すのは、Humanにしか越えられない最後の1行為まで圧
 | F8 | Meaning喪失 | 上位Desireへの接続を説明できない作業が続いている | NO_ACTIONを選ぶ |
 | F9 | 二次記述をEvidence化 | repo内の散文（canonical文書を含む）・サブエージェントの報告・Sensorの抽出だけを根拠に、外部stateや一次事実を断定している | 一次ソースを自分で開く。**外部stateはcanonicalの記述では確定しない**。サブエージェントの主張は統合担当が該当ファイルを開いて確認できたものだけ採用する。他者の投稿はSensor抽出ではなく全文を読む |
 | F10 | 既出の再発明 | 既に調査・決定済みの事項を「無い」と述べる／白紙から作り直す | 主張・調査の前に `DECISIONS.md` と `direction/` を引く。引いた形跡を残す |
+| F11 | 承認の終端化 | Human Commitを通過したDesireが「**承認済み・未実施**」のまま、次の1手を持たずに止まっている。承認・merge・台帳への転記そのものを前進として記録している | EXECUTABLE_NEXT_STEPを確定させる（HI-13）。確定できないなら `HOLD`（解除trigger必須）/ `KILL` / `NO_ACTION` へ落とす |
 
 **R1 の `reversible` をどう読むか（2026-08-10 追加。`CONSTRAINTS.md` §3 の注釈であり、条文の改変ではない）**
 
@@ -467,6 +469,38 @@ North Star / Major Desire / Hard Boundary / 戦略 / **戦略の探索範囲**�
 4. **全文Readは6,000字未満のファイルだけ。20,000字以上は `grep` / anchor のみ**（2026-08-10時点で該当10本。`research/INDEX.md` は109,174字だが497行のため `Read` 1回で全文が返る。`OS.md` `CURRENT_STATE.md` `ROADMAP.md` 自身も該当する）。
 
 実行してよいかは HI-10、誰が決めるかは HI-11、矛盾時の停止は `CLAUDE.md` §2、律速不明時は `ROADMAP.md` §3 step 5 が持つ。**本節はそれらを再掲しない。**
+
+### HI-13. Accepted Desire は EXECUTABLE_NEXT_STEP を持つ（2026-08-16 Human裁定 / D-016）
+
+**承認は終端ではない。** Human Commitを通過したDesireが「**承認済み・未実施**」のまま次の1手を持たずに止まっている状態を、正常な終端として認めない。承認・merge・台帳への転記は、それ自体では前進ではない（HI-4 F2の同型——内部の状態遷移をRealityの前進として数えない）。
+
+**Accepted Desire**: Humanの明示Commitを通過し、まだ完了していないDesire・契約・候補。具体的には ①mainへmergeされた実験契約・実行契約 ②`CURRENT_STATE.md` §2 で `ACTIVE` の実験 ③Human Commit済みで未実行の判定・rollout。**`HOLD` / `WAIT` / `KILL` / `NO_ACTION` / `HISTORICAL` はAccepted Desireではない**——これらはHI-5が既に終端として定義しており、`HOLD` と `WAIT` は解除trigger（＝終端の外し方）を必須で持つ。
+
+#### 必須フィールド（4つ。増やさない）
+
+| フィールド | 中身 |
+|---|---|
+| **1アクション** | 次に実行される具体行為を**1つだけ**。「検討する」「準備する」「様子を見る」「進める」は行為ではない |
+| **実行者** | `AI` または `Human`。両方は書かない |
+| **AIが実行できない理由** | 実行者が `Human` の場合のみ。該当する **Human Gate**（`CONSTRAINTS.md` Part I §4）または **観測・実行能力の欠落**のどちらかを名指しする。**2つを混同しない**——前者は権限、後者は能力であり、解消の仕方が違う |
+| **次に確定する状態** | この1手の後にrepoのどの値が変わるか（台帳の列 / verdict / 判定点） |
+
+#### merge後の扱い
+
+- **実行者が `AI`** で、`CONSTRAINTS.md` Part I §3 の R0〜R2 に収まり、Human Gateに触れないなら、**同一セッションで即実行する。** 実行できるものを次のセッションへ繰り越さない（HI-2: 既に委任された判断を返すことは、仕事を返すことと同じである）。
+- **実行者が `Human`** なら、**「ヒロが何をすれば再開するか」を1アクションだけ表に出して停止する。** 複数のGateが同時に開いている場合は、**現在の律速に最も近い1つ**を選ぶ（`CURRENT_STATE.md` §7）。残りは表に置き、Humanへ並べて返さない（HI-2 / HI-11）。
+
+#### 禁止する終端状態
+
+EXECUTABLE_NEXT_STEPが空欄・`UNKNOWN`・「今後検討」のまま止まっているAccepted Desireは**欠陥**である（HI-4 F11）。検出したら、次の1手を確定させるか、HI-5の語彙で `HOLD`（解除trigger必須）/ `KILL` / `NO_ACTION` へ落とす。**曖昧な保留を作らない**（HI-5）。
+
+#### 本節が変えないもの（誤読防止）
+
+1. **HI-10 の Action Default `NO_ACTION` を緩めない。** 本節が禁じるのは**既に承認されたもの**が止まることであって、未承認の作業を始める根拠にはならない。承認は7条件の充足で得られたものであり、本節はそれを再審査も上書きもしない。
+2. **Human Gateを1つも自動化しない**（`CONSTRAINTS.md` Part I §4）。「即実行」の対象はHuman Gateに触れない行為だけである。**AIが自分でGateを通れると判定してはならない。**
+3. **急かす装置ではない。** Humanへ出す1アクションは、業務外時間で完了する大きさへ圧縮する（HI-8 / HI-2）。**未実施であること自体をFAILとして学習しない**——未実施は `UNKNOWN` であって `FAIL` ではない（`CONSTRAINTS.md` Part I §6）。1手が長く実行されない場合に疑うのは、Desireの側ではなく**1手の設計の側**である。
+
+**現在値は `CURRENT_STATE.md` §2-a が持つ。本節は規律のみを持ち、現在値を持たない。**
 
 ---
 

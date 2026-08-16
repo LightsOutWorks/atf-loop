@@ -24,7 +24,8 @@ Status語彙: `ACTIVE` / `HOLD` / `NO-GO` / `RETIRED` / `HISTORICAL` / `PROPOSED
 
 運用規則:
 
-- 新しいReality Experimentは、experiment_id / desire_id / hypothesis / chosen_route / budget_cap / world_signal / verdict / learning を最低限持つ（巨大schemaを先に作らない。`ROADMAP.md` §0参照）。
+- 新しいReality Experimentは、experiment_id / desire_id / hypothesis / chosen_route / budget_cap / world_signal / verdict / learning / **executable_next_step** を最低限持つ（巨大schemaを先に作らない。`ROADMAP.md` §0参照）。
+- **承認された実験を「承認済み・未実施」のまま次の1手なしで置かない**（`OS.md` HI-13 / HI-4 F11）。承認後の現在値と次の1手は `CURRENT_STATE.md` §2-a が持つ。
 - statusの変更はCURRENT_STATE.mdの観測更新と同時に行う。Direction級の変更はD-record（`DECISIONS.md`）。
 - 過去実験の成果物は削除しない。Decision History（何を仮説し、何が失敗し、なぜRouteを変えたか）として保存する。
 - E-005 / E-006 / E-008のWorld Signalから抽出した次回Demand Scan向け学習は `experiments/batch-1/LEARNINGS.md`（Lane C / MD-3）が保持する（台帳事実はLEDGER、能力変更はJOURNALの管轄のまま）。
@@ -39,3 +40,4 @@ E-013とBatch 1で、実行後のHuman amendmentを要した契約欠陥の再�
 4. **検出力（自己閉塞・循環の禁止）**: 契約のN・期間・既知の実測率の下で「発生ゼロ」が最頻結果になりうるSignalを、PASSや資源決定の必須条件にしない。供給が小さすぎて作れない結果に判定を紐づけない。判定がその判定の結果（拡大後にしか得られない量のSignal）に依存する循環も同型として扱う（実測欠陥と訂正: `experiments/encounter-queue/LEDGER.md` Day 3 Final Verdict — Human amendment 訂正理由2。正例: E-014契約の「強シグナル（記録するがPASS条件にしない）」）。
 5. **独立Human Commitの非連動**: verdict成立に、支出・チャージ・送信・公開など別のHuman Gate行為を自動連動させない。判定と各Gate行為は独立のHuman Commit（実測欠陥と訂正: 同amendment — USD 10チャージの独立 `HOLD` 分離）。
 6. **判定入力の規律**: 判定に使う値はHuman-confirmedの実測のみ。未確認は `UNKNOWN` のまま扱い、判定のために推測で確定させない。供給不足・観測不能・記録欠損は `VOID` であり、`VOID` を `FAIL` として学習しない（`CONSTRAINTS.md` Part I §6 / 同amendment 判定手順）。
+7. **EXECUTABLE_NEXT_STEP の存在**（2026-08-16追加 / `OS.md` HI-13）: 契約は、**承認された直後に誰が何を1つ実行するか**を4フィールド（1アクション / 実行者 / AIが実行できない理由 / 次に確定する状態）で持つ。実行者が `Human` の場合、その1手は業務外時間で完了する大きさへ圧縮する（`OS.md` HI-8）。**「merge後に検討する」「承認され次第進める」は1アクションではない**（実測欠陥: E-014 は2026-08-13 merge承認後にPhase 1未着手・納品0のまま、E-012 Instance 1 は2026-08-15 merge承認後に未実施のまま、いずれも次の1手が契約にもrepoにも無かった — `OS.md` HI-4 F11）。**検査項目1〜6と違い、本項は実行前だけでなく承認後にも適用される**——承認済みの実験が1手を失った時点で欠陥となる。
