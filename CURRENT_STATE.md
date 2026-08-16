@@ -136,11 +136,11 @@ Canonical routing note: The JSON block above is the sole current source within C
 
 Status: **OBSERVED SNAPSHOT — not a target, not a promise**
 
-Observed at: **2026-08-14 JST**
+Observed at: **2026-08-15 JST**
 
 Default branch: `main`
 
-Base SHA: `1e59e031470a779571573da9e85adf3d9853357c`
+Base SHA: `3d94c50361890d398835ea8ffe442f2f5d720778`
 
 Evidence scope: 上記SHAのdefault branch / 本セッションの一次実測（`git`・`node scripts/c0-provenance.mjs`・`node scripts/control-plane-canary.mjs`・GitHub API read-only）/ 明示ラベル付きのHuman-reported。
 
@@ -166,7 +166,7 @@ status語彙とroute statusの正本は `experiments/INDEX.md`。各実験の事
 |---|---|---|---|
 | **E-006** Batch 1 Discovery Contact（MD-1） | **ACTIVE**（World Signal回収Phase） | SENT **20** / VOID 3（分母外）/ REACHABLE **17** / REPLY **1** / GENUINE_PAIN_CONFIRMED **0**。送信枠は消化済みで、追加送信・候補準備は本Batchに無い。3通目は2026-08-11送信済み、事前登録の判定時刻2026-08-13 09:45 JSTは**経過したが判定結果のrepo記録が無く `UNKNOWN`**。Stageは `REPLY` のまま（会話の長さをファネルの前進として読み替えない） | `experiments/batch-1/LEDGER.md` |
 | **E-011** MD-2 Distribution Canary（MD-2） | **ACTIVE**（観測中） | C-1（2026-08-08）/ C-2（2026-08-09）投稿済み。impression実測は C-1 **≈20 imp / 15h・reply 0**。判定は事前登録の「3本×2週間」 | `experiments/md2-distribution/CANARY_2026-08-08_CONTENT_CANDIDATES.md` |
-| **E-012** Desire発見（在重力自己分析） | **ACTIVE** | **実施件数 0 / N=0・完全に未測定**。無料提供のみ | `experiments/desire-discovery/SELF_ANALYSIS_PROTOCOL.md` |
+| **E-012** Desire発見（在重力自己分析） | **ACTIVE** | **実施件数 0 / N=0・完全に未測定**。無料提供のみ。**Instance 1 の実行契約が2026-08-15に承認済み（PR #86 / merge commit `3d94c50`）・未実施** — 承認は実施ではなく、N は 0 のまま。残る未通過Human Gateは第三者接触のみ | `experiments/desire-discovery/LEDGER.md`（台帳・実測行0）／ `INSTANCE_1_CONTRACT.md`（契約）／ `SELF_ANALYSIS_PROTOCOL.md`（実装正本） |
 | **E-014** Desire to Game Reality Test（MD-1無償前段 / MD-3） | **ACTIVE — Phase 1未着手・納品0** | 判定母集団のFunnelは未着手。到達実測はRetrospective Seed Corpus側にあり、eligibilityは全件 `UNKNOWN` のため判定母集団の外（§7） | `experiments/desire-to-game/LEDGER.md` |
 | **E-013** Daily Encounter Queue Canary | **HISTORICAL — result `VOID`** | Day 1のみHuman-confirmed（配達4 / SENT 4 / REPLY 0 / 実費 USD 0.1631）。Day 2・Day 3は実行の有無ごと `UNKNOWN`。**`FAIL` でも `KILL` でもなく、品質・需要・返信率について学習しない。** Day 4以降の自動継続なし。再試行は継続ではなく新規の事前登録とし、private session state依存を外すことを最低条件とする | `experiments/encounter-queue/LEDGER.md` |
 | **X World Signal / Reply Ingestion Canary** | **HOLD**（execution_authority = NOT_GRANTED / budget UNAPPROVED） | 再評価trigger①（初の実reply発生）は**発火済み**、②（Humanの返信確認・転記負担が実測上の律速になる）は**未発火**。**①のみでは解除しない** | — |
